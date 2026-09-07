@@ -12,3 +12,4 @@ secrets.json
 # .env is committed deliberately. This repository is private, and the team needs
 # the server to come up in live mode without per-machine setup. Rotate the key
 # when the unit ends, and remember that git history keeps it even after a delete.
+.env
