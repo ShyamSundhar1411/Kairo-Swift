@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Kairo</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Kairo uses the camera to log a meal from one photo. Photos are analysed on your iPhone; they are only uploaded if you agree, per meal.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Kairo reads your sleep, movement and heart data so it can tell you when you are actually short on rest — and stay quiet when it cannot see enough to say anything useful. This data stays on your iPhone.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Kairo writes the water and mindful minutes you log here back to Health so your other apps stay in sync.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kairo can read a meal photo you have already taken instead of asking you to take a new one.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Kairo sends at most a handful of reminders a day, and only when it thinks you will actually act on one. You can lower that number or turn it off entirely.</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchMark</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<false/>
+	</dict>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>

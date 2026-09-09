@@ -1,0 +1,118 @@
+# XcodeGen spec — generates Kairo.xcodeproj with the iOS and watchOS targets,
+# both linking the local KairoKit package.
+#
+#   brew install xcodegen
+#   cd apps && xcodegen generate && open Kairo.xcodeproj
+#
+# Info.plist and the entitlements file are GENERATED from this spec, so every
+# key lives here. Editing ios/KairoApp/Resources/Info.plist by hand — or letting
+# Xcode edit it through the capabilities editor — is overwritten on the next
+# `xcodegen generate`. That is how the HealthKit and camera usage strings were
+# lost once already.
+name: Kairo
+options:
+  bundleIdPrefix: au.edu.sydney.elec5620.kairo
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  createIntermediateGroups: true
+
+packages:
+  Kairo:
+    path: ../packages/KairoKit
+
+targets:
+  KairoApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: ios/KairoApp
+    dependencies:
+      - package: Kairo
+        product: KairoKit
+      - target: KairoWatch
+    info:
+      path: ios/KairoApp/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Kairo
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        # The screen iOS paints before any code runs. Kairo.canvas and the
+        # generated mark, so KairoStartup can open on the same picture and the
+        # handover is invisible. Assets come from scripts/make-brand-assets.swift.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+          UIImageRespectsSafeAreaInsets: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+
+        # Every string below is shown to the user in a permission dialog. Say what
+        # the data is used for, in the user's words, not the system's.
+        NSHealthShareUsageDescription: >-
+          Kairo reads your sleep, movement and heart data so it can tell you when you
+          are actually short on rest — and stay quiet when it cannot see enough to say
+          anything useful. This data stays on your iPhone.
+        NSHealthUpdateUsageDescription: >-
+          Kairo writes the water and mindful minutes you log here back to Health so
+          your other apps stay in sync.
+        NSCameraUsageDescription: >-
+          Kairo uses the camera to log a meal from one photo. Photos are analysed on
+          your iPhone; they are only uploaded if you agree, per meal.
+        NSPhotoLibraryUsageDescription: >-
+          Kairo can read a meal photo you have already taken instead of asking you to
+          take a new one.
+        NSUserNotificationsUsageDescription: >-
+          Kairo sends at most a handful of reminders a day, and only when it thinks
+          you will actually act on one. You can lower that number or turn it off
+          entirely.
+
+        # Development only: the agent server runs on localhost during Stage 2.
+        # Remove this before any real distribution.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: ios/KairoApp/Resources/KairoApp.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: au.edu.sydney.elec5620.kairo
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  KairoWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: watch/KairoWatch
+    dependencies:
+      - package: Kairo
+        product: KairoKit
+    info:
+      path: watch/KairoWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Kairo
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: au.edu.sydney.elec5620.kairo
+        NSHealthShareUsageDescription: >-
+          Kairo reads your movement and heart data on the watch to notice when you
+          have been sitting too long.
+    entitlements:
+      path: watch/KairoWatch/KairoWatch.entitlements
+      properties:
+        # The watch had NSHealthShareUsageDescription but no entitlement, so it
+        # could not have read a sensor even with the code for it. Movement and
+        # stand data are recorded on this device; reading them here is what lets
+        # the sitting page show a real number instead of a zero.
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: au.edu.sydney.elec5620.kairo.watchkitapp
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.9"
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"

@@ -1,0 +1,265 @@
+{
+  "source" : "Open Food Facts",
+  "attribution" : "Nutrition data from Open Food Facts (openfoodfacts.org), made available under the Open Database Licence (ODbL).",
+  "endpoint" : "https://world.openfoodfacts.org/api/v2/product/<barcode>.json",
+  "fetchedAt" : "2026-09-07T09:55:15Z",
+  "generatedBy" : "scripts/fetch-nutrition.swift",
+  "foods" : [
+    {
+      "barcode" : "0016000275270",
+      "name" : "Gmills hny nut cheerios sweetened whl grn oat cereal",
+      "brand" : "General Mills",
+      "kilojoulesPer100g" : 1712.19,
+      "proteinGramsPer100g" : 7.14,
+      "carbGramsPer100g" : 78.57,
+      "fatGramsPer100g" : 5.36,
+      "declaredServingGrams" : 28,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "0038000138416",
+      "name" : "Original Potato Crisps",
+      "brand" : "Pringles",
+      "kilojoulesPer100g" : 2244.5,
+      "proteinGramsPer100g" : 3.5,
+      "carbGramsPer100g" : 57,
+      "fatGramsPer100g" : 32,
+      "declaredServingGrams" : 28,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "3017620422003",
+      "name" : "Nutella",
+      "brand" : "Nutella, Ferrero, Yum yum",
+      "kilojoulesPer100g" : 2252,
+      "proteinGramsPer100g" : 6.3,
+      "carbGramsPer100g" : 57.5,
+      "fatGramsPer100g" : 30.9,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "3229820129488",
+      "name" : "Muesli Raisin, Figue, Datte, Abricot",
+      "brand" : "Bjorg",
+      "kilojoulesPer100g" : 1485,
+      "proteinGramsPer100g" : 11,
+      "carbGramsPer100g" : 59,
+      "fatGramsPer100g" : 5.8,
+      "declaredServingGrams" : 60,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "4897878000012",
+      "name" : "出前一丁",
+      "brand" : "Nissin, Nissin Demae",
+      "kilojoulesPer100g" : 2023,
+      "proteinGramsPer100g" : 11,
+      "carbGramsPer100g" : 57,
+      "fatGramsPer100g" : 23,
+      "declaredServingGrams" : 100,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "5000159461122",
+      "name" : "Snickers",
+      "kilojoulesPer100g" : 2018,
+      "proteinGramsPer100g" : 8.6,
+      "carbGramsPer100g" : 60.5,
+      "fatGramsPer100g" : 22.5,
+      "declaredServingGrams" : 50,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "5000232018700",
+      "name" : "Orange Juice from Concentrate 100% Pure Smooth",
+      "brand" : "Princes",
+      "kilojoulesPer100g" : 173,
+      "proteinGramsPer100g" : 0.6,
+      "carbGramsPer100g" : 8.9,
+      "fatGramsPer100g" : 0.5,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "5054268934602",
+      "name" : "Chicken Breast Fillets",
+      "brand" : "Tesco",
+      "kilojoulesPer100g" : 467.4,
+      "proteinGramsPer100g" : 24.3,
+      "carbGramsPer100g" : 0.1,
+      "fatGramsPer100g" : 1.4,
+      "declaredServingGrams" : 300,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "5201168416138",
+      "name" : "Authentic Greek yoghurt 0%",
+      "brand" : "Dodoni",
+      "kilojoulesPer100g" : 201,
+      "proteinGramsPer100g" : 9,
+      "carbGramsPer100g" : 2.8,
+      "fatGramsPer100g" : 0,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "5449000000996",
+      "name" : "Coca-Cola",
+      "brand" : "COCA-COLA SERVICES SA/NV, Coca-Cola",
+      "kilojoulesPer100g" : 180,
+      "proteinGramsPer100g" : 0,
+      "carbGramsPer100g" : 10.6,
+      "fatGramsPer100g" : 0,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "5449000131805",
+      "name" : "Coca-Cola Zero Azúcar",
+      "brand" : "Coca-Cola",
+      "kilojoulesPer100g" : 0.9,
+      "proteinGramsPer100g" : 0,
+      "carbGramsPer100g" : 0,
+      "fatGramsPer100g" : 0,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "80177173",
+      "name" : "Nutella",
+      "brand" : "Ferrero",
+      "kilojoulesPer100g" : 2227.9,
+      "proteinGramsPer100g" : 6.3,
+      "carbGramsPer100g" : 57.5,
+      "fatGramsPer100g" : 30.9,
+      "declaredServingGrams" : 15,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "8076809513692",
+      "name" : "Napoletana",
+      "brand" : "Barilla",
+      "kilojoulesPer100g" : 280.5,
+      "proteinGramsPer100g" : 1.4,
+      "carbGramsPer100g" : 6.2,
+      "fatGramsPer100g" : 3.7,
+      "declaredServingGrams" : 100,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300601000562",
+      "name" : "White Long Grain Rice",
+      "brand" : "coles",
+      "kilojoulesPer100g" : 1528.8,
+      "proteinGramsPer100g" : 6.8,
+      "carbGramsPer100g" : 80.2,
+      "fatGramsPer100g" : 1,
+      "declaredServingGrams" : 50,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300601186945",
+      "name" : "Full Cream Milk",
+      "brand" : "coles",
+      "kilojoulesPer100g" : 261.6,
+      "proteinGramsPer100g" : 3.4,
+      "carbGramsPer100g" : 4.4,
+      "fatGramsPer100g" : 3.4,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300605126527",
+      "name" : "Milo",
+      "brand" : "Nestlé",
+      "kilojoulesPer100g" : 1690,
+      "proteinGramsPer100g" : 12.3,
+      "carbGramsPer100g" : 59.5,
+      "fatGramsPer100g" : 12.3,
+      "declaredServingGrams" : 20,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300633584535",
+      "name" : "Tuna in Springwater",
+      "brand" : "Woolworths",
+      "kilojoulesPer100g" : 492,
+      "proteinGramsPer100g" : 26.9,
+      "carbGramsPer100g" : 0.3,
+      "fatGramsPer100g" : 0.8,
+      "declaredServingGrams" : 61,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300650018860",
+      "name" : "Vegemite",
+      "brand" : "Mondelez Australia Foods",
+      "kilojoulesPer100g" : 798,
+      "proteinGramsPer100g" : 25.4,
+      "carbGramsPer100g" : 19.9,
+      "fatGramsPer100g" : 1,
+      "declaredServingGrams" : 5,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300657009854",
+      "name" : "baked beans cheesy tomato",
+      "brand" : "Heinz",
+      "kilojoulesPer100g" : 385,
+      "proteinGramsPer100g" : 5.3,
+      "carbGramsPer100g" : 13.1,
+      "fatGramsPer100g" : 0.8,
+      "declaredServingGrams" : 210,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9300675024235",
+      "name" : "Powerade Mountain Blast",
+      "brand" : "Coca-Cola, Powerade",
+      "kilojoulesPer100g" : 105,
+      "proteinGramsPer100g" : 0,
+      "carbGramsPer100g" : 5.8,
+      "fatGramsPer100g" : 0,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9310645356686",
+      "name" : "Rolled Oats",
+      "brand" : "Coles",
+      "kilojoulesPer100g" : 1590,
+      "proteinGramsPer100g" : 13.1,
+      "carbGramsPer100g" : 66.8,
+      "fatGramsPer100g" : 8.9,
+      "declaredServingGrams" : 40,
+      "energyBasis" : "derivedFromKilocalories"
+    },
+    {
+      "barcode" : "9319133333574",
+      "name" : "Carman's Super Berry Muesli Bars (Cranberry, Blueberry & Goji)",
+      "brand" : "Carman's",
+      "kilojoulesPer100g" : 1847.33,
+      "proteinGramsPer100g" : 9.78,
+      "carbGramsPer100g" : 53.78,
+      "fatGramsPer100g" : 19.33,
+      "declaredServingGrams" : 45,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9339423001075",
+      "name" : "Wholemeal Sandwich",
+      "brand" : "Tip Top",
+      "kilojoulesPer100g" : 1040,
+      "proteinGramsPer100g" : 12.4,
+      "carbGramsPer100g" : 30.6,
+      "fatGramsPer100g" : 6.4,
+      "declaredServingGrams" : 79,
+      "energyBasis" : "publishedKilojoules"
+    },
+    {
+      "barcode" : "9414942010910",
+      "name" : "Weet-Bix",
+      "brand" : "Sanitarium",
+      "kilojoulesPer100g" : 1480,
+      "proteinGramsPer100g" : 12,
+      "carbGramsPer100g" : 67,
+      "fatGramsPer100g" : 1.4,
+      "declaredServingGrams" : 30,
+      "energyBasis" : "publishedKilojoules"
+    }
+  ]
+}
