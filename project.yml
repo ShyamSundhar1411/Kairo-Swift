@@ -2,7 +2,7 @@
 # both linking the local KairoKit package.
 #
 #   brew install xcodegen
-#   cd apps && xcodegen generate && open Kairo.xcodeproj
+#   cd mobile && xcodegen generate && open Kairo.xcodeproj
 #
 # Info.plist and the entitlements file are GENERATED from this spec, so every
 # key lives here. Editing ios/KairoApp/Resources/Info.plist by hand — or letting
@@ -18,8 +18,11 @@ options:
   createIntermediateGroups: true
 
 packages:
+  # The on-device domain now sits alongside the apps rather than in a shared
+  # top-level directory: the agent layer moved to the Python backend, so nothing
+  # outside mobile/ links this package any more.
   Kairo:
-    path: ../packages/KairoKit
+    path: KairoKit
 
 targets:
   KairoApp:
