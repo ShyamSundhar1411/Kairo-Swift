@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Generates Kairo.xcodeproj.
 #
-# Signing is per-developer, so it is not in the spec directly — it comes from
-# mobile/signing.env, which is gitignored. An unset variable would otherwise be
-# written into the project as the literal string "${KAIRO_DEV_TEAM}", which
-# fails to build for everyone who has not set it.
+# Signing lives in mobile/signing.env, which is committed so the team can clone
+# and hit run. It is read here rather than written into the spec directly because
+# XcodeGen leaves an unset ${KAIRO_DEV_TEAM} in the project as a literal string,
+# which then fails to build; exporting an empty default keeps that from happening
+# if the file is ever missing.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -16,8 +17,8 @@ export KAIRO_DEV_TEAM="${KAIRO_DEV_TEAM:-}"
 export KAIRO_BUNDLE_SUFFIX="${KAIRO_BUNDLE_SUFFIX:-}"
 
 if [ -z "$KAIRO_DEV_TEAM" ]; then
-  echo "note: no KAIRO_DEV_TEAM — simulator builds work, a device build will need"
-  echo "      a team. Copy signing.env.example to signing.env and fill it in."
+  echo "note: no KAIRO_DEV_TEAM — simulator builds work, a device build will not."
+  echo "      Set one in mobile/signing.env."
 fi
 
 xcodegen generate

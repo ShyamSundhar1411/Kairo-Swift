@@ -81,7 +81,13 @@ targets:
       path: ios/KairoApp/Resources/KairoApp.entitlements
       properties:
         com.apple.developer.healthkit: true
-        com.apple.developer.healthkit.access: []
+        # com.apple.developer.healthkit.access is deliberately absent. That key is
+        # HealthKit Access (Verifiable Health Records) — clinical records over
+        # FHIR — which a personal Apple ID cannot be granted, so requesting it
+        # fails every device build with a provisioning error. Kairo does not read
+        # clinical records: the requirement document rules them out, because they
+        # need the user's provider to be a supported institution and in Australia
+        # that is effectively nobody.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: au.edu.sydney.elec5620.kairo${KAIRO_BUNDLE_SUFFIX}
@@ -120,8 +126,9 @@ targets:
         # could not have read a sensor even with the code for it. Movement and
         # stand data are recorded on this device; reading them here is what lets
         # the sitting page show a real number instead of a zero.
+        #
+        # As on the phone, no healthkit.access key — see the note above.
         com.apple.developer.healthkit: true
-        com.apple.developer.healthkit.access: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: au.edu.sydney.elec5620.kairo${KAIRO_BUNDLE_SUFFIX}.watchkitapp
