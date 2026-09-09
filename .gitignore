@@ -26,3 +26,6 @@ secrets.json
 # tracked, so listing it here would only be confusing — the entry is left out on
 # purpose. Rotate the key when the unit ends, and remember that git history keeps
 # it even after a delete.
+
+# Per-developer signing, never committed
+mobile/signing.env
