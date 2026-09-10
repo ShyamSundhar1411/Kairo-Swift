@@ -37,6 +37,16 @@ public struct ArbitrationResult: Sendable {
     public let schedule: NudgeSchedule
     public let record: DecisionRecord
 
+    /// Public so the app can rebuild one from a decision the backend made,
+    /// replaying it through the same state machines rather than rendering JSON.
+    public init(delivered: [Nudge], suppressed: [Nudge],
+                schedule: NudgeSchedule, record: DecisionRecord) {
+        self.delivered = delivered
+        self.suppressed = suppressed
+        self.schedule = schedule
+        self.record = record
+    }
+
     /// True when the arbiter deliberately spent nothing. Not a failure.
     public var spentNothing: Bool { delivered.isEmpty }
 

@@ -58,6 +58,11 @@ struct AttentionReceiptView: View {
             .padding(.bottom, 28)
         }
         .background(KairoCanvas())
+        .toolbar {
+            NavigationLink { BackendSettingsView() } label: {
+                Label("Agents", systemImage: "point.3.connected.trianglepath.dotted")
+            }
+        }
         .navigationTitle("Attention")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -271,7 +276,7 @@ struct AttentionReceiptView: View {
         model.schedule = NudgeSchedule(dayStart: model.schedule.dayStart,
                                        dailyBudget: ceiling,
                                        spent: model.schedule.spent)
-        model.runArbitration()
+        Task { await model.runArbitration() }
     }
 
     // MARK: - Quiet hours

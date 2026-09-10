@@ -9,6 +9,14 @@ final class AppModel {
     let env: AppEnvironment
 
     private(set) var arbitration: ArbitrationResult?
+    /// Stable per install, so the backend's per-user cost budget means something.
+    let userID: String = {
+        let key = "kairo.userID"
+        if let existing = UserDefaults.standard.string(forKey: key) { return existing }
+        let fresh = UUID().uuidString.prefix(8).lowercased()
+        UserDefaults.standard.set(String(fresh), forKey: key)
+        return String(fresh)
+    }()
     private(set) var coverage: DayCoverage
     /// Today's movement, as actually read. nil until something has looked, which
     /// is deliberately distinct from a day with nothing in it.
@@ -40,8 +48,19 @@ final class AppModel {
     var schedule = NudgeSchedule(dayStart: DateHelp.at(2026, 8, 25), dailyBudget: 6, spent: 4)
     var profile: CapabilityProfile = .unrestricted
 
-    init(environment: AppEnvironment) {
+    /// Where the agent backend is, and whether it is answering.
+    let backend: BackendConnection
+
+    /// What produced the arbitration currently on screen. The UI says so, because
+    /// five reasoning roles and a local heuristic must not be indistinguishable.
+    enum Source: Equatable { case agents(recordID: String), onDevice }
+    private(set) var arbitrationSource: Source = .onDevice
+    /// Which roles contributed, when the backend served it.
+    private(set) var contributingRoles: [String] = []
+
+    init(environment: AppEnvironment, backend: BackendConnection = BackendConnection()) {
         self.env = environment
+        self.backend = backend
         let dayStart = Calendar.current.startOfDay(for: environment.clock.now)
         self.hydration = HydrationLog(dayStart: dayStart)
 
@@ -57,11 +76,15 @@ final class AppModel {
         self.coverage = c
     }
 
+    @MainActor
     func bootstrap() async {
         reloadMemories()
         refreshObservations()
         attachWrist()
-        runArbitration()
+        // Ask the backend who it is before arbitrating, so the first pass either
+        // comes from the agents or is honestly labelled as not having.
+        await backend.check()
+        await runArbitration()
         // The wrist may have been showing its own local guess since the last
         // launch. Tell it what the phone thinks before it has to ask.
         pushDayState()
@@ -79,7 +102,123 @@ final class AppModel {
 
     /// CF7 — one pass of the attention budget. Called on launch, on a new bid, and
     /// whenever the user changes their attention contract (OF3).
-    func runArbitration() {
+    /// CF7. The five roles bid when the backend is reachable; the on-device
+    /// arbiter does when it is not.
+    ///
+    /// The fallback is not a degraded copy — it is the same allocation policy,
+    /// which is what NFR9 requires and what the cross-language conformance test
+    /// pins. What differs is where the *bids* come from: real reasoning over the
+    /// current readings, or the seeded ones. That difference is reported rather
+    /// than hidden.
+    @MainActor
+    func runArbitration() async {
+        if let client = backend.client {
+            do {
+                try await arbitrateRemotely(client)
+                return
+            } catch {
+                // Keep working, but say so. An app that silently drops from the
+                // agents to a local heuristic and looks identical either way is
+                // exactly the failure this project keeps arguing against.
+                backend.noteFailure(error)
+            }
+        }
+        arbitrateOnDevice()
+    }
+
+    @MainActor
+    private func arbitrateRemotely(_ client: RemoteAgentClient) async throws {
+        let result = try await client.arbitrate(
+            userID: userID, now: env.clock.now, schedule: schedule, coverage: coverage,
+            observations: observations, quietHours: false, profile: profile)
+
+        // Replay the backend's decision through the device's own state machine
+        // rather than rendering the JSON directly. The views then need no second
+        // code path, and `Lifecycle` rejects any combination the machine does not
+        // allow — a backend that claimed a nudge was both suppressed and
+        // delivered would be caught here instead of drawn.
+        let now = env.clock.now
+        let local = try replay(result, at: now)
+
+        arbitration = local
+        schedule = NudgeSchedule(dayStart: schedule.dayStart,
+                                 dailyBudget: schedule.dailyBudget, spent: result.spent)
+        arbitrationSource = .agents(recordID: result.recordID)
+        contributingRoles = result.contributingRoles
+        records.append(local.record)
+        backend.noteServed()
+
+        for nudge in local.delivered {
+            if let ch = env.channels.first(where: { $0.kind == nudge.channel }) {
+                try? ch.deliver(nudge)
+            }
+        }
+    }
+
+    /// Turns the backend's answer back into domain values.
+    private func replay(_ result: RemoteAgentClient.Arbitration,
+                        at now: Date) throws -> ArbitrationResult {
+        func nudge(_ remote: RemoteAgentClient.RemoteNudge,
+                   delivered: Bool) throws -> Nudge {
+            var n = Nudge(bid: NudgeBid(
+                id: remote.id, nudgeClass: remote.nudgeClass, originAgent: remote.originAgent,
+                expectedBenefit: remote.score, urgency: remote.receptivity,
+                windowOpens: now.addingTimeInterval(-60),
+                windowCloses: now.addingTimeInterval(1800),
+                text: remote.text))
+            n.score = remote.score
+            n.receptivity = remote.receptivity
+            n.channel = remote.channel
+            n.suppressionReason = remote.suppressionReason
+            try n.lifecycle.transition(on: "admitted", to: .queued, at: now)
+            try n.lifecycle.transition(on: "scoredByReceptivity", to: .scored, at: now)
+            if delivered {
+                try n.lifecycle.transition(on: "allocated", to: .scheduled, at: now)
+            } else {
+                try n.lifecycle.transition(on: event(for: remote.suppressionReason),
+                                           to: .suppressed, at: now)
+            }
+            return n
+        }
+
+        let delivered = try result.delivered.map { try nudge($0, delivered: true) }
+        let suppressed = try result.suppressed.map { try nudge($0, delivered: false) }
+
+        var record = DecisionRecord(id: result.recordID, createdAt: now)
+        for role in result.contributingRoles {
+            try record.add(ContributionFragment(agentID: role, promptVersion: "backend",
+                                                claim: "", confidence: 1))
+        }
+        for cited in result.citedMemories {
+            try record.cite(MemoryCitation(memoryID: cited.id,
+                                           confidenceAtCitation: cited.confidence))
+        }
+        for n in suppressed {
+            try record.reject(RejectedAlternative(
+                bidID: n.bid.id, nudgeClass: n.bid.nudgeClass, score: n.score,
+                reason: n.suppressionReason ?? .outranked))
+        }
+        try record.setSafetyVerdict("pass", tier: result.serviceTier)
+        try record.lifecycle.transition(on: "allFragmentsCollected", to: .sealed, at: now)
+
+        return ArbitrationResult(delivered: delivered, suppressed: suppressed,
+                                 schedule: schedule, record: record)
+    }
+
+    private func event(for reason: SuppressionReason?) -> String {
+        switch reason {
+        case .budgetExhausted:  "budgetExhausted"
+        case .quietHours:       "quietHours"
+        case .costCeiling:      "costCeilingReached"
+        case .classSuspended:   "classSuspendedByContract"
+        case .windowNotOpen:    "windowNotOpen"
+        case .duplicateClass:   "duplicateInClass"
+        default:                "outrankedByAnotherBid"
+        }
+    }
+
+    @MainActor
+    private func arbitrateOnDevice() {
         let now = env.clock.now
         let input = ArbitrationInput(
             now: now, schedule: schedule,
@@ -91,6 +230,8 @@ final class AppModel {
             arbitration = result
             schedule = result.schedule
             records.append(result.record)
+            arbitrationSource = .onDevice
+            contributingRoles = []
             for n in result.delivered {
                 if let ch = env.channels.first(where: { $0.kind == n.channel }) {
                     try? ch.deliver(n)
@@ -131,7 +272,7 @@ final class AppModel {
         guard var c = contract else { return }
         try? c.lifecycle.transition(on: "userAccepted", to: .active, at: env.clock.now)
         contract = c
-        runArbitration()
+        Task { await runArbitration() }
     }
 
     func declineContract() {
@@ -187,7 +328,7 @@ final class AppModel {
                 // New evidence is precisely when a finite budget should be
                 // reconsidered: the hydration bid is now either cheaper to justify
                 // or gone entirely.
-                runArbitration()
+                Task { await runArbitration() }
             }
 
             // Pushed either way. A duplicate usually means the watch was not sure
