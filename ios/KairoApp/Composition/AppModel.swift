@@ -45,7 +45,11 @@ final class AppModel {
     /// situations from "linked but out of range".
     var wristAvailable: Bool { env.wrist != nil }
 
-    var schedule = NudgeSchedule(dayStart: DateHelp.at(2026, 8, 25), dailyBudget: 6, spent: 4)
+    /// CF7. Set in `init` from the bound clock, not here: as a property
+    /// initialiser this carried the report's 25 August and four interruptions
+    /// already spent, so a phone that had delivered nothing opened on "5 of 6
+    /// spent" and had one interruption left for the whole day it had not yet had.
+    var schedule: NudgeSchedule
     var profile: CapabilityProfile = .unrestricted
 
     /// Where the agent backend is, and whether it is answering.
@@ -58,27 +62,48 @@ final class AppModel {
     /// Which roles contributed, when the backend served it.
     private(set) var contributingRoles: [String] = []
 
-    init(environment: AppEnvironment, backend: BackendConnection = BackendConnection()) {
+    /// - Parameter seedingScenario: whether to open on the Stage 1 coverage the
+    ///   report documents. True for `.demo`, false for a real phone.
+    ///
+    ///   These four numbers were unconditional, which made them the last piece of
+    ///   the report's scenario still on screen after the clock and the health port
+    ///   became real: a phone that had measured nothing still displayed "seen 4 of
+    ///   5". Coverage is what `SafetyGate` consults to decide how strongly Kairo
+    ///   may speak, so a seeded figure does not merely mislead the reader — it
+    ///   licenses assertions the readings never supported.
+    ///
+    ///   Unseeded, a domain nothing has measured reports a fraction of zero and
+    ///   `permittedForm` drops to its most restrictive rung. Silence about an
+    ///   unmeasured day is the correct output.
+    init(environment: AppEnvironment,
+         backend: BackendConnection = BackendConnection(),
+         seedingScenario: Bool = false) {
         self.env = environment
         self.backend = backend
         let dayStart = Calendar.current.startOfDay(for: environment.clock.now)
         self.hydration = HydrationLog(dayStart: dayStart)
 
+        // The report's Tuesday opens mid-afternoon with four interruptions
+        // already behind it; a real day starts at zero and is spent as it goes.
+        self.schedule = NudgeSchedule(dayStart: dayStart, dailyBudget: 6,
+                                      spent: seedingScenario ? 4 : 0)
+
         var c = DayCoverage(dayStart: dayStart)
-        c.record(CoverageMetric(domain: .meals, observedCount: 2, expectedCount: 3))
-        c.record(CoverageMetric(domain: .sleep, observedCount: 1, expectedCount: 1))
-        c.record(CoverageMetric(domain: .movement, observedCount: 20, expectedCount: 24))
-        // The Stage 1 scenario the report documents, and the figure the app opens
-        // on. It is a seed, not a measurement: the first sip that actually arrives
-        // from the wrist replaces it with `hydration.coverageMetric()`, which will
-        // read lower and honestly so — four of five sips was never observed.
-        c.record(CoverageMetric(domain: .hydration, observedCount: 4, expectedCount: 5))
+        if seedingScenario {
+            c.record(CoverageMetric(domain: .meals, observedCount: 2, expectedCount: 3))
+            c.record(CoverageMetric(domain: .sleep, observedCount: 1, expectedCount: 1))
+            c.record(CoverageMetric(domain: .movement, observedCount: 20, expectedCount: 24))
+            // The first sip that actually arrives from the wrist replaces this
+            // with `hydration.coverageMetric()`, which will read lower and
+            // honestly so — four of five sips was never observed.
+            c.record(CoverageMetric(domain: .hydration, observedCount: 4, expectedCount: 5))
+        }
         self.coverage = c
     }
 
     @MainActor
     func bootstrap() async {
-        reloadMemories()
+        await reloadMemories()
         refreshObservations()
         attachWrist()
         // Ask the backend who it is before arbitrating, so the first pass either
@@ -95,9 +120,49 @@ final class AppModel {
         pushDayLog()
     }
 
-    func reloadMemories() {
+    /// CF10. Read from wherever the agents retrieve, so the book and the facts
+    /// the roles reason over cannot be two different lists.
+    ///
+    /// They were, until now: the screen rendered a locally seeded store while the
+    /// backend reasoned over its own. A fact extracted on the server never showed
+    /// up, and forgetting one here left it in every answer the roles gave.
+    @MainActor
+    func reloadMemories() async {
+        if let client = backend.client {
+            do {
+                memories = try await client.memoryBook(at: env.clock.now)
+                    .sorted { $0.confidence > $1.confidence }
+                return
+            } catch {
+                backend.noteFailure(error)
+            }
+        }
+        reloadLocalMemories()
+    }
+
+    /// The on-device store. In `.demo` this is the Stage 1 seed the report draws;
+    /// in `.live` it is empty until the backend answers, and an empty book is the
+    /// honest picture of a phone that has not talked to the agents yet.
+    @MainActor
+    func reloadLocalMemories() {
         memories = ((try? env.memoryStore.query("", k: 50, maxSensitivity: .health)) ?? [])
             .sorted { $0.confidence > $1.confidence }
+    }
+
+    /// CF10: the delete is real, and it happens where the retrieval happens.
+    @MainActor
+    func forget(_ memory: MemoryItem) async {
+        if let client = backend.client {
+            do {
+                try await client.forget(memoryID: memory.id)
+                await reloadMemories()
+                return
+            } catch {
+                backend.noteFailure(error)
+            }
+        }
+        try? env.memoryStore.delete(id: memory.id)
+        reloadLocalMemories()
     }
 
     /// CF7 — one pass of the attention budget. Called on launch, on a new bid, and
@@ -472,6 +537,13 @@ final class AppModel {
     private func refreshObservations() {
         let now = env.clock.now
         refreshMovement()
+        let sleepHours = (try? env.health.sleepHours(on: now)) ?? nil
+        // One night, either read or not. `nil` here means HealthKit returned
+        // nothing — which is also the only signal a denied read ever produces —
+        // so it is recorded as zero coverage rather than as a night of no sleep.
+        coverage.record(CoverageMetric(domain: .sleep,
+                                       observedCount: sleepHours == nil ? 0 : 1,
+                                       expectedCount: 1))
         observations = Observations(
             // Prefer the movement read's own figure: it is derived from step
             // buckets against a wear denominator, where the port's getter has
@@ -480,7 +552,7 @@ final class AppModel {
                 ?? (try? env.health.sedentaryMinutes(at: now)),
             hydrationML: hydration.sips.isEmpty ? nil : hydration.totalMillilitres,
             hydrationTargetML: hydration.targetMillilitres,
-            sleepHoursLastNight: (try? env.health.sleepHours(on: now)) ?? nil)
+            sleepHoursLastNight: sleepHours)
     }
 
     /// The richer movement read lives on the concrete adapter rather than on the

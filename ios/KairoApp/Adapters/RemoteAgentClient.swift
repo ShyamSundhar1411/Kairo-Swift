@@ -206,6 +206,50 @@ public struct RemoteAgentClient: Sendable {
             limits: json["limits"] as? String)
     }
 
+    /// The memory book the agents actually retrieve from.
+    ///
+    /// The app used to render a locally seeded list here, which meant the
+    /// Memory Book screen and the memories the roles reasoned over were two
+    /// different sets of facts that happened to look alike. Forgetting one on
+    /// the server left it on screen, and a fact extracted on the server never
+    /// appeared at all.
+    ///
+    /// States are replayed through `MemoryItemState` rather than assigned, so a
+    /// state this app's machine does not declare is dropped instead of shown.
+    public func memoryBook(at now: Date) async throws -> [MemoryItem] {
+        let json = try await send(request(for: "v1/memories/book"))
+        return (json["memories"] as? [[String: Any]] ?? []).compactMap {
+            Self.memory($0, at: now)
+        }
+    }
+
+    /// CF10: forgetting has to happen where the agents read from, or the fact
+    /// stays in every answer they give while the screen says it is gone.
+    public func forget(memoryID: String) async throws {
+        _ = try await send(request(for: "v1/memories/\(memoryID)", method: "DELETE"))
+    }
+
+    static func memory(_ raw: [String: Any], at now: Date) -> MemoryItem? {
+        guard let id = raw["id"] as? String,
+              let text = raw["text"] as? String,
+              let stateName = raw["state"] as? String,
+              let state = MemoryItemState(rawValue: stateName),
+              let lifecycle = Lifecycle<MemoryItemState>.replaying(to: state, at: now)
+        else { return nil }
+
+        var item = MemoryItem(
+            id: id,
+            text: text,
+            confidence: raw["confidence"] as? Double ?? 0,
+            sensitivity: (raw["sensitivity"] as? String)
+                .flatMap(MemorySensitivity.init(rawValue:)) ?? .ordinary,
+            sourceRef: raw["sourceRef"] as? String ?? "agents",
+            decayExempt: raw["decayExempt"] as? Bool ?? false)
+        item.lifecycle = lifecycle
+        for recordID in raw["pinnedBy"] as? [String] ?? [] { item.pin(by: recordID) }
+        return item
+    }
+
     public func annotate(recordID: String, author: String, text: String) async throws {
         _ = try await send(request(for: "v1/decision-records/annotate",
                                    body: ["recordID": recordID, "author": author, "text": text]))
@@ -214,15 +258,17 @@ public struct RemoteAgentClient: Sendable {
     // MARK: - Transport
 
     private func request(for path: String, query: [String: String] = [:],
-                         body: [String: Any]? = nil) -> URLRequest {
+                         body: [String: Any]? = nil,
+                         method: String? = nil) -> URLRequest {
         var components = URLComponents(
             url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty {
             components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
         var request = URLRequest(url: components.url!)
+        if let method { request.httpMethod = method }
         if let body {
-            request.httpMethod = "POST"
+            request.httpMethod = method ?? "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         }

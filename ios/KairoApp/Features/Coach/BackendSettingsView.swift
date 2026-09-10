@@ -10,11 +10,24 @@ import KairoKit
 struct BackendSettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var isChecking = false
+    @State private var source = DataSource.current
 
     var body: some View {
         @Bindable var backend = model.backend
 
         Form {
+            Section {
+                Picker("Readings", selection: $source) {
+                    ForEach(DataSource.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Data")
+            } footer: {
+                Text(source.detail)
+            }
+            .onChange(of: source) { _, new in DataSource.store(new) }
+
             Section {
                 StatusRow(state: backend.state)
             } header: {
@@ -67,13 +80,20 @@ struct BackendSettingsView: View {
                         Text(last, style: .relative).foregroundStyle(.secondary)
                     }
                 }
+                LabeledContent("Readings from") {
+                    Text(source.title).foregroundStyle(.secondary)
+                }
             } header: {
                 Text("Provenance")
             } footer: {
                 Text("Kairo keeps working when the backend is gone — the arbiter also runs "
                      + "on this phone, which is what makes it usable offline. The difference "
                      + "is that the bids are no longer being reasoned about, and that is "
-                     + "worth knowing rather than hiding.")
+                     + "worth knowing rather than hiding.\n\n"
+                     + "The two rows above are separate questions. The agents decide which "
+                     + "nudge wins and how it is worded; where the readings come from is set "
+                     + "under Data. Agents reasoning over the demo scenario still return an "
+                     + "answer about a day nobody lived.")
             }
         }
         .navigationTitle("Agents")

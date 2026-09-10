@@ -124,9 +124,8 @@ struct MemoryBookView: View {
     /// CF10: the delete is real. It leaves the store, so it is gone from the
     /// next answer every agent gives — there is no shadow copy behind it.
     private func forget(_ memory: MemoryItem) {
-        try? model.env.memoryStore.delete(id: memory.id)
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-            model.reloadMemories()
+        Task {
+            await model.forget(memory)
         }
     }
 }

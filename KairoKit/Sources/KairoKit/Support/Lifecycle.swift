@@ -98,3 +98,52 @@ public struct Lifecycle<S: LifecycleState>: Sendable {
         s == S.initial || history.contains { $0.to == s }
     }
 }
+
+public extension Lifecycle {
+    /// Rebuilds an object that is already in `target` by walking the declared
+    /// edges to it, shortest route first.
+    ///
+    /// Needed wherever a state arrives from outside — the backend's memory book,
+    /// a decoded record — because the alternative is an initialiser that simply
+    /// assigns the state, and that is a hole straight through the machine: a
+    /// field the API can set to anything is not a lifecycle. Going through
+    /// `transition(on:to:at:)` means a state the diagram cannot reach is
+    /// rejected here rather than displayed.
+    ///
+    /// The history this produces is synthetic and says so: the events are the
+    /// ones the machine declares, not ones this device witnessed. That is the
+    /// honest reading — the device did not witness them, the server did.
+    ///
+    /// Returns nil when `target` is unreachable from `S.initial`.
+    static func replaying(to target: S, at now: Date) -> Lifecycle<S>? {
+        guard let route = route(to: target) else { return nil }
+        var lifecycle = Lifecycle<S>()
+        for step in route {
+            guard (try? lifecycle.transition(on: step.event, to: step.to, at: now)) != nil else {
+                return nil
+            }
+        }
+        return lifecycle
+    }
+
+    /// Breadth-first, so the route is the shortest declared one and the search
+    /// reads the same transition table the diagrams are generated from. A route
+    /// invented here rather than derived would be exactly the drift this project
+    /// spends its structure avoiding.
+    static func route(to target: S) -> [Transition<S>]? {
+        if target == S.initial { return [] }
+        var seen: Set<S> = [S.initial]
+        var queue: [(S, [Transition<S>])] = [(S.initial, [])]
+        while !queue.isEmpty {
+            let (state, path) = queue.removeFirst()
+            for edge in S.transitions where edge.from == state {
+                if seen.contains(edge.to) { continue }
+                let next = path + [edge]
+                if edge.to == target { return next }
+                seen.insert(edge.to)
+                queue.append((edge.to, next))
+            }
+        }
+        return nil
+    }
+}

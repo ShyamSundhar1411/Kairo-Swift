@@ -45,3 +45,51 @@ struct LifecycleTests {
         #expect(audit.deadEnds.isEmpty, "\(audit.machine): dead ends \(audit.deadEnds)")
     }
 }
+
+// MARK: - Replaying a state that arrived from outside
+
+@Suite("Lifecycle.replaying")
+struct LifecycleReplayTests {
+    private let now = Date(timeIntervalSince1970: 1_756_100_400)
+
+    @Test("reaches a state the machine declares, through declared edges only")
+    func replaysToActive() throws {
+        let lifecycle = try #require(Lifecycle<MemoryItemState>.replaying(to: .active, at: now))
+        #expect(lifecycle.state == .active)
+        // candidate --userConfirmed--> verified --promoted--> active
+        #expect(lifecycle.history.count == 2)
+        #expect(lifecycle.history.map(\.event) == ["userConfirmed", "promoted"])
+        #expect(lifecycle.visited(.verified))
+    }
+
+    @Test("the route is the shortest declared one")
+    func shortestRoute() throws {
+        let route = try #require(Lifecycle<MemoryItemState>.route(to: .decaying))
+        // active --noLongerObserved--> unconfirmed --decayWindowPassed--> decaying
+        #expect(route.map(\.to) == [.verified, .active, .unconfirmed, .decaying])
+    }
+
+    @Test("the initial state needs no events")
+    func initialIsFree() throws {
+        let lifecycle = try #require(Lifecycle<MemoryItemState>.replaying(to: .candidate, at: now))
+        #expect(lifecycle.state == .candidate)
+        #expect(lifecycle.history.isEmpty)
+    }
+
+    @Test("a state no declared edge reaches is refused, not fabricated")
+    func unreachableIsNil() {
+        // A machine whose only edge leaves the target orphaned. The point is that
+        // an outside caller cannot hand us a state the diagram does not contain
+        // and have it displayed as though the object had lived through it.
+        #expect(Lifecycle<Orphaned>.replaying(to: .unreachable, at: now) == nil)
+        #expect(Lifecycle<Orphaned>.route(to: .unreachable) == nil)
+    }
+
+    private enum Orphaned: String, LifecycleState {
+        case start, middle, unreachable
+        static let machineName = "Orphaned"
+        static let initial: Orphaned = .start
+        var isTerminal: Bool { false }
+        static let transitions: [Transition<Orphaned>] = [.init(.start, "go", .middle)]
+    }
+}

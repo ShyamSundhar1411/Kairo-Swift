@@ -18,12 +18,9 @@ struct AppEnvironment {
     /// bundled Open Food Facts extract, so the demo needs no network; live goes
     /// to Open Food Facts itself. Same port either way, same citation either way.
     var nutrition: NutritionRepository
-    /// nil in preview: the agents answer from the scripted provider instead.
-    var remote: RemoteAgentClient?
-    /// The phone half of the watch link. nil in preview for the same reason
-    /// `remote` is: the recorded demo runs with no server and no paired watch, and
-    /// a `WCSession` would make it depend on whichever hardware is in the room.
-    /// Live owns the session, and `AppModel` attaches its handlers to it.
+    /// The phone half of the watch link. Local IPC rather than network, so both
+    /// configurations own one: with no watch paired it simply never delivers
+    /// anything. `AppModel` attaches its handlers to it.
     var wrist: PhoneConnectivityBridge?
 
     static var preview: AppEnvironment {
@@ -47,16 +44,20 @@ struct AppEnvironment {
             safety: SafetyGate(),
             arbiter: NudgeArbiter(receptivity: receptivity),
             nutrition: BundledNutritionRepository(),
-            remote: nil,
             wrist: wrist)
     }
 
-    static func live(serverBaseURL: URL) -> AppEnvironment {
+    static var live: AppEnvironment {
         var env = preview
         env.clock = SystemClock()
         env.health = HealthKitDataSource()
         env.nutrition = OpenFoodFactsRepository()
-        env.remote = RemoteAgentClient(baseURL: serverBaseURL)
+        // No seeded memories. `preview` opens on the report's three facts, and a
+        // real wearer being told the app remembers they are lactose intolerant —
+        // when they never said so — is the same failure as a fabricated reading.
+        // The book fills from the backend, which is where the agents retrieve
+        // from; empty until then is the honest picture.
+        env.memoryStore = InMemoryMemoryStore([])
 
         // One session, shared: the bridge that receives from the wrist is the same
         // one the watch channel sends through. Two `WCSession` delegates would
