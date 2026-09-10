@@ -40,10 +40,15 @@ public struct SafetyGate: Sendable {
         }
         if let d = claimDomain, let cov = coverage {
             let form = cov.permittedForm(for: d)
+            // Nothing measured means nothing may be said, digits or not. The
+            // number test used to guard this branch too, so "No meals logged
+            // today" — a categorical claim about a day nothing was measured of —
+            // passed a gate whose whole purpose is to stop exactly that. Numbers
+            // are where an *over*claim usually shows up, not where a claim starts.
+            if form == .forbidden {
+                return .blocked(why: "no evidence for any claim about \(d.rawValue)")
+            }
             if form < .assertion && containsBareNumber(text) {
-                if form == .forbidden {
-                    return .blocked(why: "no evidence for any claim about \(d.rawValue)")
-                }
                 return .downgraded(downgrade(text, to: form, domain: d), to: form)
             }
         }

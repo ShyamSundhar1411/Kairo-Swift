@@ -206,6 +206,25 @@ public struct RemoteAgentClient: Sendable {
             limits: json["limits"] as? String)
     }
 
+    /// CF7 — report what the user did with an interruption this service allocated.
+    ///
+    /// Sent as well as stored locally, not instead: the phone's log is what the
+    /// on-device arbiter learns from when this service is unreachable, and the
+    /// service's is what the roles reason with. Reporting only locally would mean
+    /// the agents kept bidding into a class the user had dismissed twenty times.
+    ///
+    /// The instant carries this phone's offset, for the reason `instant` explains:
+    /// the hour of the user's day is what the model learns from, and letting the
+    /// server stamp it would file a Sydney afternoon under the region's hour.
+    public func report(outcome: NudgeOutcome, userID: String) async throws {
+        _ = try await send(request(for: "v1/nudges/outcome", body: [
+            "userID": userID,
+            "nudgeClass": outcome.nudgeClass,
+            "response": outcome.response.rawValue,
+            "at": Self.instant.string(from: outcome.at),
+        ]))
+    }
+
     /// The memory book the agents actually retrieve from.
     ///
     /// The app used to render a locally seeded list here, which meant the

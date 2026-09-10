@@ -31,6 +31,24 @@ public enum CoverageDomain: String, CaseIterable, Sendable {
 ///
 /// The Steward enforces this by rejecting the Coach's own outbound message and
 /// returning a downgraded form — the sequence diagram in Member B's chain.
+public extension CoverageDomain {
+    /// The domain a nudge of this class makes claims about, or nil when it claims
+    /// nothing measurable — a bid that only asks a question is not making one.
+    ///
+    /// This mapping is what lets CF6 apply to the nudges the user actually sees.
+    /// Until it existed the evidence gate was reachable from exactly one badge on
+    /// one screen, and every interruption the arbiter delivered went out unscreened.
+    static func claimed(byNudgeClass nudgeClass: String) -> CoverageDomain? {
+        switch nudgeClass {
+        case "hydration":                 return .hydration
+        case "sedentary", "movement":     return .movement
+        case "bedtimePrep", "sleep":      return .sleep
+        case "mealLog", "meal", "meals":  return .meals
+        default:                          return nil
+        }
+    }
+}
+
 public enum AssertionForm: Int, Comparable, Sendable {
     case forbidden = 0      // may not be said at all
     case question = 1       // "did you eat lunch?"

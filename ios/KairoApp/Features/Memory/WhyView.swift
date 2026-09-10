@@ -342,6 +342,7 @@ private struct RejectedRow: View {
         case .windowClosed:    "the useful moment passed"
         case .inaccessible:    "could not be delivered in a form you can act on"
         case .duplicateClass:  "a similar interruption was already delivered"
+        case .ungrounded:      "nothing was measured here today, so nothing was claimed"
         }
     }
 
@@ -356,6 +357,7 @@ private struct RejectedRow: View {
         case .windowClosed:    "clock.badge.xmark"
         case .inaccessible:    "figure.roll"
         case .duplicateClass:  "square.on.square"
+        case .ungrounded:      "eye.slash"
         }
     }
 

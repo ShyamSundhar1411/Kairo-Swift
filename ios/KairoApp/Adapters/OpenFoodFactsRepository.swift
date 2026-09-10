@@ -3,10 +3,11 @@ import KairoKit
 
 /// The only file in the app that knows Open Food Facts exists.
 ///
-/// `NutritionRepository` is the boundary; this is one implementation of it over
-/// URLSession, and `BundledNutritionRepository` is the other. Nothing upstream
-/// changes when you swap them, which is what lets the demo run with the network
-/// switched off.
+/// `NutritionRepository` is the boundary; this is the implementation of it, over
+/// URLSession. A bundled offline table used to sit behind the same port so the
+/// demo could run with the network switched off — it is gone, along with the
+/// rest of the fixtures. A lookup that cannot reach Open Food Facts now reports
+/// that it could not, which is worse to demo and true.
 ///
 /// WHAT THIS ADAPTER WILL AND WILL NOT DO
 ///

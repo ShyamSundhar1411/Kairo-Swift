@@ -15,11 +15,19 @@ public struct ArbitrationInput: Sendable {
     public let quietHours: Bool
     /// Remaining margin for this user this month (Section 7.1, the second budget).
     public let costRemaining: Money
+    /// CF6 — what was actually measured today. A bid making a claim about a domain
+    /// with no coverage behind it is suppressed rather than delivered.
+    ///
+    /// Optional because the arbiter must stay usable without it, and because
+    /// every existing caller predates it. `nil` means "not checked", which is the
+    /// old behaviour and is stated rather than hidden.
+    public let coverage: DayCoverage?
 
     public init(now: Date, schedule: NudgeSchedule, bids: [NudgeBid],
                 memories: [MemoryItem] = [], profile: CapabilityProfile = .unrestricted,
                 activeContract: PlanContract? = nil, quietHours: Bool = false,
-                costRemaining: Money = Money(cents: 10_000)) {
+                costRemaining: Money = Money(cents: 10_000),
+                coverage: DayCoverage? = nil) {
         self.now = now
         self.schedule = schedule
         self.bids = bids
@@ -28,6 +36,7 @@ public struct ArbitrationInput: Sendable {
         self.activeContract = activeContract
         self.quietHours = quietHours
         self.costRemaining = costRemaining
+        self.coverage = coverage
     }
 }
 
@@ -92,6 +101,19 @@ public struct NudgeArbiter: Sendable {
             }
             if input.quietHours {
                 try suppress(&n, .quietHours, "quietHours", at: input.now); suppressed.append(n); continue
+            }
+            // CF6, before anything competes. A bid the readings cannot support does
+            // not get to win an interruption and then be believed: the evidence
+            // gate existed and was wired to one badge on one screen, so every
+            // nudge the arbiter delivered went out unscreened. A model that has
+            // been told "energy logged: not measured" and answers "No meals logged
+            // today" is not lying about a number — there is no number — which is
+            // why the check cannot only look for digits.
+            if let coverage = input.coverage,
+               let domain = CoverageDomain.claimed(byNudgeClass: n.bid.nudgeClass),
+               coverage.permittedForm(for: domain) == .forbidden {
+                try suppress(&n, .ungrounded, "evidenceInsufficient", at: input.now)
+                suppressed.append(n); continue
             }
             if let c = input.activeContract, c.isActive,
                c.suspended.contains(SuspendedNudgeClass(n.bid.nudgeClass)) {

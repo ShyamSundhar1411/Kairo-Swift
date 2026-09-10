@@ -187,7 +187,14 @@ struct EnergyLedgerTests {
         let obs = ledger().observations
         #expect(obs.kilojoulesLogged == nil,
                 "0 kJ logged would read to an agent as a day of fasting")
-        #expect(!obs.lines.contains { $0.contains("energy logged") })
+        // This used to assert the line was *omitted*, which is what the code did
+        // and is not what the test is named after. Omission is not absence: with
+        // no line about food at all, the Nutrition role filled the silence with
+        // "No meals logged today" — a claim about the user's day from a service
+        // that cannot see their meal log. Saying so explicitly is the fix.
+        let line = obs.lines.first { $0.contains("energy logged") }
+        #expect(line?.contains("not measured") == true)
+        #expect(line?.contains("0 kJ") != true)
     }
 
     @Test("a non-positive target is reported as no target rather than as zero")

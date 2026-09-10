@@ -82,5 +82,5 @@ struct KairoStartup<Content: View>: View {
 
 #Preview("Startup") {
     KairoStartup { RootView() }
-        .environment(AppModel(environment: .preview))
+        .environment(AppModel(environment: .live))
 }

@@ -1,11 +1,27 @@
 import Foundation
 import KairoKit
 
-/// The composition root. Every port is bound here and nowhere else, which is what
-/// lets the whole app run on fakes with no network, no HealthKit and no API key.
+/// The composition root. Every port is bound here and nowhere else.
 ///
-/// `.preview` is the configuration the demo and the recorded video use: fully
-/// deterministic, offline, and reproducible. `.live` swaps in the real adapters.
+/// There used to be two configurations. `.preview` bound a `FixedClock` frozen at
+/// 25 August 2026 15:40, a stub health source, three seeded memories and an
+/// offline food table; `@main` bound it unconditionally, so the app on a real
+/// phone opened on the report's Tuesday no matter whose wrist it was on. It is
+/// gone. There is one configuration, and every port in it reaches something real:
+///
+/// | Port | Bound to |
+/// |---|---|
+/// | `clock` | the system clock |
+/// | `health` | HealthKit, which asks for authorisation on first read |
+/// | `memoryStore` | an empty on-device store; the book comes from the backend |
+/// | `receptivity` | `ObservedReceptivityModel` over this phone's outcome log |
+/// | `nutrition` | Open Food Facts |
+/// | `channels` | notifications, and the paired watch |
+///
+/// What none of them do is invent a reading. A port that cannot answer returns
+/// nothing, `Observations` reports it as not measured, and `DayCoverage` drops
+/// what Kairo is permitted to assert. Silence on an unmeasured day is the
+/// designed output, not a failure to populate the screen.
 struct AppEnvironment {
     var clock: Clock
     var memoryStore: MemoryStore
@@ -14,135 +30,36 @@ struct AppEnvironment {
     var channels: [NudgeChannel]
     var safety: SafetyGate
     var arbiter: NudgeArbiter
-    /// Where a kilojoule figure is allowed to come from. Preview reads the
-    /// bundled Open Food Facts extract, so the demo needs no network; live goes
-    /// to Open Food Facts itself. Same port either way, same citation either way.
+    /// Open Food Facts. A kilojoule figure carries the citation it came from, so
+    /// a lookup that fails is reported as a lookup that failed rather than
+    /// replaced with a plausible number.
     var nutrition: NutritionRepository
-    /// The phone half of the watch link. Local IPC rather than network, so both
-    /// configurations own one: with no watch paired it simply never delivers
-    /// anything. `AppModel` attaches its handlers to it.
+    /// The phone half of the watch link. Local IPC rather than network: with no
+    /// watch paired it simply never delivers anything. `AppModel` attaches its
+    /// handlers to it.
     var wrist: PhoneConnectivityBridge?
-
-    static var preview: AppEnvironment {
-        let clock = FixedClock(DateHelp.at(2026, 8, 25, 15, 40))
-        let receptivity = TableReceptivityModel([
-            "hydration": 0.70, "sedentary": 0.90, "bedtimePrep": 0.60,
-        ])
-        // The wrist bridge belongs in preview too. It is local IPC, not network:
-        // with no watch paired it simply never delivers anything, so preview
-        // stays offline and deterministic — but a paired watch can actually
-        // reach the phone. Leaving it nil here is what shipped, and it is why
-        // water logged on the wrist had nowhere to arrive: `@main` binds
-        // `.preview`, so the receiving end was never constructed.
-        let wrist = PhoneConnectivityBridge()
-        return AppEnvironment(
-            clock: clock,
-            memoryStore: InMemoryMemoryStore(SeedData.memories(at: clock.now)),
-            health: StubHealthDataSource(),
-            receptivity: receptivity,
-            channels: [WatchNudgeChannel(bridge: wrist), RecordingNudgeChannel(kind: .inApp)],
-            safety: SafetyGate(),
-            arbiter: NudgeArbiter(receptivity: receptivity),
-            nutrition: BundledNutritionRepository(),
-            wrist: wrist)
-    }
+    /// What receptivity is learned from. Held here as well as inside the model so
+    /// `AppModel` can append to it when the wrist reports an outcome.
+    var outcomes: NudgeOutcomeLog
 
     static var live: AppEnvironment {
-        var env = preview
-        env.clock = SystemClock()
-        env.health = HealthKitDataSource()
-        env.nutrition = OpenFoodFactsRepository()
-        // No seeded memories. `preview` opens on the report's three facts, and a
-        // real wearer being told the app remembers they are lactose intolerant —
-        // when they never said so — is the same failure as a fabricated reading.
-        // The book fills from the backend, which is where the agents retrieve
-        // from; empty until then is the honest picture.
-        env.memoryStore = InMemoryMemoryStore([])
-
         // One session, shared: the bridge that receives from the wrist is the same
         // one the watch channel sends through. Two `WCSession` delegates would
         // fight over `WCSession.default`, and only the last one assigned would
-        // ever hear anything — which is also why this reuses the bridge preview
-        // already built rather than making a second.
-        let bridge = env.wrist ?? PhoneConnectivityBridge()
-        env.wrist = bridge
-        env.channels = [NotificationNudgeChannel(), WatchNudgeChannel(bridge: bridge)]
-        return env
-    }
-}
-
-/// The scenario drawn in the Stage 1 object diagram, so the app opens on the
-/// exact state the report describes.
-enum SeedData {
-    static func memories(at now: Date) -> [MemoryItem] {
-        var m17 = MemoryItem(id: "m17", text: "ignores nudges before 9am",
-                             confidence: 0.81, sourceRef: "nudge-outcomes")
-        _ = try? m17.lifecycle.transition(on: "corroboratedByBehaviour", to: .verified, at: now)
-        _ = try? m17.lifecycle.transition(on: "promoted", to: .active, at: now)
-
-        var m23 = MemoryItem(id: "m23", text: "lactose intolerant", confidence: 0.97,
-                             sensitivity: .health, sourceRef: "user", decayExempt: true)
-        _ = try? m23.lifecycle.transition(on: "userConfirmed", to: .verified, at: now)
-        _ = try? m23.lifecycle.transition(on: "promoted", to: .active, at: now)
-
-        var m31 = MemoryItem(id: "m31", text: "walks the dog at 7pm on weekdays",
-                             confidence: 0.64, sourceRef: "motion-pattern")
-        _ = try? m31.lifecycle.transition(on: "corroboratedByBehaviour", to: .verified, at: now)
-        _ = try? m31.lifecycle.transition(on: "promoted", to: .active, at: now)
-        return [m17, m23, m31]
-    }
-
-    /// The three bids the report's object diagram shows, with their text taken
-    /// from `observations` where a real reading exists.
-    ///
-    /// With no observations this returns the documented Stage 1 scenario verbatim,
-    /// which is what `.preview` and the recorded demo open on. Once the wrist has
-    /// actually logged something the hydration figure is the real one — a card
-    /// that says "340 ml behind" while the user is looking at a glass they just
-    /// logged is the same bug in a different place.
-    static func bids(at now: Date, observations: Observations = .none) -> [NudgeBid] {
-        var out: [NudgeBid] = []
-
-        if let text = hydrationBidText(observations) {
-            out.append(NudgeBid(id: "b1", nudgeClass: "hydration",
-                                originAgent: AgentID.coach.rawValue,
-                                expectedBenefit: 0.60, urgency: 0.3,
-                                windowOpens: now.addingTimeInterval(-3600),
-                                windowCloses: now.addingTimeInterval(3600),
-                                text: text))
-        }
-
-        let sitting = observations.sedentaryMinutes ?? 82
-        out.append(NudgeBid(id: "b2", nudgeClass: "sedentary",
-                            originAgent: AgentID.lifestyle.rawValue,
-                            expectedBenefit: 0.79, urgency: 0.7,
-                            windowOpens: now.addingTimeInterval(-600),
-                            windowCloses: now.addingTimeInterval(1800),
-                            requiredCapabilities: [.standing, .walking],
-                            text: "\(sitting) minutes unbroken. Ninety seconds on your feet?"))
-
-        out.append(NudgeBid(id: "b3", nudgeClass: "bedtimePrep",
-                            originAgent: AgentID.lifestyle.rawValue,
-                            expectedBenefit: 0.55, urgency: 0.2,
-                            windowOpens: DateHelp.at(2026, 8, 25, 21, 30),
-                            windowCloses: DateHelp.at(2026, 8, 25, 23, 0),
-                            text: "Start winding down."))
-        return out
-    }
-
-    /// nil when there is nothing to say about water.
-    ///
-    /// Someone who has already hit their target does not get interrupted about it:
-    /// dropping the bid is the honest answer, and it also means the arbiter's
-    /// silence on the Today screen is earned rather than staged.
-    private static func hydrationBidText(_ observations: Observations) -> String? {
-        guard let logged = observations.hydrationML,
-              let target = observations.hydrationTargetML else {
-            // Not measured. The Stage 1 figure, unchanged.
-            return "You are 340 ml behind today."
-        }
-        let behind = target - logged
-        guard behind > 0 else { return nil }
-        return "You are \(behind) ml behind today."
+        // ever hear anything.
+        let wrist = PhoneConnectivityBridge()
+        let outcomes = StoredOutcomeLog()
+        let receptivity = ObservedReceptivityModel(log: outcomes)
+        return AppEnvironment(
+            clock: SystemClock(),
+            memoryStore: InMemoryMemoryStore([]),
+            health: HealthKitDataSource(),
+            receptivity: receptivity,
+            channels: [NotificationNudgeChannel(), WatchNudgeChannel(bridge: wrist)],
+            safety: SafetyGate(),
+            arbiter: NudgeArbiter(receptivity: receptivity),
+            nutrition: OpenFoodFactsRepository(),
+            wrist: wrist,
+            outcomes: outcomes)
     }
 }

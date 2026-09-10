@@ -19,6 +19,8 @@ public enum NudgeState: String, LifecycleState {
               guardText: "recorded as a COST suppression, never presented as restraint"),
         .init(.scored, "classSuspendedByContract", .suppressed),
         .init(.scored, "windowNotOpen", .suppressed, guardText: "the useful moment has not arrived yet"),
+        .init(.scored, "evidenceInsufficient", .suppressed,
+              guardText: "coverage permits no claim about this domain (CF6)"),
         .init(.scored, "duplicateInClass", .suppressed,
               guardText: "another bid in the same class scored higher"),
         .init(.scored, "allocated", .scheduled),
@@ -99,6 +101,8 @@ public struct NudgeBid: Sendable, Equatable {
 public enum SuppressionReason: String, Sendable {
     case budgetExhausted, quietHours, outranked, costCeiling, classSuspended
     case windowNotOpen, windowClosed, inaccessible, duplicateClass
+    /// CF6 — nothing measured in this domain, so nothing may be claimed about it.
+    case ungrounded
     /// The policy from Section 7.1: a cost suppression is never dressed up as restraint.
     public var isPresentableAsRestraint: Bool { self != .costCeiling }
 }

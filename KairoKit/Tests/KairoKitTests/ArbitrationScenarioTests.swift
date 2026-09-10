@@ -165,3 +165,78 @@ struct ArbitrationScenarioTests {
         #expect(r.delivered.first?.bid.nudgeClass == "hydration")
     }
 }
+
+/// CF6 applied where it matters: to the interruptions the user actually receives.
+///
+/// The gate existed and was reachable from one badge on one screen, so every
+/// nudge the arbiter delivered went out unscreened. These pin it to the path.
+@Suite("CF6 — a bid the readings cannot support is not delivered")
+struct EvidenceGateTests {
+    private let now = DateHelp.at(2026, 9, 10, 15, 40)
+
+    private func bid(_ cls: String, benefit: Double = 0.8) -> NudgeBid {
+        NudgeBid(id: "b-\(cls)", nudgeClass: cls, originAgent: "role",
+                 expectedBenefit: benefit, urgency: 0.5,
+                 windowOpens: now.addingTimeInterval(-600),
+                 windowCloses: now.addingTimeInterval(1800),
+                 text: "something about \(cls)")
+    }
+
+    private func arbiter() -> NudgeArbiter {
+        NudgeArbiter(receptivity: TableReceptivityModel(["mealLog": 0.9, "hydration": 0.9]))
+    }
+
+    private func coverage(_ metrics: [CoverageMetric]) -> DayCoverage {
+        var c = DayCoverage(dayStart: Calendar.current.startOfDay(for: now))
+        metrics.forEach { c.record($0) }
+        return c
+    }
+
+    @Test("a claim about a domain nothing measured is suppressed as ungrounded")
+    func unmeasuredDomainIsSuppressed() throws {
+        let result = try arbiter().arbitrate(ArbitrationInput(
+            now: now, schedule: NudgeSchedule(dayStart: now, dailyBudget: 6, spent: 0),
+            bids: [bid("mealLog")], coverage: coverage([])), recordID: "dr-1")
+
+        #expect(result.delivered.isEmpty)
+        #expect(result.suppressed.first?.suppressionReason == .ungrounded)
+        #expect(result.suppressed.first?.state == .suppressed)
+    }
+
+    @Test("the suppression is restraint, and is shown as such")
+    func ungroundedIsPresentableAsRestraint() {
+        // Unlike a cost suppression: declining to speak without evidence is a
+        // decision the user is entitled to see credited.
+        #expect(SuppressionReason.ungrounded.isPresentableAsRestraint)
+    }
+
+    @Test("a measured domain is unaffected")
+    func measuredDomainCompetesNormally() throws {
+        let result = try arbiter().arbitrate(ArbitrationInput(
+            now: now, schedule: NudgeSchedule(dayStart: now, dailyBudget: 6, spent: 0),
+            bids: [bid("hydration")],
+            coverage: coverage([CoverageMetric(domain: .hydration,
+                                               observedCount: 5, expectedCount: 5)])),
+            recordID: "dr-2")
+        #expect(result.delivered.count == 1)
+    }
+
+    @Test("without coverage the arbiter does not check, and says so by doing nothing")
+    func noCoverageMeansNoCheck() throws {
+        // The old behaviour, kept reachable on purpose: an arbiter with no
+        // coverage has not been told what was measured, which is different from
+        // being told nothing was.
+        let result = try arbiter().arbitrate(ArbitrationInput(
+            now: now, schedule: NudgeSchedule(dayStart: now, dailyBudget: 6, spent: 0),
+            bids: [bid("mealLog")]), recordID: "dr-3")
+        #expect(result.delivered.count == 1)
+    }
+
+    @Test("a class that claims nothing measurable is not gated")
+    func unmappedClassPasses() throws {
+        let result = try arbiter().arbitrate(ArbitrationInput(
+            now: now, schedule: NudgeSchedule(dayStart: now, dailyBudget: 6, spent: 0),
+            bids: [bid("checkIn")], coverage: coverage([])), recordID: "dr-4")
+        #expect(result.delivered.count == 1)
+    }
+}

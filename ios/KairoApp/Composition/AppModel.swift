@@ -287,7 +287,7 @@ final class AppModel {
         let now = env.clock.now
         let input = ArbitrationInput(
             now: now, schedule: schedule,
-            bids: SeedData.bids(at: now, observations: observations),
+            bids: LocalBidSource.bids(at: now, observations: observations),
             memories: memories, profile: profile,
             activeContract: contract, quietHours: false)
         do {
@@ -411,24 +411,52 @@ final class AppModel {
 
     /// CF7 — what the user did with an interruption on the wrist.
     ///
-    /// Deliberately minimal, and here is what is **not** wired: there is no
-    /// outcome store. `ReceptivityModel` is a read-only port and its only
-    /// implementation is a fixed table, so nothing in this app learns from an
-    /// outcome yet, and inventing a path that looked like learning would be worse
-    /// than admitting it. Nor does this survive a relaunch — `records` is
-    /// in-memory.
+    /// Two things happen, and they are different kinds of durable.
     ///
-    /// What it does do is real: the outcome is appended to the current decision
-    /// record, which is append-only after sealing and is already shown to the user
-    /// in WhyView. So a dismissal on the wrist is at least visible in the receipt
-    /// for the pass that spent the interruption.
+    /// The outcome is appended to the current decision record, which is
+    /// append-only after sealing and is shown to the user in WhyView — so a
+    /// dismissal is visible in the receipt for the pass that spent the
+    /// interruption. That part does not survive a relaunch; `records` is
+    /// in-memory until the backend seals them.
+    ///
+    /// It is also appended to the outcome log, which does survive, and which
+    /// `ObservedReceptivityModel` reads. Until recently this was the honest gap
+    /// in the app: `ReceptivityModel` documents itself as "learned from the
+    /// outcome history of past nudges" and the only implementation was a fixed
+    /// table, so a class the user dismissed every single time kept its 0.90 and
+    /// kept winning. The class is recovered from the bid that produced it, since
+    /// the wrist reports the bid id and receptivity is learned per class.
     private func recordOutcome(bidID: String, outcome: String, at: Date) {
+        if let response = NudgeOutcome.Response(rawValue: outcome),
+           let nudgeClass = nudgeClass(forBid: bidID) {
+            let record = NudgeOutcome(nudgeClass: nudgeClass, response: response, at: at)
+            env.outcomes.append(record)
+            // And to the agents, who do the bidding. Best effort: an outcome that
+            // cannot be reported is still learned from on this phone, and the
+            // failure is surfaced the same way every other backend failure is
+            // rather than retried behind the user's back.
+            if let client = backend.client {
+                Task { [userID] in
+                    do { try await client.report(outcome: record, userID: userID) }
+                    catch { await MainActor.run { backend.noteFailure(error) } }
+                }
+            }
+        }
         guard let i = records.indices.last else {
             lastError = "the wrist reported \(outcome) for \(bidID) before any pass had run"
             return
         }
         records[i].annotate(Annotation(
             at: at, author: "watch", text: "\(bidID): \(outcome) on the wrist"))
+    }
+
+    /// The class of a bid this pass raised. Nil when the wrist reports on
+    /// something this launch never saw — after a relaunch, say — in which case
+    /// the outcome is recorded in the receipt but not learned from, because
+    /// guessing the class would teach the model about the wrong one.
+    private func nudgeClass(forBid bidID: String) -> String? {
+        let all = (arbitration?.delivered ?? []) + (arbitration?.suppressed ?? [])
+        return all.first { $0.bid.id == bidID }?.bid.nudgeClass
     }
 
     /// The phone counts, so the phone tells the watch the total. The watch showing
