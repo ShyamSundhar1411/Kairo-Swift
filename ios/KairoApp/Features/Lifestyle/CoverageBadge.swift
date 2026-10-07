@@ -141,7 +141,7 @@ struct GatedClaim: View {
 
     private func headline(_ t: String) -> some View {
         Text(t)
-            .font(.system(size: 19, weight: .semibold, design: .rounded))
+            .font(.kairoSubject)
             .foregroundStyle(Kairo.ink)
             .fixedSize(horizontal: false, vertical: true)
     }

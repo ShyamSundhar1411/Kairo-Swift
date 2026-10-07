@@ -182,17 +182,43 @@ private extension UIColor {
 
 // MARK: - Type scale
 
+// MARK: - Type scale
+//
+// Every token is anchored to a text style, so all eight grow with Dynamic Type.
+// They were `Font.system(size:)` — eight fixed point sizes that did not move at
+// all between the smallest setting and accessibility XXXL, which made the type
+// scale the single largest accessibility defect in the app and made it one that
+// no feature screen could fix locally, because no feature screen names a size.
+//
+// `relativeTo:` rather than a bare text style wherever the design wants a size
+// the ladder does not have: the *ratio* to the style is preserved as the user
+// scales, which is what a custom scale needs and what a raw size cannot give.
+
 extension Font {
     /// The one number a screen is about.
-    static let kairoDisplay  = Font.system(size: 52, weight: .semibold, design: .rounded)
-    static let kairoNumber   = Font.system(size: 30, weight: .semibold, design: .rounded)
-    static let kairoTitle    = Font.system(size: 26, weight: .bold, design: .rounded)
-    static let kairoHeadline = Font.system(size: 17, weight: .semibold, design: .rounded)
-    static let kairoBody     = Font.system(size: 16, weight: .regular)
-    static let kairoCaption  = Font.system(size: 13, weight: .regular)
+    static let kairoDisplay  = Font.system(.largeTitle, design: .rounded).weight(.semibold)
+    static let kairoNumber   = Font.system(.title, design: .rounded).weight(.semibold)
+    static let kairoTitle    = Font.system(.title2, design: .rounded).weight(.bold)
+    static let kairoHeadline = Font.system(.headline, design: .rounded)
+    static let kairoBody     = Font.system(.body)
+    static let kairoCaption  = Font.system(.footnote)
     /// Small, tracked, uppercase — section labels and pills.
-    static let kairoLabel    = Font.system(size: 11, weight: .semibold, design: .rounded)
-    static let kairoMono     = Font.system(size: 12, weight: .medium, design: .monospaced)
+    static let kairoLabel    = Font.system(.caption2, design: .rounded).weight(.semibold)
+    static let kairoMono     = Font.system(.caption, design: .monospaced).weight(.medium)
+
+    /// The weight above `kairoHeadline` a card's own subject is set in. A text
+    /// style rather than a size for the same reason as everything above it, and
+    /// named rather than spelled out at each of the six call sites that had
+    /// `Font.system(size: 19, weight: .semibold, design: .rounded)` inline.
+    static let kairoSubject  = Font.system(.title3, design: .rounded).weight(.semibold)
+
+    /// A glyph beside text. Icons are the one place a fixed size is still right —
+    /// an SF Symbol that grows with the body text pushes a 44pt control out of a
+    /// row — so this exists to make that choice explicit and greppable rather
+    /// than to pretend the size scales.
+    static func kairoGlyph(_ size: CGFloat, weight: Weight = .bold) -> Font {
+        .system(size: size, weight: weight)
+    }
 }
 
 // MARK: - Canvas

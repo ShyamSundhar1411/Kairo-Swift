@@ -135,6 +135,8 @@ struct MealCaptureView: View {
             barcodeStatus
         }
 
+        visionWarning
+
         VStack(spacing: 8) {
             SectionHeader(title: "Photo", icon: "camera", tint: Kairo.leaf)
             if let photo = model.photo {
@@ -197,6 +199,37 @@ struct MealCaptureView: View {
                     model.recognise(candidates: [], grounded: false)
                 }
             }
+        }
+    }
+
+    /// The one provider fact that belongs on a feature screen.
+    ///
+    /// Everything else about which model answered is a settings fact. This is
+    /// not: it predicts a failure the user is about to walk into, and it has to
+    /// be said *before* they photograph anything rather than after, when the
+    /// answer comes back empty and looks like the app not recognising the dish.
+    @ViewBuilder private var visionWarning: some View {
+        if app.backend.provider?.visionIsUnavailable == true {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "eye.trianglebadge.exclamationmark")
+                    .font(.kairoGlyph(15, weight: .semibold))
+                    .foregroundStyle(Kairo.amber)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(Kairo.amber.opacity(0.14)))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Photo analysis is unavailable on this deployment")
+                        .font(.kairoHeadline).foregroundStyle(Kairo.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("The barcode path still works, and it is the one that yields a "
+                         + "measured figure rather than an estimate.")
+                        .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .kairoCard(tint: Kairo.amber)
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -382,7 +415,7 @@ struct MealCaptureView: View {
                         .frame(width: 46, height: 46)
                         .background(Circle().fill(Kairo.coral.opacity(0.14)))
                     Text("I don't recognise this dish")
-                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                        .font(.kairoSubject)
                         .foregroundStyle(Kairo.ink)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
@@ -457,7 +490,7 @@ struct MealCaptureView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Pill(text: "costs one interruption", icon: "bell.badge", tint: Kairo.amber)
                 Text(model.clarifyingQuestion ?? "What was in this?")
-                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    .font(.kairoSubject)
                     .foregroundStyle(Kairo.ink)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -574,7 +607,7 @@ struct MealCaptureView: View {
                 Spacer(minLength: 8)
                 HStack(alignment: .lastTextBaseline, spacing: 3) {
                     Text("\(Int(item.facts.kilojoules))")
-                        .font(.system(size: 21, weight: .semibold, design: .rounded))
+                        .font(.kairoSubject)
                         .monospacedDigit()
                         .foregroundStyle(Kairo.ink)
                     Text("kJ")
@@ -627,7 +660,7 @@ struct MealCaptureView: View {
                 .font(.kairoLabel).tracking(0.8)
                 .foregroundStyle(Kairo.inkFaint)
             Text("\(Int(grams.rounded())) g")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.kairoHeadline)
                 .monospacedDigit()
                 .foregroundStyle(grams > 0 ? Kairo.ink : Kairo.inkFaint)
             ScoreMeter(value: total > 0 ? grams / total : 0, tint: tint, height: 4)
@@ -676,66 +709,36 @@ struct MealCaptureView: View {
             }
         }
 
-        VStack(spacing: 8) {
-            SectionHeader(title: "Worked example — two roles disagreed",
-                          icon: "arrow.triangle.branch", tint: Kairo.violet)
-            SecondOpinionView(disagreement: Self.mealDissent.dispute,
-                              outcome: Self.mealDissent.outcome)
-            TrustNote(text: "A scripted disagreement about the meal you just logged, "
-                      + "included so CF3 is visible in the build. The winner is not "
-                      + "written down anywhere — it comes from running the same "
-                      + "precedence policy the app ships with.",
-                      icon: "book.closed")
-        }
+        // CF3 used to be demonstrated here with a hard-coded disagreement about
+        // "the meal you just logged" — two `Position`s written in this file,
+        // identical for every meal anyone ever logged, carrying evidence
+        // sentences about a plate the user had not photographed.
+        //
+        // It is gone, and `SecondOpinionView` went with it rather than being
+        // left as an unreachable view. The backend's `/v1/dissent` returns
+        // `dto.outcome` — the winning position, the policy and the reason — and
+        // never the losing positions, so there is no way to draw a real
+        // two-sided disagreement from what is on the wire. Drawing one anyway
+        // would mean writing the loser's argument here, which is the thing this
+        // change removed. When the route carries the whole `DisagreementCase`,
+        // the card belongs here.
     }
 
-    // MARK: - CF3 seed
-    //
-    // Built here rather than in `SeedData` so this screen owns its own worked
-    // example. The outcome is not asserted: `resolve()` runs the real policy, and
-    // safety outranking accuracy is what hands it to the Steward.
-
-    private static let mealDissent: (dispute: DisagreementCase, outcome: DisagreementOutcome) = {
-        var dispute = DisagreementCase(
-            id: "d-meal-1",
-            topic: "whether to flag this meal's kilojoules to you",
-            positions: [
-                Position(
-                    agent: .nutrition,
-                    objective: .accuracy,
-                    claim: "Flag the kilojoules on this meal. The portion was inferred "
-                    + "from a photo rather than weighed, and the weakest item sets the "
-                    + "confidence for the whole plate.",
-                    evidence: ["portion inferred from the photo, not weighed",
-                               "the plate's confidence is its weakest item",
-                               "macros the reference entry did not carry are recorded as zero"],
-                    confidence: 0.72,
-                    costIfWrong: 0.3),
-                Position(
-                    agent: .steward,
-                    objective: .safety,
-                    claim: "Hold the line. One estimated meal is not evidence about the "
-                    + "person, and a flag would spend an interruption to say so.",
-                    evidence: ["one observation, no trend to cite",
-                               "no clinical goal on file for this user",
-                               "a flag costs one interruption from today's attention budget"],
-                    confidence: 0.66,
-                    costIfWrong: 0.7),
-            ])
-        let outcome = dispute.resolve()
-        return (dispute, outcome)
-    }()
 
     // MARK: - Transitional and error
 
     private func transitionalSection(_ model: MealLogModel) -> some View {
         HStack(spacing: 12) {
             KairoInlineLoader()
-            Text(model.state.name)
-                .font(.kairoMono)
+            // In words. This printed `model.state.name` — a camelCase machine
+            // state — at the user, in monospace, on a feature screen.
+            Text(title(for: model.state))
+                .font(.kairoHeadline)
                 .foregroundStyle(Kairo.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .kairoCard()
     }
 
@@ -821,6 +824,11 @@ private struct LoggedCard: View {
 /// faint.
 private struct MealProgressTrack: View {
     let entry: MealEntry
+    /// Four labels under four dots across 375 points is 9 points of room each
+    /// at an accessibility size, which rendered "capture" as "ca…" and
+    /// "recognise" as "re…". The per-dot labels come off and the step is named
+    /// in full underneath instead — the same words, legible, once.
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private struct Step {
         let id: String
@@ -839,25 +847,36 @@ private struct MealProgressTrack: View {
                     if i > 0 {
                         connector(filled: i <= current, tint: track[i].tint)
                     }
-                    dot(track[i], isCurrent: i == current, isPast: i < current)
+                    dot(track[i], isCurrent: i == current, isPast: i < current,
+                        showsLabel: !typeSize.isAccessibilitySize)
                 }
             }
             .frame(maxWidth: .infinity)
             .animation(.spring(response: 0.45, dampingFraction: 0.85), value: entry.state)
 
-            HStack(spacing: 6) {
-                Text(MealEntryState.machineName.uppercased())
-                    .font(.kairoLabel).tracking(1.1)
-                    .foregroundStyle(Kairo.inkFaint)
-                Spacer(minLength: 4)
-                Text("state · \(entry.state.name)")
-                    .font(.kairoMono)
-                    .foregroundStyle(Kairo.inkFaint)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Current state \(entry.state.name)")
+            // The step, in words, at every text size. This replaces the
+            // `state · camelCaseName` line that used to sit here: the same
+            // position, the same job, said in the vocabulary the dots use.
+            Text(spokenStep(track, current: current))
+                .font(.kairoCaption)
+                .foregroundStyle(track.indices.contains(current)
+                                 ? track[current].tint : Kairo.inkFaint)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .kairoCard(padding: 16)
+        // The track was `accessibilityHidden` on every dot and carried a
+        // camelCase enum name as its only label. One element, and its value is
+        // the step in the same words the dots are labelled with.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Progress")
+        .accessibilityValue(spokenStep(track, current: current))
+    }
+
+    /// The current step, in the same words the track draws.
+    private func spokenStep(_ track: [Step], current: Int) -> String {
+        guard track.indices.contains(current) else { return "not started" }
+        return "step \(current + 1) of \(track.count), \(track[current].label)"
     }
 
     // MARK: Steps
@@ -920,7 +939,8 @@ private struct MealProgressTrack: View {
             .padding(.top, 19)
     }
 
-    private func dot(_ step: Step, isCurrent: Bool, isPast: Bool) -> some View {
+    private func dot(_ step: Step, isCurrent: Bool, isPast: Bool,
+                     showsLabel: Bool) -> some View {
         let diameter: CGFloat = isCurrent ? 34 : 24
         return VStack(spacing: 6) {
             ZStack {
@@ -939,13 +959,20 @@ private struct MealProgressTrack: View {
             }
             .frame(height: 42)
 
-            Text(step.label)
-                .font(.system(size: 9, weight: isCurrent ? .bold : .medium, design: .rounded))
-                .foregroundStyle(isCurrent ? step.tint : isPast ? Kairo.inkSoft : Kairo.inkFaint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            // 9pt flat was unreadable before Dynamic Type was touched at all.
+            // A scaling label needs room to grow, so the slot is a minimum
+            // rather than a fixed width and the text may take two lines.
+            if showsLabel {
+                Text(step.label)
+                    .font(.kairoLabel)
+                    .fontWeight(isCurrent ? .bold : .medium)
+                    .foregroundStyle(isCurrent ? step.tint
+                                     : isPast ? Kairo.inkSoft : Kairo.inkFaint)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(width: 52)
+        .frame(minWidth: 44)
         .accessibilityHidden(true)
     }
 

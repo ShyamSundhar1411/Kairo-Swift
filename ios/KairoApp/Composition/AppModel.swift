@@ -62,6 +62,30 @@ final class AppModel {
     /// Which roles contributed, when the backend served it.
     private(set) var contributingRoles: [String] = []
 
+    /// Whether the cost ceiling behind the arbitration on screen stands for a
+    /// bill. Carried from `/v1/arbitrate`'s `budget` object, which arrives on
+    /// every pass, so the suppression sentence costs no extra request. The
+    /// on-device arbiter has no service cost at all, so its ladder is notional
+    /// by construction.
+    private(set) var arbitrationCosting: SuppressionCopy.Costing = .notional
+
+    /// Which backend sealed the record on screen, and the FAST-tier model that
+    /// did the bidding in it. Settings facts — a user does not need to know
+    /// they are talking to a particular model to drink water — so these are
+    /// held for the agents sheet and read nowhere else.
+    private(set) var servingProvider: String?
+    private(set) var servingModelID: String?
+
+    /// OF3 — how much each class is worth an interruption, 0...1.
+    ///
+    /// Read by `runArbitration()` on both paths: it scales the bids the local
+    /// source raises, and it is sent to the agents so the roles bid against the
+    /// same weights. Zero is a real position, and the one the screen promises
+    /// about: a class at zero raises no bid here and any bid the agents return
+    /// for it is suppressed as `classSuspended` before it reaches the ledger.
+    var priorities: [String: Double] = Dictionary(
+        uniqueKeysWithValues: NudgeClassVocabulary.known.map { ($0, 0.6) })
+
     /// - Parameter seedingScenario: whether to open on the Stage 1 coverage the
     ///   report documents. True for `.demo`, false for a real phone.
     ///
@@ -108,7 +132,8 @@ final class AppModel {
         attachWrist()
         // Ask the backend who it is before arbitrating, so the first pass either
         // comes from the agents or is honestly labelled as not having.
-        await backend.check()
+        await backend.check(userID: userID)
+        await reloadContract()
         await runArbitration()
         // The wrist may have been showing its own local guess since the last
         // launch. Tell it what the phone thinks before it has to ask.
@@ -195,7 +220,8 @@ final class AppModel {
     private func arbitrateRemotely(_ client: RemoteAgentClient) async throws {
         let result = try await client.arbitrate(
             userID: userID, now: env.clock.now, schedule: schedule, coverage: coverage,
-            observations: observations, quietHours: false, profile: profile)
+            observations: observations, quietHours: false, profile: profile,
+            priorities: priorities)
 
         // Replay the backend's decision through the device's own state machine
         // rather than rendering the JSON directly. The views then need no second
@@ -207,9 +233,14 @@ final class AppModel {
 
         arbitration = local
         schedule = NudgeSchedule(dayStart: schedule.dayStart,
-                                 dailyBudget: schedule.dailyBudget, spent: result.spent)
+                                 dailyBudget: schedule.dailyBudget,
+                                 spent: max(0, result.spent - (result.delivered.count - local.delivered.count)))
         arbitrationSource = .agents(recordID: result.recordID)
         contributingRoles = result.contributingRoles
+        arbitrationCosting = result.costIsNotional || result.costing == "shadow"
+            ? .notional : .metered
+        servingProvider = result.provider
+        servingModelID = result.biddingModelID
         records.append(local.record)
         backend.noteServed()
 
@@ -224,7 +255,8 @@ final class AppModel {
     private func replay(_ result: RemoteAgentClient.Arbitration,
                         at now: Date) throws -> ArbitrationResult {
         func nudge(_ remote: RemoteAgentClient.RemoteNudge,
-                   delivered: Bool) throws -> Nudge {
+                   delivered: Bool,
+                   overriding reason: SuppressionReason? = nil) throws -> Nudge {
             var n = Nudge(bid: NudgeBid(
                 id: remote.id, nudgeClass: remote.nudgeClass, originAgent: remote.originAgent,
                 expectedBenefit: remote.score, urgency: remote.receptivity,
@@ -234,25 +266,43 @@ final class AppModel {
             n.score = remote.score
             n.receptivity = remote.receptivity
             n.channel = remote.channel
-            n.suppressionReason = remote.suppressionReason
+            n.suppressionReason = reason ?? remote.suppressionReason
             try n.lifecycle.transition(on: "admitted", to: .queued, at: now)
             try n.lifecycle.transition(on: "scoredByReceptivity", to: .scored, at: now)
             if delivered {
                 try n.lifecycle.transition(on: "allocated", to: .scheduled, at: now)
             } else {
-                try n.lifecycle.transition(on: event(for: remote.suppressionReason),
+                try n.lifecycle.transition(on: event(for: n.suppressionReason),
                                            to: .suppressed, at: now)
             }
             return n
         }
 
-        let delivered = try result.delivered.map { try nudge($0, delivered: true) }
-        let suppressed = try result.suppressed.map { try nudge($0, delivered: false) }
+        // OF3 on the remote path. The roles are sent the weights and bid
+        // against them, but the promise the contract screen makes — a class at
+        // zero is never worth an interruption — has to hold even against a
+        // backend that ignored them, so it is enforced on the way in. A bid
+        // demoted here is shown in the ledger as suspended rather than dropped,
+        // and the interruption it would have spent is handed back below.
+        let demoted = result.delivered.filter { isSilenced($0.nudgeClass) }
+        let allowed = result.delivered.filter { !isSilenced($0.nudgeClass) }
+
+        let delivered = try allowed.map { try nudge($0, delivered: true) }
+        let suppressed = try demoted.map { try nudge($0, delivered: false, overriding: .classSuspended) }
+            + result.suppressed.map { try nudge($0, delivered: false) }
 
         var record = DecisionRecord(id: result.recordID, createdAt: now)
-        for role in result.contributingRoles {
-            try record.add(ContributionFragment(agentID: role, promptVersion: "backend",
-                                                claim: "", confidence: 1))
+        // What each role said, not merely that it spoke. These three fields used
+        // to be `("backend", "", 1)` — a blank claim at full confidence — so the
+        // role timeline in `WhyView`, the screen whose entire purpose is to show
+        // that five roles are not five relabelled prompts, rendered five empty
+        // rows whenever the backend served the pass. The data was on the wire
+        // the whole time.
+        for role in result.contributions {
+            try record.add(ContributionFragment(agentID: role.agentID,
+                                                promptVersion: role.promptVersion,
+                                                claim: role.claim,
+                                                confidence: role.confidence))
         }
         for cited in result.citedMemories {
             try record.cite(MemoryCitation(memoryID: cited.id,
@@ -263,11 +313,46 @@ final class AppModel {
                 bidID: n.bid.id, nudgeClass: n.bid.nudgeClass, score: n.score,
                 reason: n.suppressionReason ?? .outranked))
         }
-        try record.setSafetyVerdict("pass", tier: result.serviceTier)
+        // The backend's own verdict, not an assumed pass. `nothingToScreen` and
+        // `unscreened` are members of the same six-value enum and neither is a
+        // pass: one means no message existed to judge, the other that no Steward
+        // was bound. Writing "pass" over either would be the app inventing a
+        // safety result nobody produced.
+        try record.setSafetyVerdict(result.safetyVerdict ?? "unscreened",
+                                    tier: result.serviceTier)
         try record.lifecycle.transition(on: "allFragmentsCollected", to: .sealed, at: now)
 
         return ArbitrationResult(delivered: delivered, suppressed: suppressed,
                                  schedule: schedule, record: record)
+    }
+
+    /// OF3 — a class the user has turned off entirely.
+    func isSilenced(_ nudgeClass: String) -> Bool { (priorities[nudgeClass] ?? 1) <= 0 }
+
+    /// The bids the local source raised, scaled by what the user said each class
+    /// is worth. A class at zero raises nothing at all rather than raising a bid
+    /// scored to zero, because a bid scored to zero still occupies a row in the
+    /// ledger as though it had competed.
+    private func weighted(_ bids: [NudgeBid]) -> [NudgeBid] {
+        bids.compactMap { bid in
+            let weight = priorities[bid.nudgeClass] ?? 1
+            guard weight > 0 else { return nil }
+            guard weight != 1 else { return bid }
+            return NudgeBid(id: bid.id, nudgeClass: bid.nudgeClass,
+                            originAgent: bid.originAgent,
+                            expectedBenefit: bid.expectedBenefit * weight,
+                            urgency: bid.urgency,
+                            windowOpens: bid.windowOpens, windowCloses: bid.windowCloses,
+                            requiredCapabilities: bid.requiredCapabilities,
+                            text: bid.text)
+        }
+    }
+
+    /// OF3 — committed from the contract screen, which then re-runs the pass.
+    @MainActor
+    func setPriority(_ value: Double, for nudgeClass: String) {
+        guard priorities[nudgeClass] != value else { return }
+        priorities[nudgeClass] = value
     }
 
     private func event(for reason: SuppressionReason?) -> String {
@@ -278,6 +363,10 @@ final class AppModel {
         case .classSuspended:   "classSuspendedByContract"
         case .windowNotOpen:    "windowNotOpen"
         case .duplicateClass:   "duplicateInClass"
+        // The Steward refused the wording. There was no contest, so the machine
+        // must not be told there was one.
+        case .safetyRefused:    "evidenceInsufficient"
+        case .ungrounded:       "evidenceInsufficient"
         default:                "outrankedByAnotherBid"
         }
     }
@@ -287,7 +376,7 @@ final class AppModel {
         let now = env.clock.now
         let input = ArbitrationInput(
             now: now, schedule: schedule,
-            bids: LocalBidSource.bids(at: now, observations: observations),
+            bids: weighted(LocalBidSource.bids(at: now, observations: observations)),
             memories: memories, profile: profile,
             activeContract: contract, quietHours: false)
         do {
@@ -297,6 +386,11 @@ final class AppModel {
             records.append(result.record)
             arbitrationSource = .onDevice
             contributingRoles = []
+            // No service answered, so there is no service cost. The ladder the
+            // arbiter walks on this phone is a stand-in in every deployment.
+            arbitrationCosting = .notional
+            servingProvider = nil
+            servingModelID = nil
             for n in result.delivered {
                 if let ch = env.channels.first(where: { $0.kind == n.channel }) {
                     try? ch.deliver(n)
@@ -307,44 +401,79 @@ final class AppModel {
         }
     }
 
-    /// CF9 — the Lifestyle Analyst raises signals; the contract is only ever
-    /// *proposed*, never applied silently.
-    func proposeContract(kind: DisruptionKind, sources: [String], userConfirmed: Bool) {
-        let now = env.clock.now
-        var c = PlanContract(id: "pc-\(Int(now.timeIntervalSince1970))")
-        c.kind = kind
-        for s in sources {
-            c.observe(DisruptionSignal(kind: kind, source: s, observedAt: now, strength: 0.7))
-        }
+    // MARK: - CF9
+
+    /// The contract the agents are already holding for this user.
+    ///
+    /// This replaces `proposeContract(kind:sources:userConfirmed:)`, which was
+    /// dead code: nothing in `ios/` ever called it, and it could not honestly be
+    /// called from here. It built its own `DisruptionSignal`s out of strings
+    /// handed to it by the caller, and the phone has no thermometer, no calendar
+    /// and no time-zone watcher to derive one from — so every entry point that
+    /// could have existed would have had to invent the corroborating evidence
+    /// that CF9's two-signal rule exists to demand.
+    ///
+    /// What the phone can honestly do is ask. The roles evaluate disruption from
+    /// the evidence they have; this reads the result, and `respond` records the
+    /// user's answer where the agents can see it, so an accepted contract is not
+    /// re-proposed on the next pass.
+    @MainActor
+    func reloadContract() async {
+        guard let client = backend.client else { return }
         do {
-            try c.lifecycle.transition(on: "signalDetected", to: .disruptionSuspected, at: now)
-            guard c.isCorroborated(userConfirmed: userConfirmed) else {
-                try c.lifecycle.transition(on: "insufficientEvidence", to: .standard, at: now)
-                contract = nil
-                return
-            }
-            try c.lifecycle.transition(on: "corroborated", to: .proposed, at: now)
-            c.targetReduction = 0.3
-            c.suspended = [SuspendedNudgeClass("sedentary")]
-            c.expiresAt = now.addingTimeInterval(3 * 86_400)
-            contract = c
+            contract = try await Self.replay(try await client.contract(userID: userID),
+                                             at: env.clock.now)
         } catch {
-            lastError = String(describing: error)
+            backend.noteFailure(error)
         }
     }
 
-    func acceptContract() {
-        guard var c = contract else { return }
-        try? c.lifecycle.transition(on: "userAccepted", to: .active, at: env.clock.now)
-        contract = c
-        Task { await runArbitration() }
+    /// Turns the backend's contract into a domain value by replaying it through
+    /// the same state machine, so a state this app's machine does not declare is
+    /// dropped rather than drawn.
+    private static func replay(_ remote: RemoteAgentClient.RemoteContract?,
+                               at now: Date) throws -> PlanContract? {
+        guard let remote,
+              let state = PlanContractState(rawValue: remote.state),
+              let lifecycle = Lifecycle<PlanContractState>.replaying(to: state, at: now)
+        else { return nil }
+        var c = PlanContract(id: remote.id)
+        c.lifecycle = lifecycle
+        c.kind = remote.kind.flatMap(DisruptionKind.init(rawValue:))
+        c.targetReduction = remote.targetReduction
+        c.suspended = Set(remote.suspendedClasses.map(SuspendedNudgeClass.init))
+        c.expiresAt = remote.expiresAt
+        return c
     }
 
-    func declineContract() {
+    /// Consent, recorded where the agents can see it.
+    ///
+    /// The old `acceptContract()` / `declineContract()` moved only the copy on
+    /// the phone, so the backend went on proposing the same contract on every
+    /// subsequent pass and a user who had already said no was asked again.
+    @MainActor
+    func respondToContract(accept: Bool) async {
         guard var c = contract else { return }
-        try? c.lifecycle.transition(on: "userDeclined", to: .declined, at: env.clock.now)
-        try? c.lifecycle.transition(on: "returnToStandard", to: .standard, at: env.clock.now)
-        contract = nil
+        let now = env.clock.now
+        if accept {
+            try? c.lifecycle.transition(on: "userAccepted", to: .active, at: now)
+            contract = c
+        } else {
+            try? c.lifecycle.transition(on: "userDeclined", to: .declined, at: now)
+            try? c.lifecycle.transition(on: "returnToStandard", to: .standard, at: now)
+            contract = nil
+        }
+        if let client = backend.client {
+            do {
+                contract = try Self.replay(
+                    try await client.respondToContract(userID: userID, accept: accept), at: now)
+            } catch {
+                backend.noteFailure(error)
+            }
+        }
+        // A suspended class changes what may be delivered, so the ledger on
+        // Today has to be re-run rather than left showing the old contest.
+        await runArbitration()
     }
 
     /// CF6 + CF11 — anything the Coach wants to say passes the gate first.

@@ -53,7 +53,7 @@ struct ContractProposalCard: View {
                     .font(.kairoLabel).tracking(1.1)
                     .foregroundStyle(Kairo.teal)
                 Text(headline)
-                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    .font(.kairoSubject)
                     .foregroundStyle(Kairo.ink)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -97,18 +97,19 @@ struct ContractProposalCard: View {
         VStack(alignment: .leading, spacing: 7) {
             SectionHeader(title: "Reminders that pause", icon: "pause.circle")
 
+            // PillWrap rather than a horizontal scroller: the point of naming
+            // every suspended class is that the user can see what is on the
+            // table, and a class parked off the right edge of a row nothing
+            // advertises as scrollable is a class they will not see.
             if suspendedClasses.isEmpty {
                 Pill(text: "nothing pauses", icon: "bell.fill", tint: Kairo.inkSoft)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(suspendedClasses, id: \.self) { name in
-                            Pill(text: Kairo.title(forNudgeClass: name),
-                                 icon: Kairo.icon(forNudgeClass: name),
-                                 tint: Kairo.colour(forNudgeClass: name))
-                        }
+                PillWrap {
+                    ForEach(suspendedClasses, id: \.self) { name in
+                        Pill(text: Kairo.title(forNudgeClass: name),
+                             icon: Kairo.icon(forNudgeClass: name),
+                             tint: Kairo.colour(forNudgeClass: name))
                     }
-                    .padding(.vertical, 1)
                 }
             }
         }
@@ -121,7 +122,7 @@ struct ContractProposalCard: View {
     // MARK: - When it ends
 
     private var expiryRow: some View {
-        HStack(spacing: 6) {
+        PillWrap {
             if let expiry = contract.expiresAt {
                 Pill(text: runLength, icon: "calendar.badge.clock", tint: Kairo.violet)
                 Pill(text: "ends \(expiry.formatted(date: .abbreviated, time: .omitted))",
@@ -129,8 +130,8 @@ struct ContractProposalCard: View {
             } else {
                 Pill(text: "no end date recorded", icon: "calendar.badge.clock", tint: Kairo.coral)
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Days rather than a bare date: the promise is about how long this lasts,
@@ -146,8 +147,9 @@ struct ContractProposalCard: View {
 
     private var daysRunning: Int? {
         guard let expiry = contract.expiresAt else { return nil }
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Australia/Sydney") ?? .current
+        // The user's own calendar. A contract that "runs 3 days" counted in
+        // Sydney is off by one for half the world.
+        let cal = Calendar.current
         let from = cal.startOfDay(for: model.env.clock.now)
         let to = cal.startOfDay(for: expiry)
         return max(0, cal.dateComponents([.day], from: from, to: to).day ?? 0)
@@ -155,22 +157,27 @@ struct ContractProposalCard: View {
 
     // MARK: - Consent
 
-    private var buttons: some View {
-        HStack(spacing: 10) {
-            Button("Not now") { model.declineContract() }
+    /// Stacked rather than side by side. Two capsule buttons on one line at
+    /// accessibility XXXL leave about forty points each for "Use the smaller
+    /// plan", and the consent control is the last place in the app that should
+    /// be shrinking its own label to fit.
+    @ViewBuilder private var buttons: some View {
+        let controls = Group {
+            Button("Not now") { respond(accept: false) }
                 .buttonStyle(.kairoSoft)
-                .frame(maxWidth: 116)
-
-            Button {
-                model.acceptContract()
-            } label: {
-                Text("Use the smaller plan")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-            .buttonStyle(.kairoProminent(Kairo.teal))
+            Button("Use the smaller plan") { respond(accept: true) }
+                .buttonStyle(.kairoProminent(Kairo.teal))
+        }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) { controls }
+            VStack(spacing: 10) { controls }
         }
         .padding(.top, 2)
+    }
+
+    /// CF9 — recorded where the agents can see it, not only on the phone.
+    private func respond(accept: Bool) {
+        Task { await model.respondToContract(accept: accept) }
     }
 
     // MARK: - Copy

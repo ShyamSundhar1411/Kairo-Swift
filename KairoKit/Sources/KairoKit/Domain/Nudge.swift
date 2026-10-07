@@ -98,11 +98,17 @@ public struct NudgeBid: Sendable, Equatable {
     public func isOpen(at t: Date) -> Bool { t >= windowOpens && t <= windowCloses }
 }
 
-public enum SuppressionReason: String, Sendable {
+public enum SuppressionReason: String, Sendable, CaseIterable {
     case budgetExhausted, quietHours, outranked, costCeiling, classSuspended
     case windowNotOpen, windowClosed, inaccessible, duplicateClass
     /// CF6 — nothing measured in this domain, so nothing may be claimed about it.
     case ungrounded
+    /// The Steward refused the wording, so nothing was sent and the attention
+    /// budget was not spent on it. Distinct from `ungrounded`: there *was*
+    /// evidence, and the sentence built on it did not clear the safety gate.
+    /// The backend emits this on `/v1/arbitrate`; a client that folded it into
+    /// `outranked` would tell the user a contest happened that never did.
+    case safetyRefused
     /// The policy from Section 7.1: a cost suppression is never dressed up as restraint.
     public var isPresentableAsRestraint: Bool { self != .costCeiling }
 }

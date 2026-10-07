@@ -44,14 +44,211 @@ public struct RemoteAgentClient: Sendable {
         public let promptVersion: String
         public let roles: [String]
         public let runtime: String
+        public let provider: Provider
+        /// Figure 14's four ports and what each is bound to. Architecture facts:
+        /// they belong in the agents sheet and nowhere a user would meet them.
+        public let ports: [Port]
+    }
+
+    /// Which model answered, why that one, and whether the ids it was configured
+    /// with actually exist. Enough to tell a working deployment from a
+    /// confidently broken one without reading the server's log.
+    public struct Provider: Sendable {
+        public struct Model: Sendable, Identifiable {
+            public let tier: String
+            public let id: String
+            /// nil when the backend was never able to ask. `false` is the one
+            /// that predicts a failure — a model id that does not exist.
+            public let validated: Bool?
+        }
+        public struct Skipped: Sendable, Identifiable {
+            public let name: String
+            public let displayName: String
+            public let reason: String
+            public var id: String { name }
+        }
+        public let name: String
+        public let displayName: String
+        public let selectedBecause: String
+        public let answeredAtBind: Bool?
+        public let models: [Model]
+        public let supportsTiers: [String]
+        /// "metered" or "shadow".
+        public let costing: String
+        public let considered: [Skipped]
+
+        public var isShadowCosted: Bool { costing == "shadow" }
+        /// CF1 — the one provider fact that predicts a failure the user is about
+        /// to walk into, so the meal capture prompt can say so before the photo.
+        public var visionIsUnavailable: Bool {
+            models.first { $0.tier == "vision" }?.validated == false
+                || !supportsTiers.contains("vision")
+        }
+    }
+
+    public struct Port: Sendable, Identifiable {
+        public let key: String
+        public let interface: String
+        public let direction: String
+        public let adapter: String
+        public let note: String
+        public var id: String { key }
+    }
+
+    /// The backend answered 503: it is up, and it has said in English what is
+    /// wrong. *Unreachable* means check the address; this means read the
+    /// sentence. Thrown rather than returned so the one caller that can show it
+    /// cannot forget to.
+    public struct Refusal: Error, LocalizedError, Sendable {
+        /// `diagnosis` when the payload carries one — nothing was bound at all —
+        /// and the backend's own `mode` line when a named provider was bound and
+        /// answered nothing at bind time, which is the other way to get a 503.
+        public let diagnosis: String
+        public let provider: Provider?
+        public var errorDescription: String? { diagnosis }
     }
 
     public func health() async throws -> Health {
-        let json = try await send(request(for: "health"))
+        let (json, status) = try await sendAllowingRefusal(request(for: "health"))
+        let provider = Self.provider(json["provider"] as? [String: Any])
+        guard status != 503 else {
+            throw Refusal(diagnosis: Self.diagnosis(in: json), provider: provider)
+        }
         return Health(mode: json["mode"] as? String ?? "unknown",
                       promptVersion: json["promptVersion"] as? String ?? "unknown",
                       roles: json["roles"] as? [String] ?? [],
-                      runtime: json["runtime"] as? String ?? "unknown")
+                      runtime: json["runtime"] as? String ?? "unknown",
+                      provider: provider,
+                      ports: Self.ports(json["ports"] as? [String: Any]))
+    }
+
+    /// The sentence to print. `diagnosis` is only present on the payload the
+    /// refusing app serves — the one that comes up when no provider could be
+    /// bound at all. A backend that bound a named provider which then answered
+    /// nothing also returns 503, and puts the same kind of sentence in `mode`.
+    /// Printing whichever one exists is what makes the Today chip's "agents
+    /// refusing" lead somewhere rather than to an empty row.
+    private static func diagnosis(in json: [String: Any]) -> String {
+        if let d = json["diagnosis"] as? String, !d.isEmpty { return d }
+        if let mode = json["mode"] as? String, !mode.isEmpty { return mode }
+        return "The backend answered 503 without saying why."
+    }
+
+    private static func provider(_ raw: [String: Any]?) -> Provider {
+        guard let raw else {
+            return Provider(name: "none", displayName: "none", selectedBecause: "",
+                            answeredAtBind: nil, models: [], supportsTiers: [],
+                            costing: "metered", considered: [])
+        }
+        // Ordered by the ladder rather than by dictionary order, so the fast
+        // tier that does the bidding is always the first row on the sheet.
+        let order = ["fast", "deep", "vision"]
+        let models = (raw["models"] as? [String: Any] ?? [:])
+            .compactMap { tier, value -> Provider.Model? in
+                guard let m = value as? [String: Any], let id = m["id"] as? String else { return nil }
+                return Provider.Model(tier: tier, id: id, validated: m["validated"] as? Bool)
+            }
+            .sorted { (order.firstIndex(of: $0.tier) ?? 9) < (order.firstIndex(of: $1.tier) ?? 9) }
+        return Provider(
+            name: raw["name"] as? String ?? "unknown",
+            displayName: raw["displayName"] as? String ?? raw["name"] as? String ?? "unknown",
+            selectedBecause: raw["selectedBecause"] as? String ?? "",
+            answeredAtBind: raw["answeredAtBind"] as? Bool,
+            models: models,
+            supportsTiers: raw["supportsTiers"] as? [String] ?? [],
+            costing: raw["costing"] as? String ?? "metered",
+            considered: (raw["considered"] as? [[String: Any]] ?? []).compactMap {
+                guard let name = $0["name"] as? String else { return nil }
+                return Provider.Skipped(name: name,
+                                        displayName: $0["displayName"] as? String ?? name,
+                                        reason: $0["reason"] as? String ?? "")
+            })
+    }
+
+    private static func ports(_ raw: [String: Any]?) -> [Port] {
+        let order = ["pLLM", "pHealth", "pEvents", "pNotify"]
+        return (raw ?? [:]).compactMap { key, value -> Port? in
+            guard let p = value as? [String: Any] else { return nil }
+            return Port(key: key,
+                        interface: p["interface"] as? String ?? "",
+                        direction: p["direction"] as? String ?? "",
+                        adapter: p["adapter"] as? String ?? "",
+                        note: p["note"] as? String ?? "")
+        }
+        .sorted { (order.firstIndex(of: $0.key) ?? 9) < (order.firstIndex(of: $1.key) ?? 9) }
+    }
+
+    // MARK: - Section 7.1, the second budget
+
+    /// The cost ladder, in the backend's own words.
+    ///
+    /// `note` is served as a finished sentence and is rendered verbatim: the one
+    /// place in the app that is allowed to show the money is also the one place
+    /// that must not paraphrase what the money means.
+    public struct Budget: Sendable {
+        public let tier: String
+        public let costing: String
+        public let notional: Bool
+        public let note: String
+        public let spentHundredthsOfACent: Int
+        public let ceilingHundredthsOfACent: Int
+
+        public var isNotional: Bool { notional || costing == "shadow" }
+    }
+
+    public func budget(userID: String) async throws -> Budget {
+        let json = try await send(request(for: "v1/budget", query: ["userID": userID]))
+        return Budget(tier: json["tier"] as? String ?? "unknown",
+                      costing: json["costing"] as? String ?? "metered",
+                      notional: json["notional"] as? Bool ?? false,
+                      note: json["note"] as? String ?? "",
+                      spentHundredthsOfACent: json["spentHundredthsOfACent"] as? Int ?? 0,
+                      ceilingHundredthsOfACent: json["ceilingHundredthsOfACent"] as? Int ?? 0)
+    }
+
+    // MARK: - CF9
+
+    /// The contract the agents are already holding for this user.
+    ///
+    /// A read, not a proposal. The app has no calendar, no thermometer and no
+    /// time-zone watcher, so it has no disruption signal to offer
+    /// `/v1/contract/evaluate` that it would not have had to invent — and a
+    /// fabricated signal is the one thing CF9's corroboration rule exists to
+    /// refuse. What it can honestly do is ask what the roles concluded from the
+    /// evidence they have, and put a `proposed` contract in front of the user.
+    public struct RemoteContract: Sendable {
+        public let id: String
+        public let state: String
+        public let kind: String?
+        public let targetReduction: Double
+        public let suspendedClasses: [String]
+        public let expiresAt: Date?
+        public let signalSources: [String]
+    }
+
+    public func contract(userID: String) async throws -> RemoteContract? {
+        let json = try await send(request(for: "v1/contract", query: ["userID": userID]))
+        return Self.contract(json["contract"] as? [String: Any])
+    }
+
+    /// CF9 — consent, recorded where the agents can see it. Without this the
+    /// accept button moved a copy of the contract on the phone and the backend
+    /// kept proposing the same one on the next pass.
+    public func respondToContract(userID: String, accept: Bool) async throws -> RemoteContract? {
+        let json = try await send(request(for: "v1/contract/respond",
+                                          body: ["userID": userID, "accept": accept]))
+        return Self.contract(json["contract"] as? [String: Any])
+    }
+
+    private static func contract(_ raw: [String: Any]?) -> RemoteContract? {
+        guard let raw, let id = raw["id"] as? String,
+              let state = raw["state"] as? String else { return nil }
+        return RemoteContract(
+            id: id, state: state, kind: raw["kind"] as? String,
+            targetReduction: raw["targetReduction"] as? Double ?? 0,
+            suspendedClasses: raw["suspendedClasses"] as? [String] ?? [],
+            expiresAt: (raw["expiresAt"] as? String).flatMap(parse(instant:)),
+            signalSources: raw["signalSources"] as? [String] ?? [])
     }
 
     // MARK: - CF7
@@ -66,9 +263,38 @@ public struct RemoteAgentClient: Sendable {
         public let spent: Int
         public let spentNothing: Bool
         public let recordID: String
-        public let contributingRoles: [String]
+        /// What each role actually said, not merely that it spoke.
+        ///
+        /// This used to be `[String]` — `fragments.map { $0["agent"] }` — and the
+        /// claim, the prompt version and the confidence on the same object were
+        /// dropped on the floor. `WhyView`'s role timeline, which is the best
+        /// thing in the app, then drew five rows of empty text at 100% confident
+        /// every time the backend served the pass. The data was always on the
+        /// wire.
+        public let contributions: [Contribution]
         public let citedMemories: [(id: String, confidence: Double)]
         public let serviceTier: String
+        public let safetyVerdict: String?
+        /// S7 — which backend produced *this* record, read off the sealed
+        /// artefact rather than off whatever is bound right now.
+        public let provider: String?
+        /// Caveat worth keeping in the type's name rather than in a comment on
+        /// one screen: this is the FAST-tier model, the one that does the
+        /// bidding, not whichever tier any given sentence was written by.
+        public let biddingModelID: String?
+        /// Section 7.1, arriving on every pass. Whether the ceiling that
+        /// suppressed something stands for a bill or for a stand-in.
+        public let costing: String
+        public let costIsNotional: Bool
+
+        public var contributingRoles: [String] { contributions.map(\.agentID) }
+    }
+
+    public struct Contribution: Sendable {
+        public let agentID: String
+        public let promptVersion: String
+        public let claim: String
+        public let confidence: Double
     }
 
     public struct RemoteNudge: Sendable, Identifiable {
@@ -92,7 +318,8 @@ public struct RemoteAgentClient: Sendable {
     /// time through a port instead of reading it.
     public func arbitrate(userID: String, now: Date, schedule: NudgeSchedule,
                           coverage: DayCoverage, observations: Observations,
-                          quietHours: Bool, profile: CapabilityProfile) async throws -> Arbitration {
+                          quietHours: Bool, profile: CapabilityProfile,
+                          priorities: [String: Double] = [:]) async throws -> Arbitration {
         var coveragePayload: [String: Any] = [:]
         for domain in CoverageDomain.allCases {
             if let m = coverage.metrics[domain] {
@@ -110,22 +337,40 @@ public struct RemoteAgentClient: Sendable {
             "capabilities": profile.available.map(\.rawValue),
             "coverage": coveragePayload,
             "observations": observations.payload,
+            // OF3. The roles bid against the same weights the contract screen
+            // shows, so the slider is not a setting the agents never hear about.
+            "priorities": priorities,
         ]))
 
         let record = json["record"] as? [String: Any] ?? [:]
+        let budget = json["budget"] as? [String: Any] ?? [:]
         return Arbitration(
             delivered: (json["delivered"] as? [[String: Any]] ?? []).compactMap(Self.nudge),
             suppressed: (json["suppressed"] as? [[String: Any]] ?? []).compactMap(Self.nudge),
             spent: json["spent"] as? Int ?? schedule.spent,
             spentNothing: json["spentNothing"] as? Bool ?? true,
             recordID: record["id"] as? String ?? "",
-            contributingRoles: (record["fragments"] as? [[String: Any]] ?? [])
-                .compactMap { $0["agent"] as? String },
+            contributions: (record["fragments"] as? [[String: Any]] ?? []).compactMap {
+                guard let agent = $0["agent"] as? String else { return nil }
+                return Contribution(
+                    agentID: agent,
+                    promptVersion: $0["promptVersion"] as? String ?? "unknown",
+                    claim: $0["claim"] as? String ?? "",
+                    // Not 1. A missing confidence is unknown, and drawing an
+                    // unknown as full certainty is the failure this whole app
+                    // argues against.
+                    confidence: $0["confidence"] as? Double ?? 0)
+            },
             citedMemories: (record["citations"] as? [[String: Any]] ?? []).compactMap {
                 guard let id = $0["memoryID"] as? String else { return nil }
                 return (id, $0["confidenceAtCitation"] as? Double ?? 0)
             },
-            serviceTier: json["serviceTier"] as? String ?? "unknown")
+            serviceTier: json["serviceTier"] as? String ?? "unknown",
+            safetyVerdict: record["safetyVerdict"] as? String,
+            provider: record["provider"] as? String,
+            biddingModelID: record["modelID"] as? String,
+            costing: budget["costing"] as? String ?? "metered",
+            costIsNotional: budget["notional"] as? Bool ?? false)
     }
 
     private static func nudge(_ raw: [String: Any]) -> RemoteNudge? {
@@ -303,26 +548,57 @@ public struct RemoteAgentClient: Sendable {
     /// "ignores nudges before 9am". Sending 15:40 Sydney as 05:40Z hands the
     /// backend an hour of 5, and the roles correctly decline to bid at what they
     /// are told is dawn. The offset is the part that carries the meaning.
-    private static let instant: ISO8601DateFormatter = {
+    static let instant: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
         f.timeZone = .current
         return f
     }()
 
+    /// Accepts the ISO instants the backend emits, which carry fractional
+    /// seconds where `datetime.isoformat()` has a microsecond component.
+    static let instantWithFraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        f.timeZone = .current
+        return f
+    }()
+
+    static func parse(instant raw: String) -> Date? {
+        instantWithFraction.date(from: raw) ?? instant.date(from: raw)
+    }
+
     private func send(_ request: URLRequest) async throws -> [String: Any] {
+        let (object, status) = try await sendAllowingRefusal(request)
+        guard (200..<300).contains(status) else {
+            // A 503 from a route other than /health is the refusing app saying
+            // the same thing /health says; carry its sentence rather than the
+            // JSON body, so whatever surfaces the error has something to print.
+            if status == 503 {
+                throw Refusal(diagnosis: Self.diagnosis(in: object),
+                              provider: Self.provider(object["provider"] as? [String: Any]))
+            }
+            throw ClientError.http(status, String(describing: object))
+        }
+        return object
+    }
+
+    /// 503 is a real answer here, not a transport failure: the backend is up and
+    /// has told the client in English what is misconfigured. Swallowing it into
+    /// `unreachable` throws away the most useful sentence the server can send.
+    private func sendAllowingRefusal(_ request: URLRequest) async throws -> ([String: Any], Int) {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw ClientError.malformed("not an HTTP response")
         }
-        guard (200..<300).contains(http.statusCode) else {
-            throw ClientError.http(http.statusCode,
-                                   String(data: data, encoding: .utf8) ?? "")
-        }
-        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            guard (200..<300).contains(http.statusCode) else {
+                throw ClientError.http(http.statusCode,
+                                       String(data: data, encoding: .utf8) ?? "")
+            }
             throw ClientError.malformed("top level is not an object")
         }
-        return object
+        return (object, http.statusCode)
     }
 }
 

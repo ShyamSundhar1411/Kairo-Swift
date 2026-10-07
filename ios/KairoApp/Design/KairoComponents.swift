@@ -56,18 +56,36 @@ struct KairoHeader<Trailing: View>: View {
     let title: String
     @ViewBuilder var trailing: Trailing
 
+    /// At an accessibility size the title and a trailing control cannot share a
+    /// 375pt line: the title lost, and "Good evening" rendered as "Good eve…".
+    /// A screen's own name is the last thing that should be abbreviated, so the
+    /// control moves below it instead.
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(eyebrow.uppercased())
-                    .font(.kairoLabel).tracking(1.1)
-                    .foregroundStyle(Kairo.inkFaint)
-                Text(title)
-                    .font(.kairoTitle)
-                    .foregroundStyle(Kairo.ink)
+        let words = VStack(alignment: .leading, spacing: 2) {
+            Text(eyebrow.uppercased())
+                .font(.kairoLabel).tracking(typeSize.isAccessibilitySize ? 0.4 : 1.1)
+                .foregroundStyle(Kairo.inkFaint)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(title)
+                .font(.kairoTitle)
+                .foregroundStyle(Kairo.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 10) {
+                words
+                trailing
             }
-            Spacer(minLength: 8)
-            trailing
+        } else {
+            HStack(alignment: .center) {
+                words
+                Spacer(minLength: 8)
+                trailing
+            }
         }
     }
 }
@@ -135,9 +153,13 @@ struct Pill: View {
     var solid = false
 
     var body: some View {
-        HStack(spacing: 4) {
-            if let icon { Image(systemName: icon).font(.system(size: 9, weight: .bold)) }
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            if let icon { Image(systemName: icon).font(.kairoGlyph(9)) }
+            // Wraps when the row it is on is narrower than the label. A pill is
+            // a container for a short phrase, not a promise that the phrase is
+            // short at every text size.
             Text(text).font(.kairoLabel).tracking(0.4)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 8).padding(.vertical, 4)
         .foregroundStyle(solid ? Color.white : tint)
@@ -283,17 +305,22 @@ struct StatTile: View {
                     .fill(tint.opacity(0.15)))
             if let value {
                 Text(value)
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .font(.kairoNumber)
                     .foregroundStyle(Kairo.ink)
-                    .lineLimit(1).minimumScaleFactor(0.7)
+                    // Shrinks rather than truncating. A measurement cut off at
+                    // an ellipsis is worse than a small one, and a tile three
+                    // across has nowhere to grow sideways.
+                    .lineLimit(1).minimumScaleFactor(0.5)
             } else {
                 KairoSkeleton(width: 58, height: 22)
                     .padding(.vertical, 3)
             }
+            // No `lineLimit(2)`. "sitting unbroken" is two lines at the
+            // default size and four at accessibility XXXL, and a fixed limit
+            // turned the fourth into an ellipsis.
             Text(caption)
-                .font(.system(size: 11, weight: .medium))
+                .font(.kairoCaption)
                 .foregroundStyle(Kairo.inkFaint)
-                .lineLimit(2, reservesSpace: true)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -393,4 +420,49 @@ extension ButtonStyle where Self == KairoSoftButtonStyle {
 
 extension ButtonStyle where Self == KairoPressButtonStyle {
     static var kairoPress: KairoPressButtonStyle { .init() }
+}
+
+// MARK: - Hero rows
+
+/// A fixed-width graphic beside a block of prose — and above it instead, once
+/// the prose needs the whole screen.
+///
+/// Kairo's hero cards are all this shape: a dial, a ring or a loader on the
+/// left, the sentence that explains it on the right. At 375 points and an
+/// accessibility text size the right-hand column is about 190 points wide,
+/// which is four or five characters a line. Stacking is not a worse version of
+/// the design; it is the same design given the room the words need.
+struct AdaptiveHeroRow<Graphic: View, Detail: View, Trailing: View>: View {
+    let stacked: Bool
+    var spacing: CGFloat = Kairo.Space.gutter
+    @ViewBuilder var graphic: Graphic
+    @ViewBuilder var detail: Detail
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        if stacked {
+            VStack(alignment: .leading, spacing: spacing) {
+                graphic
+                detail
+                trailing
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(alignment: .center, spacing: spacing) {
+                graphic
+                detail
+                Spacer(minLength: 0)
+                trailing
+            }
+        }
+    }
+}
+
+extension AdaptiveHeroRow where Trailing == EmptyView {
+    init(stacked: Bool, spacing: CGFloat = Kairo.Space.gutter,
+         @ViewBuilder graphic: () -> Graphic,
+         @ViewBuilder detail: () -> Detail) {
+        self.init(stacked: stacked, spacing: spacing,
+                  graphic: graphic, detail: detail, trailing: { EmptyView() })
+    }
 }
