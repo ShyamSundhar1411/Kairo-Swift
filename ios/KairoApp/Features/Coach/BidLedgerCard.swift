@@ -21,6 +21,11 @@ struct BidLedgerCard: View {
     /// Tapping a row opens the decision record for this pass. nil while no pass
     /// has been recorded, which is the only state where a row is not tappable.
     let record: DecisionRecord?
+    /// A label and a count on one line leave the label a third of the width at
+    /// an accessibility size, and SwiftUI then hyphenates: "THE CON-TEST". A
+    /// heading broken mid-word is the cramping this screen was rebuilt to
+    /// remove, so the count moves to its own line instead.
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var all: [Nudge] { (delivered + suppressed).sorted { $0.score > $1.score } }
     private var deliveredIDs: Set<String> { Set(delivered.map(\.bid.id)) }
@@ -57,14 +62,9 @@ struct BidLedgerCard: View {
     private var roster: some View {
         let bidding = Set(all.map(\.bid.originAgent))
         return VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
-                Text("WHO BID").font(.kairoLabel).tracking(1.1)
-                Spacer(minLength: 4)
-                Text(bidding.isEmpty ? "none of five"
-                     : "\(bidding.count) of \(AgentID.allCases.count)")
-                    .font(.kairoLabel).tracking(0.6)
-            }
-            .foregroundStyle(Kairo.inkFaint)
+            countedLabel("WHO BID",
+                         count: bidding.isEmpty ? "none of five"
+                                : "\(bidding.count) of \(AgentID.allCases.count)")
 
             HStack(spacing: 10) {
                 ForEach(AgentID.allCases, id: \.self) { agent in
@@ -92,14 +92,8 @@ struct BidLedgerCard: View {
 
     private var ledger: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text(delivered.isEmpty ? "WHAT IT HELD BACK" : "THE CONTEST")
-                    .font(.kairoLabel).tracking(1.1)
-                Spacer(minLength: 4)
-                Text(all.count == 1 ? "1 bid" : "\(all.count) bids")
-                    .font(.kairoLabel).tracking(0.6)
-            }
-            .foregroundStyle(Kairo.inkFaint)
+            countedLabel(delivered.isEmpty ? "WHAT IT HELD BACK" : "THE CONTEST",
+                         count: all.count == 1 ? "1 bid" : "\(all.count) bids")
 
             VStack(spacing: 0) {
                 ForEach(Array(all.enumerated()), id: \.element.bid.id) { i, nudge in
@@ -114,6 +108,29 @@ struct BidLedgerCard: View {
                 }
             }
         }
+    }
+
+    /// A section label with its tally. Side by side while there is room for
+    /// both, stacked once there is not.
+    @ViewBuilder
+    private func countedLabel(_ label: String, count: String) -> some View {
+        let name = Text(label)
+            .font(.kairoLabel).tracking(typeSize.isAccessibilitySize ? 0.4 : 1.1)
+            .fixedSize(horizontal: false, vertical: true)
+        let tally = Text(count)
+            .font(.kairoLabel).tracking(0.4)
+            .fixedSize(horizontal: false, vertical: true)
+
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 2) { name; tally }
+            } else {
+                HStack(spacing: 6) { name; Spacer(minLength: 4); tally }
+            }
+        }
+        .foregroundStyle(Kairo.inkFaint)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private var nothingBid: some View {
