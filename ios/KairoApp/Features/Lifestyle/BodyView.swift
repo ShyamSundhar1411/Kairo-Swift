@@ -7,8 +7,18 @@ import KairoKit
 /// the badge *is* what the number is worth: the same `AssertionForm` the Steward
 /// enforces on any sentence about sleep. When the watch was off the wrist there is
 /// nothing to draw, so the screen says so rather than drawing an empty ring.
-struct SleepView: View {
+///
+/// Was `SleepView`. It now carries movement as well, which arrived here from
+/// Today: a sitting figure and a wear figure are the same kind of fact as last
+/// night's hours — a reading from the same sensor with the same evidence gate
+/// over it — and they answered none of the questions the attention ledger is
+/// for. The wear and sitting tiles were drawn twice, once on each screen; there
+/// is now one set.
+struct BodyView: View {
     @Environment(AppModel.self) private var model
+    /// Three tiles across 375 points is 110 points each, which at an
+    /// accessibility size fits "on" and then an ellipsis. They stack.
+    @Environment(\.dynamicTypeSize) private var typeSize
     /// Absent and not-yet-read are different facts, and this screen is the one
     /// that must not confuse them: rendering an unread port as nil told the user
     /// "the watch was off your wrist" on the first frame, before anything had
@@ -40,12 +50,11 @@ struct SleepView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Kairo.Space.stack) {
-                    KairoHeader(eyebrow: "last night", title: "Sleep")
+                    KairoHeader(eyebrow: "what your sensors saw", title: "Body")
                         .padding(.horizontal, 4)
 
-                    hero
-                    tiles
-                    debtSection
+                    sleepSection
+                    movementSection
                     coverageSection
 
                     TrustNote(text: "Kairo will not draw a trend line through days it "
@@ -59,6 +68,16 @@ struct SleepView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
         .task { await load() }
+    }
+
+    // MARK: - Sleep
+
+    private var sleepSection: some View {
+        VStack(spacing: 8) {
+            SectionHeader(title: "Last night", icon: "moon.stars", tint: Kairo.violet)
+            hero
+            debtSection
+        }
     }
 
     // MARK: - Hero
@@ -186,17 +205,59 @@ struct SleepView: View {
 
     // MARK: - Stats
 
-    /// `wearHours` is the honest denominator behind the hero: hours slept mean
-    /// nothing without the hours the watch was actually on.
-    private var tiles: some View {
-        HStack(spacing: 10) {
-            StatTile(value: measured(wearHours, shortHours), caption: "on your wrist",
-                     icon: "applewatch", tint: Kairo.teal)
-            StatTile(value: measured(sedentaryMinutes) { "\($0) min" },
-                     caption: "sitting unbroken",
-                     icon: "figure.stand", tint: Kairo.amber)
-            StatTile(value: dayCoverage.state.rawValue.capitalized, caption: "coverage state",
-                     icon: "calendar.badge.clock", tint: Kairo.violet)
+    // MARK: - Movement
+    //
+    // CF5, moved here from Today. Every figure is optional on purpose: the whole
+    // point of the movement read was to stop showing a constant where there was
+    // no measurement, so an absent value says so instead of drawing a zero.
+    //
+    // `wearHours` is also the honest denominator behind the sleep hero — hours
+    // slept mean nothing without the hours the watch was actually on — which is
+    // the other reason the two belong on one screen.
+
+    private var movementSection: some View {
+        VStack(spacing: 8) {
+            SectionHeader(title: "Movement", icon: "figure.walk", tint: Kairo.amber)
+            VStack(alignment: .leading, spacing: 12) {
+                if let m = model.movement {
+                    HStack(spacing: 8) {
+                        Text("TODAY").font(.kairoLabel).tracking(1.1)
+                        Spacer(minLength: 4)
+                        CoverageBadge(form: m.permittedForm())
+                    }
+                    .foregroundStyle(Kairo.amber)
+                }
+
+                // One set of tiles, not two. Wear and sitting were on this
+                // screen and on Today, reading the same two ports.
+                let tiles = Group {
+                    StatTile(value: measured(wearHours, shortHours), caption: "on your wrist",
+                             icon: "applewatch", tint: Kairo.teal)
+                    StatTile(value: measured(sedentaryMinutes) { "\($0) min" },
+                             caption: "sitting unbroken",
+                             icon: "figure.stand", tint: Kairo.amber)
+                    StatTile(value: model.movement.flatMap(\.activeKilojoules)
+                                .map { "\(Int($0)) kJ" },
+                             caption: "burned today",
+                             icon: "flame.fill", tint: Kairo.coral)
+                }
+                if typeSize.isAccessibilitySize {
+                    VStack(spacing: 10) { tiles }
+                } else {
+                    HStack(spacing: 10) { tiles }
+                }
+
+                if let m = model.movement, !m.isObserved {
+                    Text("No wear reading yet, so nothing here is measured against "
+                         + "anything. Kairo will not put a figure on a day it could "
+                         + "not see.")
+                        .font(.kairoCaption)
+                        .foregroundStyle(Kairo.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .kairoCard()
         }
     }
 
@@ -223,8 +284,6 @@ struct SleepView: View {
     /// see, and the *sentence* is chosen by the form that debt permits.
     private var debtSection: some View {
         VStack(spacing: 8) {
-            SectionHeader(title: "This week", icon: "moon.stars",
-                          trailing: "screened", tint: Kairo.violet)
             if let debt {
                 GatedClaim(text: debtClaim(debt), domain: .sleep)
                 evidenceFootnote(debt)

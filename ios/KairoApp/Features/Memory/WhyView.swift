@@ -9,6 +9,10 @@ import KairoKit
 /// visibly different sources, because that is the claim being audited.
 struct WhyView: View {
     let record: DecisionRecord
+    /// The bid the user tapped to get here, when they came from the ledger. Its
+    /// row is marked so the screen answers the question that was asked rather
+    /// than presenting a list and leaving them to find their way back.
+    var focus: String?
 
     var body: some View {
         ScrollView {
@@ -46,49 +50,115 @@ struct WhyView: View {
 
     // MARK: - Summary
 
+    /// The subject of this screen is what was decided. It used to be `record.id`
+    /// at 22pt monospace — a database key as the headline of the one screen
+    /// whose entire job is to be readable by the person it is about.
     private var summary: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("DECISION RECORD")
+                    Text("WHAT KAIRO DECIDED")
                         .font(.kairoLabel).tracking(1.1)
                         .foregroundStyle(Kairo.inkFaint)
-                    Text(record.id)
-                        .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    Text(headline)
+                        .font(.kairoTitle)
                         .foregroundStyle(Kairo.ink)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(record.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
+                        .font(.kairoCaption)
                         .foregroundStyle(Kairo.inkSoft)
                 }
                 Spacer(minLength: 8)
                 Image(systemName: record.isSealed ? "lock.fill" : "pencil.and.outline")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.kairoGlyph(15, weight: .semibold))
                     .foregroundStyle(Kairo.violet)
                     .frame(width: 38, height: 38)
                     .background(Circle().fill(Kairo.violet.opacity(0.14)))
             }
 
             PillWrap {
-                Pill(text: spacedStateName(record.state.name),
-                     icon: "circle.dashed", tint: Kairo.violet)
                 if record.isSealed {
-                    if record.state != .sealed {
-                        Pill(text: "sealed", icon: "lock.fill", tint: Kairo.violet)
-                    }
+                    Pill(text: "sealed — cannot be edited", icon: "lock.fill", tint: Kairo.violet)
                 } else {
-                    Pill(text: "not sealed yet", icon: "pencil", tint: Kairo.amber)
+                    Pill(text: "still being assembled", icon: "pencil", tint: Kairo.amber)
                 }
                 if let verdict = record.safetyVerdict {
-                    Pill(text: "safety \(verdict)", icon: "shield.lefthalf.filled",
-                         tint: verdict == "pass" ? Kairo.leaf : Kairo.coral)
+                    Pill(text: safetyWords(verdict), icon: safetyIcon(verdict),
+                         tint: safetyTint(verdict))
                 }
-                if let tier = record.serviceTier {
-                    Pill(text: "tier \(tier)", icon: "cpu", tint: Kairo.sky)
-                }
+            }
+
+            if let tier = record.serviceTier {
+                // The tier was drawn as `tier healthy` with a cpu glyph and no
+                // explanation — a rung on the cost ladder, printed at a user
+                // who has never been told there is a ladder. Either it is
+                // explained or it goes; this explains it in one line.
+                Text(tierExplanation(tier))
+                    .font(.kairoCaption)
+                    .foregroundStyle(Kairo.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .kairoCard(tint: Kairo.violet)
+    }
+
+    /// One sentence naming the outcome, built from the record rather than from
+    /// whatever screen pushed this one.
+    private var headline: String {
+        let rejected = record.rejectedAlternatives.count
+        guard rejected > 0 else {
+            return record.fragments.isEmpty
+                ? "Nothing was decided in this pass"
+                : "\(record.fragments.count) roles weighed in and nothing was worth saying"
+        }
+        return rejected == 1
+            ? "One bid was turned down"
+            : "\(rejected) bids were turned down"
+    }
+
+    /// The six-member safety enum, in words. `nothingToScreen` and `unscreened`
+    /// are not passes: one means no message existed to judge, the other that no
+    /// Steward was bound — and showing either as a green tick would be the app
+    /// claiming a safety result nobody produced.
+    private func safetyWords(_ verdict: String) -> String {
+        switch verdict {
+        case "pass":            "safety: cleared"
+        case "rewritten":       "safety: rewritten before sending"
+        case "blocked":         "safety: blocked"
+        case "heldForHuman":    "safety: held for a person"
+        case "nothingToScreen": "safety: nothing to screen"
+        case "unscreened":      "safety: not screened"
+        default:                "safety: \(spacedStateName(verdict))"
+        }
+    }
+
+    private func safetyIcon(_ verdict: String) -> String {
+        switch verdict {
+        case "pass":            "checkmark.seal.fill"
+        case "rewritten":       "pencil.and.outline"
+        case "blocked":         "hand.raised.fill"
+        case "heldForHuman":    "person.crop.circle.badge.exclamationmark"
+        case "nothingToScreen": "tray"
+        default:                "shield.slash"
+        }
+    }
+
+    private func safetyTint(_ verdict: String) -> Color {
+        switch verdict {
+        case "pass":                      Kairo.leaf
+        case "rewritten":                 Kairo.sky
+        case "blocked", "heldForHuman":   Kairo.coral
+        // Neither a pass nor a failure. Drawn as neither.
+        case "nothingToScreen":           Kairo.inkFaint
+        default:                          Kairo.amber
+        }
+    }
+
+    private func tierExplanation(_ tier: String) -> String {
+        "Decided at the \(tier) rung of the cost ladder — how much reasoning Kairo "
+        + "is allowed to spend this month, which drops as the ceiling is approached. "
+        + "Safety screening and your memory never degrade."
     }
 
     private var bareNote: some View {
@@ -166,7 +236,7 @@ struct WhyView: View {
                           trailing: "\(record.rejectedAlternatives.count)", tint: Kairo.teal)
 
             ForEach(Array(record.rejectedAlternatives.enumerated()), id: \.offset) { _, r in
-                RejectedRow(alternative: r)
+                RejectedRow(alternative: r, isFocused: r.bidID == focus)
             }
         }
     }
@@ -220,20 +290,26 @@ private struct FragmentRow: View {
                     .font(.kairoLabel).tracking(0.6)
                     .foregroundStyle(tint)
 
-                Text(fragment.claim)
+                // A role that was recorded as contributing but said nothing is
+                // drawn as exactly that. It used to be an empty line, which read
+                // as a rendering bug rather than as a fact about the record.
+                Text(fragment.claim.isEmpty
+                     ? "contributed to this pass without a recorded claim"
+                     : fragment.claim)
                     .font(.kairoBody)
-                    .foregroundStyle(Kairo.ink)
+                    .foregroundStyle(fragment.claim.isEmpty ? Kairo.inkFaint : Kairo.ink)
                     .fixedSize(horizontal: false, vertical: true)
 
                 ScoreMeter(value: fragment.confidence, tint: tint, height: 5)
 
-                HStack(spacing: 6) {
-                    Text("prompt \(fragment.promptVersion)")
-                    Spacer(minLength: 4)
+                PillWrap {
                     Text(String(format: "%.0f%% confident", fragment.confidence * 100))
+                        .font(.kairoCaption)
+                        .foregroundStyle(Kairo.inkSoft)
+                    Text("prompt \(fragment.promptVersion)")
+                        .font(.kairoMono)
+                        .foregroundStyle(Kairo.inkFaint)
                 }
-                .font(.kairoMono)
-                .foregroundStyle(Kairo.inkFaint)
             }
             .padding(.bottom, isLast ? 0 : 18)
         }
@@ -258,13 +334,14 @@ private struct CitationRow: View {
                        size: 42, lineWidth: 5)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(citation.memoryID)
-                    .font(.kairoMono)
-                    .foregroundStyle(Kairo.ink)
                 Text(String(format: "cited at %.0f%% confidence",
                             citation.confidenceAtCitation * 100))
-                    .font(.caption)
-                    .foregroundStyle(Kairo.inkSoft)
+                    .font(.kairoHeadline)
+                    .foregroundStyle(Kairo.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(citation.memoryID)
+                    .font(.kairoMono)
+                    .foregroundStyle(Kairo.inkFaint)
             }
             Spacer(minLength: 0)
         }
@@ -277,98 +354,59 @@ private struct CitationRow: View {
 
 // MARK: - One rejected alternative
 
-/// Mirrors `SuppressedCard` on Today deliberately: the same reason must read the
-/// same way in the live view and in the record. In particular a cost decision is
-/// labelled as a cost decision in the warning colour — it is never presented to
-/// the user as restraint (Section 7.1).
+/// Reads the same sentence the Today ledger reads, because it is the same
+/// decision. Both go through `SuppressionCopy`, which is the only place in the
+/// app that turns a `SuppressionReason` into English — there used to be two
+/// copies of that switch and they had already drifted.
 private struct RejectedRow: View {
     let alternative: RejectedAlternative
+    /// True for the bid the user tapped to get here.
+    var isFocused = false
 
     private var classTint: Color { Kairo.colour(forNudgeClass: alternative.nudgeClass) }
-    private var isCost: Bool { alternative.reason == .costCeiling }
+    private var copy: SuppressionCopy.Copy {
+        // The record carries no costing of its own, so the sentence here is the
+        // metered one. A notional ceiling is explained on Today, where the
+        // budget object that says so actually arrives.
+        SuppressionCopy.copy(for: alternative.reason, costing: .metered)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Capsule()
-                .fill(reasonTint)
+                .fill(copy.tint)
                 .frame(width: 3)
                 .frame(maxHeight: .infinity)
 
             VStack(alignment: .leading, spacing: 7) {
-                HStack(spacing: 6) {
-                    Image(systemName: Kairo.icon(forNudgeClass: alternative.nudgeClass))
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(classTint)
-                    Text(Kairo.title(forNudgeClass: alternative.nudgeClass))
-                        .font(.kairoHeadline)
-                        .foregroundStyle(Kairo.ink)
-                    Spacer(minLength: 0)
-                    if isCost {
-                        Pill(text: "cost", icon: "dollarsign.circle.fill",
-                             tint: Kairo.coral, solid: true)
+                PillWrap {
+                    Pill(text: Kairo.title(forNudgeClass: alternative.nudgeClass),
+                         icon: Kairo.icon(forNudgeClass: alternative.nudgeClass),
+                         tint: classTint)
+                    if let badge = copy.badge {
+                        Pill(text: badge.text, icon: badge.icon, tint: copy.tint, solid: true)
                     }
-                    Text(String(format: "%.2f", alternative.score))
-                        .font(.kairoMono)
-                        .foregroundStyle(Kairo.inkFaint)
+                    if isFocused {
+                        Pill(text: "the one you tapped", icon: "hand.tap.fill",
+                             tint: Kairo.violet)
+                    }
                 }
 
-                Text(explanation)
-                    .font(.subheadline)
-                    .foregroundStyle(Kairo.inkSoft)
+                Text(copy.sentence)
+                    .font(.kairoBody)
+                    .foregroundStyle(Kairo.ink)
                     .fixedSize(horizontal: false, vertical: true)
 
-                PillWrap {
-                    Pill(text: spacedStateName(alternative.reason.rawValue),
-                         icon: reasonIcon, tint: reasonTint)
-                    Pill(text: alternative.bidID, icon: "number", tint: Kairo.inkFaint)
-                }
-
-                ScoreMeter(value: alternative.score, tint: reasonTint, height: 4)
+                ScoreMeter(value: alternative.score, tint: copy.tint, height: 4)
                     .opacity(0.8)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .kairoCard(padding: 14, radius: Kairo.Radius.inner, tint: isCost ? Kairo.coral : nil)
-    }
-
-    private var explanation: String {
-        switch alternative.reason {
-        case .budgetExhausted: "today's interruption budget was already spent"
-        case .quietHours:      "quiet hours"
-        case .outranked:       "a more useful interruption won this slot"
-        case .costCeiling:     "held back to stay inside this month's service cost"
-        case .classSuspended:  "suspended by your current plan contract"
-        case .windowNotOpen:   "not due yet"
-        case .windowClosed:    "the useful moment passed"
-        case .inaccessible:    "could not be delivered in a form you can act on"
-        case .duplicateClass:  "a similar interruption was already delivered"
-        case .ungrounded:      "nothing was measured here today, so nothing was claimed"
-        }
-    }
-
-    private var reasonIcon: String {
-        switch alternative.reason {
-        case .budgetExhausted: "gauge.with.dots.needle.0percent"
-        case .quietHours:      "moon.fill"
-        case .outranked:       "arrow.up.arrow.down"
-        case .costCeiling:     "dollarsign.circle"
-        case .classSuspended:  "pause.circle"
-        case .windowNotOpen:   "clock.badge.questionmark"
-        case .windowClosed:    "clock.badge.xmark"
-        case .inaccessible:    "figure.roll"
-        case .duplicateClass:  "square.on.square"
-        case .ungrounded:      "eye.slash"
-        }
-    }
-
-    private var reasonTint: Color {
-        switch alternative.reason {
-        case .costCeiling, .inaccessible: Kairo.coral
-        case .budgetExhausted:            Kairo.amber
-        case .quietHours:                 Kairo.violet
-        case .classSuspended:             Kairo.teal
-        default:                          Kairo.inkFaint
-        }
+        .kairoCard(padding: 14, radius: Kairo.Radius.inner,
+                   tint: isFocused ? Kairo.violet : (copy.badge == nil ? nil : copy.tint))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(Kairo.title(forNudgeClass: alternative.nudgeClass)): "
+                            + copy.sentence)
     }
 }
 

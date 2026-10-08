@@ -38,6 +38,13 @@ targets:
       - package: Kairo
         product: KairoKit
       - target: KairoWatch
+    # The UI tests run inside this scheme, so `xcodebuild test -scheme KairoApp`
+    # exercises the screens. They exist because this machine has no Simulator.app
+    # — there is no window to click — and the screens that matter most here are
+    # two taps deep.
+    scheme:
+      testTargets:
+        - KairoUITests
     info:
       path: ios/KairoApp/Resources/Info.plist
       properties:
@@ -137,3 +144,19 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.9"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
+
+  KairoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: ios/KairoUITests
+    dependencies:
+      - target: KairoApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: au.edu.sydney.elec5620.kairo${KAIRO_BUNDLE_SUFFIX}.uitests
+        DEVELOPMENT_TEAM: ${KAIRO_DEV_TEAM}
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.9"
+        TEST_TARGET_NAME: KairoApp
+        GENERATE_INFOPLIST_FILE: YES

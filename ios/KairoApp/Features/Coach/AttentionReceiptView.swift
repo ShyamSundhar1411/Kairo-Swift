@@ -18,23 +18,18 @@ struct AttentionReceiptView: View {
     /// makes it real.
     @State private var ceiling: Int = 6
     @State private var quietStart = 21
-    @State private var priorities: [String: Double] = [
-        "hydration": 0.5, "sedentary": 0.8, "bedtimePrep": 0.6,
-    ]
 
     private let maxCeiling = 12
-    /// Fixed order, so the rows do not reshuffle as values change.
-    private let priorityOrder = ["hydration", "sedentary", "bedtimePrep"]
+    /// Fixed order, so the rows do not reshuffle as values change. Every class
+    /// the vocabulary declares, because a class missing from this list is one
+    /// the user cannot turn off.
+    private var priorityOrder: [String] { NudgeClassVocabulary.known }
 
     var body: some View {
         ScrollView {
             VStack(spacing: Kairo.Space.stack) {
-                header
-                restraintHero
-                tiles
-
                 VStack(spacing: 8) {
-                    SectionHeader(title: "Your contract", icon: "slider.horizontal.3",
+                    SectionHeader(title: "Interruptions a day", icon: "slider.horizontal.3",
                                   tint: Kairo.amber)
                     ceilingCard
                 }
@@ -51,81 +46,19 @@ struct AttentionReceiptView: View {
                 }
 
                 TrustNote(text: "Setting a priority to zero means Kairo will never spend an "
-                          + "interruption on it, even when it thinks it should.")
+                          + "interruption on it, even when it thinks it should: that class "
+                          + "stops bidding on this phone, and the agents are sent the same "
+                          + "weights with every pass.")
             }
             .padding(.horizontal, Kairo.Space.stack)
             .padding(.top, 4)
             .padding(.bottom, 28)
         }
         .background(KairoCanvas())
-        .toolbar {
-            NavigationLink { BackendSettingsView() } label: {
-                Label("Agents", systemImage: "point.3.connected.trianglepath.dotted")
-            }
-        }
-        .navigationTitle("Attention")
+        .navigationTitle("Your attention contract")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear { ceiling = model.schedule.dailyBudget }
-    }
-
-    // MARK: - Header
-
-    private var header: some View {
-        KairoHeader(eyebrow: "Today so far", title: "Held back on purpose") {
-            if let c = model.contract, c.state == .active {
-                Pill(text: "plan contract", icon: "checkmark.seal.fill", tint: Kairo.teal)
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    // MARK: - Restraint
-
-    private var held: Int { model.arbitration?.suppressed.count ?? 0 }
-    private var delivered: Int { model.arbitration?.delivered.count ?? 0 }
-    private var considered: Int { held + delivered }
-
-    /// The number the screen is about. Not "notifications sent" — the ones that
-    /// were argued for and still did not reach you.
-    private var restraintHero: some View {
-        HStack(alignment: .center, spacing: Kairo.Space.gutter) {
-            MetricRing(progress: considered == 0 ? 0 : Double(held) / Double(considered),
-                       tint: Kairo.teal,
-                       centreText: "\(held)",
-                       size: 106, lineWidth: 9)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("DELIBERATELY HELD BACK")
-                    .font(.kairoLabel).tracking(1.1)
-                    .foregroundStyle(Kairo.inkFaint)
-                Text(considered == 0
-                     ? "Nothing has bid for your attention yet"
-                     : "\(held) of \(considered) bids stayed quiet")
-                    .font(.kairoHeadline)
-                    .foregroundStyle(Kairo.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Every one of these could have reached you. Kairo decided it was not "
-                     + "worth the interruption.")
-                    .font(.caption)
-                    .foregroundStyle(Kairo.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .kairoCard()
-    }
-
-    private var tiles: some View {
-        HStack(spacing: 10) {
-            StatTile(value: "\(model.schedule.spent)",
-                     caption: "interruptions spent", icon: "bell.badge.fill", tint: Kairo.amber)
-            StatTile(value: "\(held)",
-                     caption: "deliberately held back", icon: "hand.raised.fill", tint: Kairo.teal)
-            StatTile(value: "\(model.schedule.remaining)",
-                     caption: "left in today's budget", icon: "gauge.with.dots.needle.67percent",
-                     tint: Kairo.sky)
-        }
     }
 
     // MARK: - Ceiling
@@ -283,11 +216,12 @@ struct AttentionReceiptView: View {
 
     private var quietCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(18..<24, id: \.self) { hourPill($0) }
-                }
-                .padding(.vertical, 2)
+            // PillWrap, not a horizontal scroller. Six hour pills at
+            // accessibility XXXL are wider than an iPhone SE, and a row that
+            // scrolls sideways hides the option the user is looking for behind
+            // a gesture nothing on the screen advertises.
+            PillWrap(spacing: 8, lineSpacing: 8) {
+                ForEach(18..<24, id: \.self) { hourPill($0) }
             }
 
             Text(quietCaption)
@@ -315,7 +249,7 @@ struct AttentionReceiptView: View {
                     Image(systemName: "moon.fill").font(.system(size: 9, weight: .bold))
                 }
                 Text(String(format: "%02d:00", h))
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.kairoHeadline)
                     .monospacedDigit()
             }
             .foregroundStyle(on ? Color.white : Kairo.inkSoft)
@@ -357,7 +291,7 @@ struct AttentionReceiptView: View {
 
     private func priorityRow(_ key: String) -> some View {
         let tint = Kairo.colour(forNudgeClass: key)
-        let value = priorities[key] ?? 0.5
+        let value = model.priorities[key] ?? 0.6
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: Kairo.icon(forNudgeClass: key))
@@ -379,16 +313,24 @@ struct AttentionReceiptView: View {
                     Pill(text: "never", tint: Kairo.coral)
                 } else {
                     Text("\(Int((value * 100).rounded()))%")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(.kairoHeadline)
                         .monospacedDigit()
                         .contentTransition(.numericText())
                         .foregroundStyle(tint)
                 }
             }
 
-            Slider(value: Binding(get: { priorities[key] ?? 0.5 },
-                                  set: { priorities[key] = $0 }),
-                   in: 0...1, step: 0.05)
+            // OF3: this moves a value `runArbitration()` reads. It used to move
+            // a `@State` dictionary this screen owned and nothing else ever
+            // looked at, under a footnote promising that zero meant never.
+            Slider(value: Binding(get: { model.priorities[key] ?? 0.6 },
+                                  set: { model.setPriority($0, for: key) }),
+                   in: 0...1, step: 0.05,
+                   onEditingChanged: { editing in
+                       // Re-arbitrate on release, for the same reason the dot
+                       // row does: a scrub across the slider is one decision.
+                       if !editing { Task { await model.runArbitration() } }
+                   })
                 .tint(tint)
                 .accessibilityLabel("\(Kairo.title(forNudgeClass: key)) priority")
                 .accessibilityValue(value <= 0 ? "never"

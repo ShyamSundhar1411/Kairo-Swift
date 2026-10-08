@@ -6,7 +6,9 @@ import KairoKit
 /// while switching, which matters because a half-logged meal must survive a
 /// glance at Today.
 enum KairoTab: String, CaseIterable, Identifiable {
-    case today, meals, sleep, memory
+    /// `body` rather than `sleep`: the screen now carries movement as well as
+    /// last night, so the old name described one of its two halves.
+    case today, meals, body, memory
 
     var id: String { rawValue }
 
@@ -14,7 +16,7 @@ enum KairoTab: String, CaseIterable, Identifiable {
         switch self {
         case .today:  "Today"
         case .meals:  "Meals"
-        case .sleep:  "Sleep"
+        case .body:   "Body"
         case .memory: "Memory"
         }
     }
@@ -23,7 +25,7 @@ enum KairoTab: String, CaseIterable, Identifiable {
         switch self {
         case .today:  "sun.max"
         case .meals:  "fork.knife"
-        case .sleep:  "moon.zzz"
+        case .body:   "heart.text.square"
         case .memory: "book.closed"
         }
     }
@@ -32,17 +34,24 @@ enum KairoTab: String, CaseIterable, Identifiable {
         switch self {
         case .today:  "sun.max.fill"
         case .meals:  "fork.knife"
-        case .sleep:  "moon.zzz.fill"
+        case .body:   "heart.text.square.fill"
         case .memory: "book.closed.fill"
         }
     }
 
+    /// One word, one colour. `memory` was teal while the Memory *agent* is
+    /// violet, so the tab bar and every agent chip disagreed about what the
+    /// word meant. The agent's colour wins: it is the one that appears on five
+    /// other screens.
     var tint: Color {
         switch self {
         case .today:  Kairo.amber
         case .meals:  Kairo.leaf
-        case .sleep:  Kairo.violet
-        case .memory: Kairo.teal
+        // Teal, because the Lifestyle analyst is the role that reasons about
+        // both halves of this screen — not violet, which now belongs to Memory
+        // on the tab bar as it already did on every agent chip.
+        case .body:   Kairo.teal
+        case .memory: Kairo.violet
         }
     }
 }
@@ -57,7 +66,7 @@ struct RootView: View {
             ZStack {
                 page(.today)  { TodayView() }
                 page(.meals)  { MealCaptureView() }
-                page(.sleep)  { SleepView() }
+                page(.body)   { BodyView() }
                 page(.memory) { MemoryBookView() }
             }
             .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 62) }
@@ -81,6 +90,12 @@ struct RootView: View {
 struct KairoTabBar: View {
     @Binding var selection: KairoTab
     @Namespace private var pill
+    /// Four labels cannot share 375 points at an accessibility size — "Today"
+    /// and "Memory" both rendered as three letters and an ellipsis. The icons
+    /// are already the thing being aimed at; the words come off rather than
+    /// being abbreviated into noise, and VoiceOver still announces each tab by
+    /// name because the label was never carried by the `Text`.
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(spacing: 2) {
@@ -91,10 +106,14 @@ struct KairoTabBar: View {
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: selection == t ? t.selectedIcon : t.icon)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.kairoGlyph(typeSize.isAccessibilitySize ? 22 : 16,
+                                              weight: .semibold))
                             .symbolEffect(.bounce, value: selection == t)
-                        Text(t.title)
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        if !typeSize.isAccessibilitySize {
+                            Text(t.title)
+                                .font(.kairoLabel)
+                                .lineLimit(1)
+                        }
                     }
                     .foregroundStyle(selection == t ? t.tint : Kairo.inkFaint)
                     .frame(maxWidth: .infinity)

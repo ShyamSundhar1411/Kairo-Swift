@@ -11,6 +11,9 @@ import KairoKit
 struct MemoryBookView: View {
     @Environment(AppModel.self) private var model
     @State private var openRecordID: String?
+    /// A 44-point disc beside prose leaves the prose 190 points at 375, which
+    /// iOS's own audit reported as clipped text at accessibility XXXL.
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         NavigationStack {
@@ -56,8 +59,15 @@ struct MemoryBookView: View {
     // MARK: - Header
 
     private var header: some View {
+        // The count comes off at an accessibility size rather than being
+        // clipped. Inside a `List` row the header's trailing slot is measured
+        // against the row rather than the line, so the pill was handed 125
+        // points and cut "2 facts" in half — and the same count is already on
+        // the Facts section header immediately below this.
         KairoHeader(eyebrow: "what kairo remembers", title: "Memory") {
-            Pill(text: factCount, icon: "book.closed.fill", tint: Kairo.teal)
+            if !typeSize.isAccessibilitySize {
+                Pill(text: factCount, icon: "book.closed.fill", tint: Kairo.teal)
+            }
         }
     }
 
@@ -66,21 +76,22 @@ struct MemoryBookView: View {
     }
 
     private var emptyFacts: some View {
-        HStack(spacing: 14) {
+        AdaptiveHeroRow(stacked: typeSize.isAccessibilitySize, spacing: 14) {
             Image(systemName: "book.closed")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.kairoGlyph(18, weight: .semibold))
                 .foregroundStyle(Kairo.teal)
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(Kairo.teal.opacity(0.14)))
+        } detail: {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Kairo remembers nothing about you")
                     .font(.kairoHeadline).foregroundStyle(Kairo.ink)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Facts appear here as they are learned, and only after they "
                      + "have been corroborated.")
-                    .font(.caption).foregroundStyle(Kairo.inkSoft)
+                    .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
         }
         .kairoCard(tint: Kairo.teal)
     }
@@ -363,16 +374,31 @@ func spacedStateName(_ name: String) -> String {
 
 /// A row of pills that wraps onto the next line instead of squashing. Facts can
 /// carry four or five badges at once and the labels grow with Dynamic Type.
+///
+/// Every width is clamped to the proposal before it is used. Without that clamp
+/// a single pill whose label is wider than the screen — "target reached — no
+/// more water nudges today" at accessibility XXXL is about 900 points — reported
+/// its full intrinsic width as the layout's width, which widened the scroll
+/// view's content past the device and pushed every other card on the screen off
+/// both edges at once. The pill is given the clamped width instead, so its own
+/// text wraps and the row stays inside the screen.
 struct PillWrap: Layout {
     var spacing: CGFloat = 6
     var lineSpacing: CGFloat = 6
+
+    /// What one subview actually gets, never wider than the line it sits on.
+    private func measure(_ s: LayoutSubview, limit: CGFloat) -> CGSize {
+        let natural = s.sizeThatFits(.unspecified)
+        guard natural.width > limit, limit.isFinite else { return natural }
+        return s.sizeThatFits(ProposedViewSize(width: limit, height: nil))
+    }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let limit = proposal.width ?? .infinity
         var x: CGFloat = 0, y: CGFloat = 0
         var lineHeight: CGFloat = 0, widest: CGFloat = 0
         for s in subviews {
-            let size = s.sizeThatFits(.unspecified)
+            let size = measure(s, limit: limit)
             if x > 0, x + spacing + size.width > limit {
                 y += lineHeight + lineSpacing
                 x = 0
@@ -383,14 +409,14 @@ struct PillWrap: Layout {
             widest = max(widest, x)
             lineHeight = max(lineHeight, size.height)
         }
-        return CGSize(width: widest, height: y + lineHeight)
+        return CGSize(width: min(widest, limit), height: y + lineHeight)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize,
                        subviews: Subviews, cache: inout ()) {
         var x = bounds.minX, y = bounds.minY, lineHeight: CGFloat = 0
         for s in subviews {
-            let size = s.sizeThatFits(.unspecified)
+            let size = measure(s, limit: bounds.width)
             if x > bounds.minX, x + spacing + size.width > bounds.maxX {
                 y += lineHeight + lineSpacing
                 x = bounds.minX
