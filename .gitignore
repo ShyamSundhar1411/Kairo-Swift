@@ -6,7 +6,7 @@ DerivedData/
 *.xcworkspace/
 xcuserdata/
 *.xcuserstate
-
+.env
 # Python
 __pycache__/
 *.py[cod]
