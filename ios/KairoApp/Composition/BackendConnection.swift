@@ -90,9 +90,26 @@ final class BackendConnection {
         didSet { UserDefaults.standard.set(token, forKey: Self.tokenKey) }
     }
 
+    /// Where a backend is, before anyone has told us otherwise.
+    ///
+    /// In the simulator this IS the Mac's loopback, so a developer who has the
+    /// backend running gets the five agent roles on first launch with nothing
+    /// typed. Demanding an address up front made the default experience the
+    /// on-device fallback — the weakest version of the product — and left the
+    /// person to discover a settings screen before they ever saw an agent.
+    ///
+    /// On a real device loopback is the phone itself and nothing answers; that
+    /// resolves to `.unreachable` with the reason on screen, which is the state
+    /// this class already exists to make visible. A wrong guess that announces
+    /// itself beats a blank field that explains nothing.
+    static let defaultAddress = "http://127.0.0.1:8080"
+
     init(address: String? = nil) {
         let stored = UserDefaults.standard.string(forKey: Self.key)
-        self.address = address ?? stored ?? ""
+        // `stored` is honoured even when empty: clearing the field is a
+        // deliberate "run on-device", and re-defaulting over it would make the
+        // setting impossible to turn off.
+        self.address = address ?? stored ?? Self.defaultAddress
         self.token = UserDefaults.standard.string(forKey: Self.tokenKey) ?? ""
     }
 
