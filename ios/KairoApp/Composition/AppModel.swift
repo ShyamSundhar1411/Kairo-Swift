@@ -1,11 +1,15 @@
 import Foundation
 import Observation
+import os
 import KairoKit
 
 /// The single observable the SwiftUI tree reads. Feature views own their own
 /// sub-state; anything crossing a member boundary lives here.
 @Observable
 final class AppModel {
+    private static let log = Logger(subsystem: "au.edu.sydney.elec5620.kairo",
+                                    category: "AppModel")
+
     let env: AppEnvironment
 
     private(set) var arbitration: ArbitrationResult?
@@ -421,8 +425,8 @@ final class AppModel {
     func reloadContract() async {
         guard let client = backend.client else { return }
         do {
-            contract = try await Self.replay(try await client.contract(userID: userID),
-                                             at: env.clock.now)
+            contract = try Self.replay(try await client.contract(userID: userID),
+                                       at: env.clock.now)
         } catch {
             backend.noteFailure(error)
         }
@@ -455,13 +459,26 @@ final class AppModel {
     func respondToContract(accept: Bool) async {
         guard var c = contract else { return }
         let now = env.clock.now
-        if accept {
-            try? c.lifecycle.transition(on: "userAccepted", to: .active, at: now)
-            contract = c
-        } else {
-            try? c.lifecycle.transition(on: "userDeclined", to: .declined, at: now)
-            try? c.lifecycle.transition(on: "returnToStandard", to: .standard, at: now)
-            contract = nil
+        // Optimistic, but only where the machine allows it. These used to be
+        // `try?` with the result dropped, so a refused transition left the
+        // contract untouched and the next line showed it as accepted anyway —
+        // and with no backend to correct it, the screen kept that answer.
+        do {
+            if accept {
+                _ = try c.lifecycle.transition(on: "userAccepted", to: .active, at: now)
+                contract = c
+            } else {
+                _ = try c.lifecycle.transition(on: "userDeclined", to: .declined, at: now)
+                _ = try c.lifecycle.transition(on: "returnToStandard", to: .standard, at: now)
+                contract = nil
+            }
+        } catch {
+            // The machine does not allow this answer from the state it is in.
+            // Leave what is on screen alone and let the backend be the one to
+            // say what the contract became. Logged rather than asserted: this is
+            // reachable when the contract moved on under the screen, and a
+            // crashing demo is a worse answer than a stale row.
+            Self.log.error("contract refused \(accept ? "accept" : "decline"): \(error)")
         }
         if let client = backend.client {
             do {
