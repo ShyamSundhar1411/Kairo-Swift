@@ -1,0 +1,122 @@
+# SCRUM-93 — the checks that used to be run by hand, or not at all.
+#
+# `scripts/verify.sh` has always existed and has always been somebody
+# remembering to type it. Worse, it covers KairoKit and the backend and stops
+# there, so `mobile/ios` and `mobile/watch` were never compiled by anything but
+# a person opening Xcode — the status table in the README said so in as many
+# words. A target nothing builds is a target that is broken the moment nobody
+# is looking at it.
+#
+# Three jobs rather than one script, because they fail for unrelated reasons and
+# a single red tick that could mean "Python broke" or "the watch app broke" is
+# one bisect away from useless. They run in parallel; the slow one is the app
+# build, so it starts at the same time as the fast ones rather than behind them.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A second push to the same branch makes the first run's answer irrelevant.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend — 267 tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # pyproject says >=3.11; pin the low end here so a syntax feature from
+          # a newer release cannot land without the floor being raised with it.
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        working-directory: backend
+        run: pip install -e ".[dev]"
+
+      - name: Test
+        working-directory: backend
+        # No network, no API key, and that is the point: every vendor is
+        # exercised against an in-process OpenAI-compatible stub. A suite that
+        # needed a key would be a suite that is skipped on every fork.
+        run: python -m pytest -q
+
+  kairokit:
+    name: KairoKit — domain and state machines
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test
+        working-directory: mobile/KairoKit
+        run: swift build && swift test
+
+      - name: State machine audit
+        working-directory: mobile/KairoKit
+        # Unreachable states and non-terminal dead ends. The report prints these
+        # machines as figures, so a machine that stops being well-formed is a
+        # figure that stops being true.
+        run: swift run -q kairo-uml audit
+
+  apps:
+    name: iOS and watchOS — compile
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate the project
+        working-directory: mobile
+        # Kairo.xcodeproj is generated and gitignored, so CI builds the same
+        # project a clone does rather than one checked in months ago.
+        # KAIRO_DEV_TEAM is deliberately unset: a simulator build needs no team,
+        # and a workflow that wanted one would need a signing identity in a
+        # secret, which is a lot of machinery for "does it compile".
+        run: ./generate.sh
+
+      - name: Build the app and the watch app
+        working-directory: mobile
+        # KairoWatch is a dependency of KairoApp, so this builds both. A
+        # destination by name would break the day the runner image changes its
+        # simulator list; `generic/platform` compiles without booting anything.
+        #
+        # One build, captured once. Checking warnings with a second xcodebuild
+        # would find none on most runs for the wrong reason: the second build is
+        # incremental, and a warning is only re-emitted when its file is
+        # recompiled.
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Kairo.xcodeproj \
+            -scheme KairoApp \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build.log | tail -40
+
+      - name: Fail on a source warning
+        working-directory: mobile
+        # Not `-warnings-as-errors`: that also fails on warnings from the
+        # toolchain and from SwiftPM dependencies, which this repository cannot
+        # fix and which change with every Xcode release. This counts warnings
+        # whose file is inside the checkout, which is the set somebody here can
+        # actually act on.
+        run: |
+          grep -E "^${GITHUB_WORKSPACE}/.*\.swift:[0-9]+:[0-9]+: warning:" build.log \
+            | sort -u > warnings.txt || true
+          if [ -s warnings.txt ]; then
+            echo "::error::source warnings"
+            cat warnings.txt
+            exit 1
+          fi
+          echo "no source warnings"
