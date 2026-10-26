@@ -224,6 +224,9 @@ public struct RemoteAgentClient: Sendable {
         public let suspendedClasses: [String]
         public let expiresAt: Date?
         public let signalSources: [String]
+        /// FR9.5. Set only when the Steward refused, which is the one case
+        /// where a contract arrives in `standard` with something to say.
+        public let stewardVetoReason: String?
     }
 
     public func contract(userID: String) async throws -> RemoteContract? {
@@ -248,7 +251,8 @@ public struct RemoteAgentClient: Sendable {
             targetReduction: raw["targetReduction"] as? Double ?? 0,
             suspendedClasses: raw["suspendedClasses"] as? [String] ?? [],
             expiresAt: (raw["expiresAt"] as? String).flatMap(parse(instant:)),
-            signalSources: raw["signalSources"] as? [String] ?? [])
+            signalSources: raw["signalSources"] as? [String] ?? [],
+            stewardVetoReason: raw["stewardVetoReason"] as? String)
     }
 
     // MARK: - CF7

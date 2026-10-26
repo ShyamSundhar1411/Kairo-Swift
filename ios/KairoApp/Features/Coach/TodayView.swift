@@ -38,6 +38,15 @@ struct TodayView: View {
                         ContractProposalCard(contract: c)
                     }
 
+                    // FR9.5. A contract the Steward refused never becomes a
+                    // card asking for consent, so without this the user is
+                    // never told it was considered. That is the same omission
+                    // the losing-bid rows exist to prevent: a decision made
+                    // about them, on evidence, that they cannot see.
+                    if let c = model.contract, let why = c.stewardVetoReason {
+                        StewardVetoNote(reason: why)
+                    }
+
                     TrustNote(text: "Every bid that lost is listed above, with why. "
                               + "Nothing here was hidden from you, and a suppression made to "
                               + "save money is labelled as one.")

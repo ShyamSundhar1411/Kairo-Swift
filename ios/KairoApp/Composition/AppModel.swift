@@ -447,6 +447,7 @@ final class AppModel {
         c.targetReduction = remote.targetReduction
         c.suspended = Set(remote.suspendedClasses.map(SuspendedNudgeClass.init))
         c.expiresAt = remote.expiresAt
+        c.stewardVetoReason = remote.stewardVetoReason
         return c
     }
 

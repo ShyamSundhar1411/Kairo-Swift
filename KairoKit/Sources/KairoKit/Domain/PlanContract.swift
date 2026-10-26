@@ -69,6 +69,11 @@ public struct PlanContract: Sendable {
     public var suspended: Set<SuspendedNudgeClass> = []
     public var expiresAt: Date?
     public private(set) var extensionCount: Int = 0
+    /// FR9.5. Why the Steward refused this contract, in its own sentence. Set
+    /// only on the vetoed path, and kept after the state returns to `.standard`:
+    /// the contract is gone, and the reason it never happened is the part worth
+    /// showing. Mirrors `PlanContract.steward_veto_reason` in the backend.
+    public var stewardVetoReason: String?
 
     public init(id: String) {
         self.id = id
