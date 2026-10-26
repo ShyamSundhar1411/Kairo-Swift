@@ -5,7 +5,9 @@ public enum ScreeningVerdict: Sendable, Equatable {
     case pass(String)
     case rewritten(String, why: String)
     case downgraded(String, to: AssertionForm)
-    case blocked(why: String)
+    /// `referral` is FR11.7: present when a clinical flag was recognised,
+    /// `nil` when the block was about evidence rather than about the person.
+    case blocked(why: String, referral: EscalationService? = nil)
     case heldForHuman(why: String)
 }
 
@@ -14,10 +16,10 @@ public struct SafetyGate: Sendable {
     /// An unqualified "100% screened" claim is false the moment a user writes
     /// in a language nobody tested.
     public let competentLocales: Set<String>
-    private let redFlags: [String]
+    private let redFlags: [RedFlag]
 
     public init(competentLocales: Set<String> = ["en-AU", "en"],
-                redFlags: [String] = ["skip meals", "starve", "purge", "lose 5kg this week"]) {
+                redFlags: [RedFlag] = RedFlag.defaults) {
         self.competentLocales = competentLocales
         self.redFlags = redFlags
     }
@@ -35,8 +37,9 @@ public struct SafetyGate: Sendable {
             return .heldForHuman(why: "locale \(locale) is outside declared competence; translate-then-screen or hold")
         }
         let lower = text.lowercased()
-        if let hit = redFlags.first(where: { lower.contains($0) }) {
-            return .blocked(why: "red-flag pattern: \(hit)")
+        if let hit = redFlags.first(where: { lower.contains($0.pattern) }) {
+            return .blocked(why: "red-flag pattern: \(hit.pattern)",
+                            referral: Escalation.referral(for: hit.type))
         }
         if let d = claimDomain, let cov = coverage {
             let form = cov.permittedForm(for: d)
@@ -46,6 +49,8 @@ public struct SafetyGate: Sendable {
             // passed a gate whose whole purpose is to stop exactly that. Numbers
             // are where an *over*claim usually shows up, not where a claim starts.
             if form == .forbidden {
+                // No referral: this is a statement about what Kairo measured,
+                // not a finding about the person who would have read it.
                 return .blocked(why: "no evidence for any claim about \(d.rawValue)")
             }
             if form < .assertion && containsBareNumber(text) {

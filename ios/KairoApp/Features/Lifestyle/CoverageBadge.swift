@@ -113,10 +113,14 @@ struct GatedClaim: View {
                 headline(t)
                 reason(why, tint: Kairo.inkSoft)
 
-            case let .blocked(why):
+            case let .blocked(why, referral):
                 stamp("not said at all", icon: "hand.raised.fill", tint: Kairo.coral)
                 redaction
                 reason(why, tint: Kairo.coral)
+                // FR11.7. A block that names nowhere to go is the whole gap
+                // this closes: the gate has just decided someone may be unwell
+                // and then said nothing to them.
+                if let referral { ReferralCard(service: referral) }
 
             case let .heldForHuman(why):
                 stamp("held for a person to check",
