@@ -56,12 +56,26 @@ public final class StoredOutcomeLog: NudgeOutcomeLog, @unchecked Sendable {
         return (try? decoder.decode([NudgeOutcome].self, from: data)) ?? []
     }
 
-    /// Written whole and atomically. A truncated log would read as a user who
-    /// stopped responding, which the model would learn from.
+    /// Written whole, atomically, and encrypted at rest.
+    ///
+    /// Atomic because a truncated log would read as a user who stopped
+    /// responding, which the model would learn from.
+    ///
+    /// `.completeFileProtection` is NFR6's at-rest half (SCRUM-24). This file is
+    /// a behavioural record — what somebody dismissed and at what hour — and the
+    /// container is not encrypted by default beyond the device passcode's own
+    /// class. `complete` rather than `completeUnlessOpen`: every write here is a
+    /// whole-file replace from the foreground, so there is no open handle that
+    /// needs to survive a lock, and the weaker class would buy nothing.
+    ///
+    /// Written on each save rather than once at creation, because `.atomic`
+    /// replaces the file by rename and the replacement carries the *new* file's
+    /// attributes, not the old one's — set it once and the protection quietly
+    /// disappears on the first append.
     private static func write(_ outcomes: [NudgeOutcome], to url: URL) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(outcomes) else { return }
-        try? data.write(to: url, options: .atomic)
+        try? data.write(to: url, options: [.atomic, .completeFileProtection])
     }
 }

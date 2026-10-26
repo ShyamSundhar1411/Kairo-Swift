@@ -65,7 +65,12 @@ final class BackendConnection {
     }
 
     private static let key = "kairo.backend.baseURL"
-    private static let tokenKey = "kairo.backend.token"
+    /// NFR6. A keychain account now, not a `UserDefaults` key. The old value is
+    /// migrated once on first launch and then removed from the plist — leaving
+    /// it there would mean the credential was in two places, one of them the
+    /// place this change exists to get it out of.
+    private static let tokenAccount = "backend.token"
+    private static let legacyTokenKey = "kairo.backend.token"
 
     private(set) var state: State = .onDevice
     /// The last time the backend answered an arbitration, so the UI can say
@@ -87,7 +92,7 @@ final class BackendConnection {
         didSet { UserDefaults.standard.set(address, forKey: Self.key) }
     }
     var token: String {
-        didSet { UserDefaults.standard.set(token, forKey: Self.tokenKey) }
+        didSet { KeychainStore.set(token, for: Self.tokenAccount) }
     }
 
     /// Where a backend is, before anyone has told us otherwise.
@@ -110,16 +115,44 @@ final class BackendConnection {
         // deliberate "run on-device", and re-defaulting over it would make the
         // setting impossible to turn off.
         self.address = address ?? stored ?? Self.defaultAddress
-        self.token = UserDefaults.standard.string(forKey: Self.tokenKey) ?? ""
+        self.token = Self.loadToken()
+    }
+
+    /// Keychain first, then the old plist key once.
+    ///
+    /// `didSet` does not fire from an initialiser, so the migration writes
+    /// through `KeychainStore` directly — and deletes the plist copy in the same
+    /// breath, because a credential that exists in both places has only been
+    /// copied, not moved.
+    private static func loadToken() -> String {
+        if let secure = KeychainStore.string(for: tokenAccount) { return secure }
+        guard let legacy = UserDefaults.standard.string(forKey: legacyTokenKey),
+              !legacy.isEmpty else { return "" }
+        KeychainStore.set(legacy, for: tokenAccount)
+        UserDefaults.standard.removeObject(forKey: legacyTokenKey)
+        return legacy
     }
 
     /// nil when nothing is configured, which is the on-device path.
     var client: RemoteAgentClient? {
         let trimmed = address.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, let url = URL(string: trimmed), url.host != nil else { return nil }
+        guard !trimmed.isEmpty, let url = URL(string: trimmed), url.host != nil,
+              Self.transportIsAcceptable(url) else { return nil }
         return RemoteAgentClient(baseURL: url,
                                  token: token.isEmpty ? nil : token)
     }
+
+    /// NFR6, the in-transit half (SCRUM-24). The rule itself lives in
+    /// `KairoKit.TransportPolicy`, where it has tests — the app target has no
+    /// unit test bundle, and a decision about whether health summaries may
+    /// leave the phone in cleartext should not be untested code behind a guard.
+    static func transportIsAcceptable(_ url: URL) -> Bool {
+        TransportPolicy.isAcceptable(url)
+    }
+
+    /// Why the address field is refusing, in a sentence meant for the person
+    /// typing it. `nil` when there is nothing wrong with it.
+    var addressObjection: String? { TransportPolicy.objection(to: address) }
 
     @MainActor
     func check(userID: String) async {

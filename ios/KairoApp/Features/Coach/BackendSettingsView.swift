@@ -214,6 +214,17 @@ struct BackendSettingsView: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)
+            // NFR6. The objection is shown here rather than left to surface as
+            // a failed request: ATS refuses cleartext to a remote host with an
+            // opaque URLError, which this screen would otherwise report as
+            // "the backend did not answer" — sending somebody to debug a server
+            // that is fine.
+            if let objection = backend.addressObjection {
+                Label(objection, systemImage: "lock.trianglebadge.exclamationmark.fill")
+                    .font(.kairoCaption)
+                    .foregroundStyle(Kairo.coral)
+                    .labelStyle(.titleAndIcon)
+            }
             SecureField("Bearer token (optional)", text: $backend.token)
             Button {
                 Task {
@@ -237,7 +248,10 @@ struct BackendSettingsView: View {
         } footer: {
             Text("The address of the machine running `python -m kairo`. Leave it empty "
                  + "to stay on the device. On a phone this must be the Mac's address on "
-                 + "your network, not localhost — localhost on a phone is the phone.")
+                 + "your network, not localhost — localhost on a phone is the phone."
+                 + "\n\nAnything that is not on this machine must be https. The token is "
+                 + "kept in the keychain, not in preferences, and does not travel in a "
+                 + "device backup.")
         }
     }
 
