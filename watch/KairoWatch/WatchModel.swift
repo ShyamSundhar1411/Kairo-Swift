@@ -34,6 +34,14 @@ final class WatchModel {
     /// after every water event, so the gap is a moment, not a day.
     private(set) var log: DayLog?
 
+    /// NFR10 / SCRUM-19. Counts what this companion does that costs energy, so
+    /// a regression is visible the day it lands rather than the day somebody
+    /// runs Instruments. **Not a battery measurement** — watchOS gives an app
+    /// its own `batteryLevel`, never its own share of the drain, so any number
+    /// computed here would be the whole watch's consumption wearing this app's
+    /// name. `docs/NFR10-BATTERY.md` has the procedure for the real one.
+    private(set) var energy = WatchEnergyBudget(dayStart: Calendar.current.startOfDay(for: Date()))
+
     /// Sips tapped on this wrist that the phone's total does not yet cover.
     ///
     /// This is both the optimistic overlay on the display and the outbox: each
@@ -214,7 +222,7 @@ final class WatchModel {
         if unacknowledgedSips.count > Self.outboxLimit { unacknowledgedSips.removeFirst() }
         WaterOutbox.save(unacknowledgedSips)
 
-        bridge.send(.waterLogged(millilitres: sip.millilitres, at: sip.at, id: sip.id))
+        send(.waterLogged(millilitres: sip.millilitres, at: sip.at, id: sip.id))
 
         // FR8.5 — the non-visual channel that works with the screen off and the
         // phone in another room, which is the situation one-tap logging exists
@@ -232,7 +240,7 @@ final class WatchModel {
     /// ids are stable, so the phone discards what it already has.
     private func flushOutbox() {
         for sip in unacknowledgedSips {
-            bridge.send(.waterLogged(millilitres: sip.millilitres, at: sip.at, id: sip.id))
+            send(.waterLogged(millilitres: sip.millilitres, at: sip.at, id: sip.id))
         }
     }
 
@@ -240,16 +248,27 @@ final class WatchModel {
         guard let p = pending else { return }
         // These three strings are what the receptivity model learns from, so they
         // travel exactly as they are.
-        bridge.send(.nudgeOutcome(bidID: p.bidID, outcome: outcome, at: Date()))
+        send(.nudgeOutcome(bidID: p.bidID, outcome: outcome, at: Date()))
         answeredBidIDs.insert(p.bidID)
         pending = nil
     }
 
     #if canImport(WatchKit)
-    private func haptic(_ type: WKHapticType) { WKInterfaceDevice.current().play(type) }
+    /// One door out, so NFR10's transmission count cannot miss a caller. The
+    /// outbox re-sends on reconnect, so this is the number that grows when the
+    /// link is flapping — which is exactly the case worth noticing.
+    private func send(_ payload: WristEvent) {
+        energy.record(.transmission, at: Date())
+        bridge.send(payload)
+    }
+
+    private func haptic(_ type: WKHapticType) {
+        energy.record(.haptic, at: Date())
+        WKInterfaceDevice.current().play(type)
+    }
     #else
     private enum WKHapticType { case notification, success, click }
-    private func haptic(_ type: WKHapticType) {}
+    private func haptic(_ type: WKHapticType) { energy.record(.haptic, at: Date()) }
     #endif
 
     #if DEBUG
