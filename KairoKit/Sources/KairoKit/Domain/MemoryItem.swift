@@ -4,15 +4,34 @@ import Foundation
 public enum MemoryItemState: String, LifecycleState {
     case candidate, verified, active, contradicted, superseded
     case unconfirmed, decaying, expired, deleted
+    /// Figure 39. A near-identical candidate (FR10.2): the incumbent is
+    /// refreshed and the candidate is kept in this state rather than dropped,
+    /// so the Memory Book can say "already known" instead of looking as though
+    /// it ignored what the user said.
+    case merged
+    /// Figure 39, and UC7's A3 — low confidence or temporary. Rejected, not
+    /// deleted: deletion is the user's verb (A5), and "Kairo chose not to keep
+    /// this" is a different answer from "you removed it".
+    case rejected
 
     public static let machineName = "MemoryItem"
     public static let initial: MemoryItemState = .candidate
-    public var isTerminal: Bool { self == .superseded || self == .expired || self == .deleted }
+    public var isTerminal: Bool {
+        self == .superseded || self == .expired || self == .deleted
+            || self == .merged || self == .rejected
+    }
+
+    /// Not remembered facts — the record of a decision *about* one. The Memory
+    /// Book lists them apart from what Kairo actually knows.
+    public var isACurationNote: Bool { self == .merged || self == .rejected }
 
     public static let transitions: [Transition<MemoryItemState>] = [
         .init(.candidate, "userConfirmed", .verified),
         .init(.candidate, "corroboratedByBehaviour", .verified, guardText: "observed >= 3 times"),
-        .init(.candidate, "rejected", .deleted),
+        .init(.candidate, "nearIdenticalToStored", .merged,
+              guardText: "refresh the incumbent (FR10.2)"),
+        .init(.candidate, "belowCaptureFloor", .rejected,
+              guardText: "low confidence or temporary (UC7 A3)"),
         .init(.verified, "promoted", .active),
         .init(.active, "contradictionDetected", .contradicted),
         .init(.contradicted, "userAdjudicatedAgainst", .superseded),
