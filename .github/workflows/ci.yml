@@ -73,6 +73,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Toolchain
+        # Printed because the first CI run failed to compile something that
+        # builds locally, and the log did not say which Xcode it was using.
+        run: xcodebuild -version && swift --version
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -97,12 +102,32 @@ jobs:
         # recompiled.
         run: |
           set -o pipefail
+          # `| tail -40` alone was a mistake: the first failing run showed the
+          # list of failed compile *commands* and not one line of the compiler's
+          # actual complaint, which was thousands of lines earlier. The whole
+          # log goes to build.log and the errors are pulled back out below,
+          # whatever the exit status.
           xcodebuild \
             -project Kairo.xcodeproj \
             -scheme KairoApp \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | tee build.log | tail -40
+            build > build.log 2>&1 || echo "BUILD_FAILED" > build.failed
+          tail -40 build.log
+
+      - name: Report compiler errors
+        if: always()
+        working-directory: mobile
+        run: |
+          if grep -E "(error|note): " build.log > errors.txt; then
+            echo "::group::compiler output"
+            sed "s|$GITHUB_WORKSPACE/||" errors.txt
+            echo "::endgroup::"
+          fi
+          if [ -f build.failed ]; then
+            echo "::error::xcodebuild failed — see the compiler output above"
+            exit 1
+          fi
 
       - name: Fail on a source warning
         working-directory: mobile
