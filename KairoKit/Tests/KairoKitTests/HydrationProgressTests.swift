@@ -107,3 +107,55 @@ struct HydrationProgressTests {
         #expect(spokenValue.hasPrefix("\(ringPercent) percent"))
     }
 }
+
+@Suite("FR8.2 — a photographed volume is weaker evidence than a tap")
+struct SipProvenanceTests {
+
+    @Test("a tap is the default, so nothing already logged changes meaning")
+    func tapIsDefault() {
+        let sip = HydrationLog.Sip(id: "a", at: DateHelp.at(2026, 8, 25), millilitres: 250)
+        #expect(sip.source == .tap)
+    }
+
+    @Test("a sip written before provenance existed decodes as the tap it was")
+    func backwardCompatible() throws {
+        // A watch that has not been updated sends exactly this shape, and a
+        // decode failure would drop a glass somebody logged.
+        let old = #"{"id":"a","at":780000000,"millilitres":250}"#
+        let sip = try JSONDecoder().decode(HydrationLog.Sip.self,
+                                           from: Data(old.utf8))
+        #expect(sip.source == .tap)
+        #expect(sip.millilitres == 250)
+    }
+
+    @Test("the day's total says how much of it came off a photograph")
+    func provenanceIsAnswerable() {
+        var log = HydrationLog(dayStart: DateHelp.at(2026, 8, 25), targetMillilitres: 2000)
+        log.record(.init(id: "tap", at: DateHelp.at(2026, 8, 25, 9), millilitres: 300))
+        log.record(.init(id: "shot", at: DateHelp.at(2026, 8, 25, 13),
+                         millilitres: 250, source: .photo))
+        #expect(log.totalMillilitres == 550)
+        #expect(log.photographedMillilitres == 250)
+    }
+
+    @Test("a photographed sip still cannot be counted twice")
+    func noDoubleCount() {
+        var log = HydrationLog(dayStart: DateHelp.at(2026, 8, 25))
+        let sip = HydrationLog.Sip(id: "photo-1", at: DateHelp.at(2026, 8, 25, 13),
+                                   millilitres: 250, source: .photo)
+        // Hoisted: `#expect` evaluates its argument in a closure that captures
+        // immutably, so a mutating call cannot live inside one.
+        let first = log.record(sip)
+        let second = log.record(sip)
+        #expect(first)
+        #expect(!second, "accepting the same offer twice must not add 500 ml")
+        #expect(log.totalMillilitres == 250)
+    }
+
+    @Test("there is no case for an unconfirmed inference")
+    func onlyConfirmedInferencesExist() {
+        // The log has no way to hold a drink the user has not accepted, which
+        // is the point: FR8.2 offers, it does not write.
+        #expect(HydrationLog.Source.allCases.count == 2)
+    }
+}

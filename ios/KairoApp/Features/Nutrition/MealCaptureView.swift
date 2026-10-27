@@ -18,6 +18,10 @@ struct MealCaptureView: View {
     @State private var lookingUp: String?
     @State private var reference: FoodReference?
     @State private var lookupFailure: String?
+    /// NFR6 — per-session consent for a photo leaving the phone. `@State` and
+    /// not persisted on purpose: "per session" is the requirement's word, and a
+    /// remembered yes is a different promise from the one made.
+    @State private var confirmingUpload = false
 
     var body: some View {
         NavigationStack {
@@ -38,6 +42,15 @@ struct MealCaptureView: View {
             }, onBarcode: { code in
                 Task { await resolve(code) }
             })
+        }
+        .confirmationDialog("Send this photo to the backend?",
+                            isPresented: $confirmingUpload, titleVisibility: .visible) {
+            Button("Send it once") { Task { await analysePhoto() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The photo leaves your iPhone and goes to the bound backend, which "
+                 + "passes it to the vision model. Nothing else about your day goes "
+                 + "with it. Asked every session (NFR6).")
         }
         .sheet(item: $reference) { row in
             PortionPickerSheet(reference: row) { grams, basis in
@@ -73,6 +86,13 @@ struct MealCaptureView: View {
                     transitionalSection(model)
                 }
 
+                // FR8.2. Outside the state switch on purpose: a drink is
+                // visible in the photograph whether or not the *food* could be
+                // grounded, so the offer survives the ungrounded branch. A
+                // bottle beside an unrecognised dish was still a bottle.
+                drinksOffer(model)
+
+                if let failure = model.analysisFailure { errorCard(failure) }
                 if let e = model.error { errorCard(e) }
 
                 TrustNote(text: "Kilojoules are what Kairo stores — that is the unit on an "
@@ -158,8 +178,10 @@ struct MealCaptureView: View {
                           icon: "exclamationmark.triangle")
             }
 
+            analyseRow
+
             // Same seeded items and the same `recognise` calls as before — these
-            // are the three branches the state machine can take.
+            // are the branches the state machine can take without a backend.
             ChoiceCard(title: "Grilled salmon and rice",
                        subtitle: "the confident path: both items clear the threshold, "
                        + "so it goes straight to an estimate",
@@ -191,6 +213,21 @@ struct MealCaptureView: View {
                 }
             }
 
+            // FR8.2 without a vision provider. It feeds a canned response
+            // through `apply` — the *same* handler the network path uses — so
+            // the drink offer being exercised here is evidence about the real
+            // code and not about a second one written for the demo. The only
+            // thing scripted is where the `MealAnalysis` came from.
+            ChoiceCard(title: "A plate with a glass beside it",
+                       subtitle: "scripted FR8.2: the analyst sees a drink it can "
+                       + "measure, and Kairo offers it rather than logging it",
+                       icon: "cup.and.saucer.fill",
+                       tint: Kairo.sky) {
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                    model.apply(Self.plateWithAGlass)
+                }
+            }
+
             ChoiceCard(title: "A dish Kairo has never seen",
                        subtitle: "takes the ungrounded path: it refuses to publish a number",
                        icon: "questionmark.circle",
@@ -199,6 +236,101 @@ struct MealCaptureView: View {
                     model.recognise(candidates: [], grounded: false)
                 }
             }
+        }
+    }
+
+    /// The scripted FR8.2 response.
+    ///
+    /// Two drinks on purpose, and only one of them survives: the water is in
+    /// shot and measurable, the second is the inference the schema exists to
+    /// stop — a model reasoning "they had curry, so probably a lassi" rather
+    /// than seeing one. The backend zeroes it; this fixture arrives already
+    /// filtered, which is what a real response looks like by the time it is here.
+    private static let plateWithAGlass = RemoteAgentClient.MealAnalysis(
+        state: "estimated", grounded: true, failure: nil, clarifyingQuestion: nil,
+        items: [
+            FoodItem(name: "dal and rice", grams: 320,
+                     facts: NutritionFacts(kilojoules: 1850, proteinGrams: 18, carbGrams: 74),
+                     confidence: 0.81),
+        ],
+        drinks: [
+            RemoteAgentClient.InferredDrink(name: "water", millilitres: 250,
+                                            kilojoules: 0, confidence: 0.72),
+        ])
+
+    /// FR8.2 / NFR6 — send the photo to the analyst, having asked first.
+    ///
+    /// Separate button rather than automatic on capture, because NFR6 says meal
+    /// photographs are "uploaded only on explicit per-session consent" and an
+    /// upload that happens because you took a picture is not consent to
+    /// anything. The sheet states what leaves the phone before it leaves.
+    @ViewBuilder private var analyseRow: some View {
+        if let model, model.photo != nil {
+            if model.analysing {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Reading your plate…")
+                        .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .kairoCard()
+            } else if app.backend.client != nil,
+                      app.backend.provider?.visionIsUnavailable != true {
+                ChoiceCard(title: "Analyse this photo",
+                           subtitle: "sends it to the bound backend once. Real items, real "
+                           + "confidence — and any drink it can actually see (FR8.2).",
+                           icon: "sparkle.magnifyingglass",
+                           tint: Kairo.sky) {
+                    confirmingUpload = true
+                }
+            }
+        }
+    }
+
+    /// FR8.2's offer. **Never written without an answer.**
+    ///
+    /// The hydration total is the number the user taps to correct; a volume read
+    /// off a picture written into it silently would put a guess where somebody
+    /// believes they measured. Declining is recorded the same way accepting is,
+    /// because "no" is an answer and an offer that reappears has not heard it.
+    @ViewBuilder private func drinksOffer(_ model: MealLogModel) -> some View {
+        if !model.pendingDrinks.isEmpty {
+            VStack(spacing: 8) {
+                SectionHeader(title: "A drink in the photo", icon: "cup.and.saucer",
+                              trailing: "\(model.pendingDrinks.count)", tint: Kairo.sky)
+                TrustNote(text: "Kairo thinks it can see this. It has not been added to "
+                          + "your water — a volume read off a picture is weaker than a "
+                          + "tap, so it asks.",
+                          icon: "hand.raised")
+                ForEach(model.pendingDrinks) { drink in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "drop.fill")
+                            .font(.kairoGlyph(15, weight: .semibold))
+                            .foregroundStyle(Kairo.colour(for: .hydration))
+                            .frame(width: 38, height: 38)
+                            .background(Circle().fill(Kairo.colour(for: .hydration).opacity(0.14)))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("\(drink.name), about \(Int(drink.millilitres)) ml")
+                                .font(.kairoHeadline).foregroundStyle(Kairo.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("confidence \(Int(drink.confidence * 100))%")
+                                .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack(spacing: 10) {
+                        Button("Add to my water") {
+                            if let sip = model.acceptDrink(drink) { app.record(sip) }
+                        }
+                        .buttonStyle(.kairoProminent(Kairo.colour(for: .hydration)))
+                        Button("Not mine") { model.declineDrink(drink) }
+                            .buttonStyle(.kairoSoft)
+                    }
+                }
+            }
+            .kairoCard(tint: Kairo.sky)
         }
     }
 
@@ -245,8 +377,8 @@ struct MealCaptureView: View {
                 Text("Photograph your meal")
                     .font(.kairoHeadline)
                     .foregroundStyle(Kairo.ink)
-                Text("One photo. It stays on your iPhone — nothing is uploaded, and the "
-                     + "estimate below is scripted until the on-device classifier lands.")
+                Text("One photo. It stays on your iPhone unless you ask for it to be "
+                     + "analysed — and that asks you first, every session (NFR6).")
                     .font(.kairoCaption)
                     .foregroundStyle(Kairo.inkSoft)
                     .multilineTextAlignment(.center)
@@ -311,6 +443,13 @@ struct MealCaptureView: View {
     /// A scan resolves to a published row or to nothing. There is no third
     /// branch where Kairo supplies a number of its own.
     @MainActor
+    /// FR8.2. The user has said yes; send it once.
+    private func analysePhoto() async {
+        guard let model, let client = app.backend.client else { return }
+        await model.analysePhoto(using: client, userID: app.userID,
+                                 coverage: app.coverage)
+    }
+
     private func resolve(_ code: String) async {
         lookingUp = code
         lookupFailure = nil

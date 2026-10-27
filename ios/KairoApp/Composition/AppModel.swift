@@ -521,6 +521,29 @@ final class AppModel {
     ///
     /// Internal rather than private so a preview or a test can drive it directly
     /// without a paired watch.
+    /// One door for every sip, whatever logged it (FR8.1, FR8.2).
+    ///
+    /// `record` returns false for a sip already in the log. WatchConnectivity
+    /// re-delivers the current application context on every activation, so the
+    /// same tap genuinely does arrive more than once — and a total that
+    /// double-counts is worse than one that arrives late. A photographed drink
+    /// the user accepted twice is the same hazard with a different cause, which
+    /// is why both come through here.
+    @discardableResult
+    func record(_ sip: HydrationLog.Sip) -> Bool {
+        let isNew = hydration.record(sip)
+        guard isNew else { return false }
+        // Coverage stops being a seeded figure the moment there is a real one,
+        // because everything downstream of the gate is entitled to know how
+        // much of the day was actually observed.
+        coverage.record(hydration.coverageMetric())
+        refreshObservations()
+        // New evidence is precisely when a finite budget should be reconsidered:
+        // the hydration bid is now either cheaper to justify or gone entirely.
+        Task { await runArbitration() }
+        return true
+    }
+
     func handle(_ event: WristEvent) {
         switch event {
         case let .waterLogged(millilitres, at, id):
@@ -528,20 +551,7 @@ final class AppModel {
             // re-delivers the current application context on every activation, so
             // the same tap genuinely does arrive more than once — and a total that
             // double-counts is worse than one that arrives late.
-            let isNew = hydration.record(
-                HydrationLog.Sip(id: id, at: at, millilitres: millilitres))
-
-            if isNew {
-                // Coverage stops being a seeded figure the moment there is a real
-                // one, because everything downstream of the gate is entitled to
-                // know how much of the day was actually observed.
-                coverage.record(hydration.coverageMetric())
-                refreshObservations()
-                // New evidence is precisely when a finite budget should be
-                // reconsidered: the hydration bid is now either cheaper to justify
-                // or gone entirely.
-                Task { await runArbitration() }
-            }
+            record(HydrationLog.Sip(id: id, at: at, millilitres: millilitres))
 
             // Pushed either way. A duplicate usually means the watch was not sure
             // the phone heard it, which is exactly when the wrist most needs the

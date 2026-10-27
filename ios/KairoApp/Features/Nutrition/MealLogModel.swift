@@ -23,6 +23,26 @@ final class MealLogModel {
     /// beside it is scripted, and the screen has to say so.
     private(set) var photo: UIImage?
 
+    /// FR8.2 — drinks the analyst could see in the photograph.
+    ///
+    /// **Offered, never logged.** The hydration total is the number the user
+    /// taps to correct; a volume read off a picture written into it without
+    /// asking would put a guess where somebody believes they measured. The user
+    /// accepts each one, or none.
+    private(set) var drinks: [RemoteAgentClient.InferredDrink] = []
+    /// Drinks the user has accepted this session, so the offer does not come
+    /// back after it has been answered.
+    private(set) var acceptedDrinkIDs: Set<String> = []
+    private(set) var analysing = false
+    /// Set when the backend was asked and could not answer — distinct from the
+    /// analyst having looked and declined to quantify, which is `.ungrounded`
+    /// and is a feature (OF1).
+    private(set) var analysisFailure: String?
+
+    var pendingDrinks: [RemoteAgentClient.InferredDrink] {
+        drinks.filter { !acceptedDrinkIDs.contains($0.id) }
+    }
+
     init(clock: Clock, confidenceThreshold: Double = 0.6) {
         self.clock = clock
         self.threshold = confidenceThreshold
@@ -57,6 +77,76 @@ final class MealLogModel {
                                                to: .awaitingClarification, at: clock.now)
             }
         } catch { self.error = String(describing: error) }
+    }
+
+    // MARK: - CF1 over the network (FR8.2)
+
+    /// Drive the machine from a real analysis.
+    ///
+    /// Separate from `recognise` because the backend has already decided which
+    /// branch this is — `state` on the response is the analyst's own answer —
+    /// and re-deriving it here from the confidence would give two sources for
+    /// one decision. The scripted paths still call `recognise`; this is the
+    /// same machine reached with real evidence.
+    func apply(_ analysis: RemoteAgentClient.MealAnalysis) {
+        drinks = analysis.drinks
+        analysisFailure = analysis.failure
+        guard analysis.failure == nil else {
+            // The analysis did not happen. Saying "ungrounded" here would dress
+            // a broken call up as the product working as designed.
+            return
+        }
+        do {
+            try entry.lifecycle.transition(on: "beginRecognition", to: .classifying, at: clock.now)
+            guard analysis.grounded, !analysis.items.isEmpty else {
+                try entry.lifecycle.transition(on: "noGroundingFound", to: .ungrounded, at: clock.now)
+                return
+            }
+            entry.items = analysis.items
+            if let question = analysis.clarifyingQuestion {
+                clarifyingQuestion = question
+                try entry.lifecycle.transition(on: "confidenceBelowThreshold",
+                                               to: .awaitingClarification, at: clock.now)
+            } else {
+                try entry.lifecycle.transition(on: "confidenceAccepted", to: .estimated, at: clock.now)
+            }
+        } catch { self.error = String(describing: error) }
+    }
+
+    /// Send the captured photo to the analyst.
+    ///
+    /// Does nothing without a photo: there is no path here that analyses an
+    /// image the user did not take.
+    func analysePhoto(using client: RemoteAgentClient, userID: String,
+                      coverage: DayCoverage) async {
+        guard let photo, let data = photo.jpegData(compressionQuality: 0.8) else { return }
+        analysing = true
+        defer { analysing = false }
+        do {
+            let analysis = try await client.analyseMeal(
+                userID: userID, imageData: data, mediaType: "image/jpeg",
+                hint: nil, coverage: coverage)
+            apply(analysis)
+        } catch {
+            analysisFailure = String(describing: error)
+        }
+    }
+
+    /// The user accepted one inferred drink. Returns the sip to log, or nil if
+    /// it was already answered — so a double tap cannot double-count a glass.
+    func acceptDrink(_ drink: RemoteAgentClient.InferredDrink) -> HydrationLog.Sip? {
+        guard !acceptedDrinkIDs.contains(drink.id) else { return nil }
+        acceptedDrinkIDs.insert(drink.id)
+        return HydrationLog.Sip(id: "photo-\(entry.id)-\(drink.id)",
+                                at: clock.now,
+                                millilitres: Int(drink.millilitres.rounded()),
+                                source: .photo)
+    }
+
+    /// The user declined it. Recorded the same way as acceptance so the offer
+    /// does not reappear — "no" is an answer, not an absence of one.
+    func declineDrink(_ drink: RemoteAgentClient.InferredDrink) {
+        acceptedDrinkIDs.insert(drink.id)
     }
 
     func requestTeaching() {
@@ -115,6 +205,9 @@ final class MealLogModel {
         clarifyingQuestion = nil
         error = nil
         photo = nil
+        drinks = []
+        acceptedDrinkIDs = []
+        analysisFailure = nil
     }
 
     private func question(for items: [FoodItem]) -> String {

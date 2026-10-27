@@ -174,14 +174,43 @@ public enum WristSync {
 /// will re-deliver a queued message, and a total that double-counts is worse than
 /// one that arrives late.
 public struct HydrationLog: Sendable, Equatable {
+    /// Where a sip's number came from (FR8.1, FR8.2).
+    ///
+    /// A tap is the user stating a fact. A volume read off a photograph is the
+    /// system's estimate that the user then accepted — weaker evidence, and the
+    /// log has to be able to say which is which. Without this the two are one
+    /// number and "where did 250 ml come from?" has no answer.
+    public enum Source: String, Codable, Sendable, CaseIterable {
+        /// One tap on the watch or the phone.
+        case tap
+        /// Inferred from a meal photograph and **confirmed by the user**. There
+        /// is deliberately no case for an unconfirmed inference, because one is
+        /// never written to the log.
+        case photo
+    }
+
     public struct Sip: Codable, Sendable, Equatable, Identifiable {
         public let id: String
         public let at: Date
         public let millilitres: Int
-        public init(id: String, at: Date, millilitres: Int) {
+        /// Defaulted so a sip decoded from a log written before this existed —
+        /// or arriving from a watch that has not been updated — reads as the
+        /// tap it was, rather than failing to decode.
+        public var source: Source = .tap
+
+        public init(id: String, at: Date, millilitres: Int, source: Source = .tap) {
             self.id = id
             self.at = at
             self.millilitres = millilitres
+            self.source = source
+        }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(String.self, forKey: .id)
+            at = try c.decode(Date.self, forKey: .at)
+            millilitres = try c.decode(Int.self, forKey: .millilitres)
+            source = try c.decodeIfPresent(Source.self, forKey: .source) ?? .tap
         }
     }
 
@@ -203,6 +232,12 @@ public struct HydrationLog: Sendable, Equatable {
     }
 
     public var totalMillilitres: Int { sips.reduce(0) { $0 + $1.millilitres } }
+
+    /// FR8.2. What the user accepted from a photograph rather than tapped.
+    /// Shown in the log so the provenance of the day's total is answerable.
+    public var photographedMillilitres: Int {
+        sips.filter { $0.source == .photo }.reduce(0) { $0 + $1.millilitres }
+    }
     public var remainingMillilitres: Int { max(0, targetMillilitres - totalMillilitres) }
 
     public var fractionOfTarget: Double {
