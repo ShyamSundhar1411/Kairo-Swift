@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// FR9.5 — the contract that was considered and refused.
+/// FR9.5, Figure 38 — the contract that was considered and refused.
 ///
 /// A vetoed contract never becomes a proposal card, so without this the user is
 /// simply never told the conversation happened: the agents saw two corroborating
@@ -23,16 +23,22 @@ struct StewardVetoNote: View {
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 5) {
-                Text("A gentler week was considered, and held back")
+                Text("A gentler week was considered, and refused")
                     .font(.kairoHeadline)
                     .foregroundStyle(Kairo.ink)
                 Text(reason)
                     .font(.kairoCaption)
                     .foregroundStyle(Kairo.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Your targets are unchanged. Nothing was suspended.")
+                // Figure 38 routes this to Escalated, not back to Standard, and
+                // the copy has to say so. "Nothing changed" would describe the
+                // old edge and would quietly be the reassurance the Steward
+                // declined to give.
+                Text("Your targets are unchanged, and this has been flagged for "
+                     + "a person to look at.")
                     .font(.caption)
                     .foregroundStyle(Kairo.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }

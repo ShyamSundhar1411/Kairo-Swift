@@ -63,12 +63,33 @@ struct PlanContractTests {
         #expect(c.lifecycle.isTerminal)
     }
 
-    @Test("the Steward can veto a contract that would mask deterioration")
-    func stewardVeto() throws {
+    /// Figure 38: the veto edge leaves Drafted and lands on Escalated.
+    ///
+    /// Renamed, because the old name claimed more than the test did — it moved
+    /// a contract across an edge by hand and called that "the Steward can
+    /// veto", while nothing in either codebase ever emitted the event. The
+    /// Steward's half is `test_the_steward_vetoes_a_contract_that_would_mask_deterioration`
+    /// in the backend suite. This pins the edge.
+    @Test("a vetoed contract escalates rather than returning to normal targets")
+    func stewardVetoEscalates() throws {
         var c = PlanContract(id: "pc-7")
         try c.lifecycle.transition(on: "signalDetected", to: .disruptionSuspected, at: t)
+        try c.lifecycle.transition(on: "stewardVetoed", to: .escalated, at: t)
+        #expect(c.state == .escalated)
+        // Escalated is terminal: a contract the Steward refused is not a
+        // contract that comes back on its own.
+        #expect(c.lifecycle.isTerminal)
+    }
+
+    @Test("a vetoed contract never passes through proposed")
+    func vetoSkipsProposed() throws {
+        var c = PlanContract(id: "pc-8")
+        try c.lifecycle.transition(on: "signalDetected", to: .disruptionSuspected, at: t)
         try c.lifecycle.transition(on: "corroborated", to: .proposed, at: t)
-        try c.lifecycle.transition(on: "stewardVetoed", to: .standard, at: t)
-        #expect(c.state == .standard)
+        // The edge is gone from Proposed, so the user cannot be asked to accept
+        // something and have it vetoed underneath them.
+        #expect(throws: (any Error).self) {
+            try c.lifecycle.transition(on: "stewardVetoed", to: .escalated, at: t)
+        }
     }
 }

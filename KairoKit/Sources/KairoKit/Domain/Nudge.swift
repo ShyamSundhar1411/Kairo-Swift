@@ -31,6 +31,12 @@ public enum NudgeState: String, LifecycleState {
         .init(.delivered, "userDismissed", .dismissed),
         .init(.delivered, "noResponseInWindow", .expired),
         .init(.snoozed, "requeued", .queued),
+        // Figure 37's `Snoozed → Expired [expiry passes]`, drawn and never
+        // implemented. Without it the only way out of a snooze was `requeued`,
+        // so a nudge nobody requeued never reached `recorded` and never
+        // reached the outcome log receptivity learns from. Mirrors nudge.py.
+        .init(.snoozed, "snoozeWindowClosed", .expired,
+              guardText: "the window passed before anything requeued it"),
         .init(.accepted, "outcomeLogged", .recorded),
         .init(.dismissed, "outcomeLogged", .recorded),
         .init(.expired, "outcomeLogged", .recorded),

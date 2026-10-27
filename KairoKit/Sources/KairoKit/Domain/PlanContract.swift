@@ -19,7 +19,11 @@ public enum PlanContractState: String, LifecycleState {
               guardText: "fewer than 2 corroborating signals and no user confirmation"),
         .init(.disruptionSuspected, "corroborated", .proposed,
               guardText: ">= 2 signals || user confirmed"),
-        .init(.proposed, "stewardVetoed", .standard,
+        // Figure 38: the veto edge leaves *Drafted* and lands on *Escalated*.
+        // The Steward vetoes when it thinks the contract would hide someone
+        // getting worse, and returning quietly to standard targets is the one
+        // response that guarantees that goes unseen. Mirrors contract.py.
+        .init(.disruptionSuspected, "stewardVetoed", .escalated,
               guardText: "contract would mask genuine deterioration"),
         .init(.proposed, "userDeclined", .declined),
         .init(.declined, "returnToStandard", .standard),
