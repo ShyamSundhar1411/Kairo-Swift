@@ -6,7 +6,10 @@ import Foundation
 /// sealed content. Corrections append an annotation; they never edit history.
 public enum DecisionRecordState: String, LifecycleState {
     case assembling, sealed, published, queried, replayed
-    case disputed, underReview, amendedByAnnotation, retentionExpired, purged
+    /// `purged` is reachable only from `assembling`: a draft abandoned before
+    /// it was ever sealed is not a record, and discarding it deletes no
+    /// evidence. There is no path from `published`.
+    case disputed, underReview, amendedByAnnotation, purged
 
     public static let machineName = "DecisionRecord"
     public static let initial: DecisionRecordState = .assembling
@@ -25,8 +28,11 @@ public enum DecisionRecordState: String, LifecycleState {
         .init(.underReview, "annotationAppended", .amendedByAnnotation,
               guardText: "append only — sealed content is never rewritten"),
         .init(.amendedByAnnotation, "closed", .published),
-        .init(.published, "retentionWindowPassed", .retentionExpired),
-        .init(.retentionExpired, "purgeExecuted", .purged),
+        // Figure 41 carries an annotation rather than an edge: "No final
+        // state: sealed records are never deleted or rewritten; they are
+        // retained for audit (FR12.3, NFR12)". The two edges that used to be
+        // here — published → retentionExpired → purged — are not drift from
+        // that, they are its opposite. Mirrors records.py.
     ]
 }
 
