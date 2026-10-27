@@ -39,13 +39,27 @@ public enum LocalBidSource {
     ///   - observations: what was measured. Absent fields yield no bid.
     ///   - calendar: injected so the evening window is computed in the user's
     ///     own day rather than UTC.
+    ///   - coverage: FR6.4. Optional because a caller that has not measured
+    ///     coverage should raise no coverage bid rather than a confident one
+    ///     about a day it never looked at.
     public static func bids(at now: Date,
                             observations: Observations,
-                            calendar: Calendar = .current) -> [NudgeBid] {
+                            calendar: Calendar = .current,
+                            coverage: DayCoverage? = nil) -> [NudgeBid] {
         var out: [NudgeBid] = []
         if let bid = sedentaryBid(at: now, observations: observations) { out.append(bid) }
         if let bid = hydrationBid(at: now, observations: observations) { out.append(bid) }
         if let bid = bedtimeBid(at: now, observations: observations, calendar: calendar) {
+            out.append(bid)
+        }
+        // FR6.4. Deliberately last and deliberately low: it competes with the
+        // bids above and loses to any of them. It is also the only bid in this
+        // file not derived from a reading — it is derived from their *absence*,
+        // which is why nothing else here could ever have raised it, and why a
+        // phone that has measured nothing stops being silent about that.
+        if let coverage,
+           let bid = CoverageBid.bid(for: coverage, dayStart: coverage.dayStart,
+                                     calendar: calendar) {
             out.append(bid)
         }
         return out

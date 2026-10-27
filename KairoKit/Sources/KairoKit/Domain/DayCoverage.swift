@@ -110,3 +110,76 @@ public struct DayCoverage: Sendable {
         return .forbidden
     }
 }
+
+// MARK: - FR6.4
+
+/// Low coverage, raised as its own low-priority bid.
+///
+/// Mirrors `kairo/domain/nudge.py: coverage_bid`. Deterministic and model-free,
+/// which is the point of having it here at all: it is the one bid the phone can
+/// raise while completely offline, and NFR9's fallback arbiter is only worth
+/// having if the day with no connectivity is also the day the user can be told
+/// Kairo is not seeing anything.
+public enum CoverageBid {
+    /// Fixed and low. FR6.4 says low coverage *competes*, so this has to be
+    /// beatable by anything with a real finding behind it — and still win on a
+    /// day where nothing else bids, which is the day it matters most.
+    public static let expectedBenefit = 0.25
+    public static let urgency = 0.15
+    public static let nudgeClass = "coverage"
+
+    /// The domains under the floor, worst first.
+    public static func shortfalls(in coverage: DayCoverage) -> [CoverageDomain] {
+        CoverageDomain.allCases
+            .filter { coverage.fraction($0) < coverage.floor }
+            .sorted { coverage.fraction($0) < coverage.fraction($1) }
+    }
+
+    /// What the user is told. Named domains, never a percentage: "coverage is
+    /// 41%" is a number about the system, "I have not seen your sleep today" is
+    /// a sentence about the user, and FR6.1 asks for the second.
+    public static func text(for coverage: DayCoverage) -> String {
+        let named = shortfalls(in: coverage).map(\.rawValue)
+        guard !named.isEmpty else { return "" }
+        let what: String
+        switch named.count {
+        case 1: what = named[0]
+        case 2: what = "\(named[0]) or \(named[1])"
+        default:
+            what = named.dropLast().joined(separator: ", ") + " or " + named[named.count - 1]
+        }
+        return "I have not seen enough \(what) today to say much about it. "
+             + "Logging any of it would help."
+    }
+
+    /// `YYYY-MM-DD` in the given calendar. Built from components rather than a
+    /// `DateFormatter` so no locale can turn it into something else.
+    static func isoDay(_ date: Date, in calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// `nil` when every domain is above the floor — the common case, and it
+    /// must cost nothing.
+    /// `calendar` defaults to `.current` deliberately: the user's day is theirs,
+    /// not ours. Tests pass `DateHelp.calendar` so they say which day they mean
+    /// — the distinction that broke three KairoKit tests on the first CI run.
+    public static func bid(for coverage: DayCoverage, dayStart: Date,
+                           calendar: Calendar = .current) -> NudgeBid? {
+        let message = text(for: coverage)
+        guard !message.isEmpty else { return nil }
+        let day = calendar.startOfDay(for: dayStart)
+        return NudgeBid(
+            // The id is the day, so a round that runs six times does not produce
+            // six identical complaints about the same missing data.
+            id: "coverage:" + Self.isoDay(day, in: calendar),
+            nudgeClass: nudgeClass, originAgent: "Orchestrator",
+            expectedBenefit: expectedBenefit, urgency: urgency,
+            // The whole day. A coverage shortfall is not a moment — it does not
+            // become more or less true at 3pm — so a short window would let the
+            // one bid about *not having data* expire before anything saw it.
+            windowOpens: day,
+            windowCloses: calendar.date(byAdding: .day, value: 1, to: day) ?? day,
+            text: message)
+    }
+}
