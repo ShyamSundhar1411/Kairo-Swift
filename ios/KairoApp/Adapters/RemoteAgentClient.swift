@@ -404,7 +404,31 @@ public struct RemoteAgentClient: Sendable {
         public let failure: String?
         public let clarifyingQuestion: String?
         public let items: [FoodItem]
-        public var totalKilojoules: Double { items.reduce(0) { $0 + $1.facts.kilojoules } }
+        /// FR8.2 — drinks the analyst could actually see in the photograph.
+        /// Empty is the common and correct answer.
+        public let drinks: [InferredDrink]
+        public var totalKilojoules: Double {
+            items.reduce(0) { $0 + $1.facts.kilojoules }
+                + drinks.reduce(0) { $0 + $1.kilojoules }
+        }
+        /// What a photograph suggests was drunk. **Offered, never logged.** The
+        /// hydration number is the one the user taps to correct, and a volume
+        /// read off a picture is weaker evidence than a tap — writing it in
+        /// without asking would put a guess somewhere the user believes they
+        /// measured.
+        public var inferredMillilitres: Int {
+            Int(drinks.reduce(0) { $0 + $1.millilitres }.rounded())
+        }
+    }
+
+    /// FR8.2. `confidence` travels because the client has to be able to say how
+    /// sure this is when it offers it.
+    public struct InferredDrink: Sendable, Identifiable {
+        public let name: String
+        public let millilitres: Double
+        public let kilojoules: Double
+        public let confidence: Double
+        public var id: String { "\(name)-\(Int(millilitres))" }
     }
 
     public func analyseMeal(userID: String, imageData: Data, mediaType: String,
@@ -424,12 +448,22 @@ public struct RemoteAgentClient: Sendable {
                                       proteinGrams: raw["proteinGrams"] as? Double ?? 0),
                 confidence: raw["confidence"] as? Double ?? 0.5)
         }
+        // FR8.2. The server has already dropped anything not visible or with no
+        // volume, so everything that arrives here is offerable — but a drink
+        // with no name is not something to show somebody, so it is skipped.
+        let drinks = (json["drinks"] as? [[String: Any]] ?? []).compactMap { raw -> InferredDrink? in
+            guard let name = raw["name"] as? String,
+                  let ml = raw["millilitres"] as? Double, ml > 0 else { return nil }
+            return InferredDrink(name: name, millilitres: ml,
+                                 kilojoules: raw["kilojoules"] as? Double ?? 0,
+                                 confidence: raw["confidence"] as? Double ?? 0.5)
+        }
         return MealAnalysis(
             state: json["state"] as? String ?? "unavailable",
             grounded: json["grounded"] as? Bool ?? false,
             failure: json["failure"] as? String,
             clarifyingQuestion: json["clarifyingQuestion"] as? String,
-            items: items)
+            items: items, drinks: drinks)
     }
 
     // MARK: - CF12
