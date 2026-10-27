@@ -25,6 +25,6 @@
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>au.edu.sydney.elec5620.kairo</string>
+	<string>au.edu.sydney.elec5620.kairo${KAIRO_BUNDLE_SUFFIX}</string>
 </dict>
 </plist>

@@ -205,10 +205,23 @@ struct TodayView: View {
         }
         .kairoCard(tint: logged ? tint : Kairo.inkFaint)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(logged
-            ? "\(log.totalMillilitres) of \(log.targetMillilitres) millilitres of water, "
-              + "logged \(log.sips.count) times"
-            : "No water logged yet today. \(emptyWaterHint)")
+        // FR8.5. The old label read the totals, which is the *number*; the ring
+        // was encoding the *position*, and position was the part with no
+        // non-visual equivalent. NFR11's colour-only rule points at the same
+        // gap: green-at-target was the only thing that said "you are done".
+        .accessibilityLabel(logged ? waterSpoken : "No water logged yet today. \(emptyWaterHint)")
+        .accessibilityValue(HydrationProgress.accessibilityValue(
+            totalMillilitres: log.totalMillilitres,
+            targetMillilitres: log.targetMillilitres,
+            sipCount: log.sips.count))
+    }
+
+    /// FR8.5's spoken form, from the one source the ring reads, so the two
+    /// cannot drift apart.
+    private var waterSpoken: String {
+        HydrationProgress.spoken(totalMillilitres: model.hydration.totalMillilitres,
+                                 targetMillilitres: model.hydration.targetMillilitres,
+                                 sipCount: model.hydration.sips.count)
     }
 
     /// One pill, and it says the most useful thing available: how far there is

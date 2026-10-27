@@ -205,13 +205,27 @@ final class WatchModel {
         // A stable id per tap, minted once and kept: WatchConnectivity re-delivers
         // queued messages, and the phone de-duplicates on this id rather than
         // counting the same glass twice.
+        // FR8.5. Captured before the append, because the milestone is a
+        // property of the *change* — testing the new total instead would buzz
+        // again on every later sip inside the same quarter.
+        let before = waterMillilitres
         let sip = HydrationLog.Sip(id: UUID().uuidString, at: Date(), millilitres: ml)
         unacknowledgedSips.append(sip)
         if unacknowledgedSips.count > Self.outboxLimit { unacknowledgedSips.removeFirst() }
         WaterOutbox.save(unacknowledgedSips)
 
         bridge.send(.waterLogged(millilitres: sip.millilitres, at: sip.at, id: sip.id))
-        haptic(.click)
+
+        // FR8.5 — the non-visual channel that works with the screen off and the
+        // phone in another room, which is the situation one-tap logging exists
+        // for. `.click` confirms the tap; a milestone gets something the user
+        // can tell apart from it without looking.
+        if let milestone = HydrationProgress.crossed(from: before, to: waterMillilitres,
+                                                     target: waterTargetMillilitres) {
+            haptic(milestone == .target ? .success : .directionUp)
+        } else {
+            haptic(.click)
+        }
     }
 
     /// Re-offer every tap the phone has not accounted for. Safe to repeat: the

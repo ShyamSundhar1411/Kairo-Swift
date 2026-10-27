@@ -234,6 +234,10 @@ struct MemoryRow: View {
             return Kairo.amber
         case .superseded, .expired, .deleted:
             return Kairo.inkFaint
+        // FR10.2 / UC7 A3. Not facts — the record of a decision about one, so
+        // they are greyed like the other states Kairo is not acting on.
+        case .merged, .rejected:
+            return Kairo.inkFaint
         case .active, .verified:
             return nil
         }
@@ -255,6 +259,8 @@ struct MemoryRow: View {
         case .superseded:   "arrow.triangle.branch"
         case .expired:      "clock.badge.xmark"
         case .deleted:      "trash"
+        case .merged:       "arrow.triangle.merge"
+        case .rejected:     "xmark.circle"
         }
     }
 
@@ -271,6 +277,13 @@ struct MemoryRow: View {
             return "Kairo has not seen this happen lately."
         case .decaying:
             return "Fading out on its own unless it happens again."
+        case .merged:
+            // The user said something Kairo already knew. Saying so is the
+            // point of FR10.2 having a state: without it the repeat looked
+            // like it was ignored.
+            return "Already known — this confirmed a fact Kairo had."
+        case .rejected:
+            return "Not kept. Kairo was not confident enough this was durable."
         case .superseded:
             return "Replaced by a newer fact, kept because a decision cited it."
         case .expired:
