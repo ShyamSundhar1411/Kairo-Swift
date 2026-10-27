@@ -56,11 +56,19 @@ public enum MemorySensitivity: String, Sendable, Comparable, CaseIterable {
 
 public struct MemoryItem: Sendable {
     public let id: String
+    /// FR10.7 — stored in the language the user expressed it in, never
+    /// translated. A memory somebody cannot recognise as their own sentence is
+    /// not theirs.
     public var text: String
     public var lifecycle: Lifecycle<MemoryItemState>
     public var confidence: Double
     public let sensitivity: MemorySensitivity
     public let sourceRef: String
+    /// FR10.7. BCP-47 tag of the language `text` is written in. Empty means
+    /// unknown, which is deliberately not the same as English — a memory
+    /// assumed English because nobody recorded otherwise is how the original
+    /// gets rewritten later.
+    public var language: String = ""
     public var decayAt: Date?
     /// Decision-record ids that cited this memory. A pinned memory keeps the
     /// version that was cited, so sealed history cannot be rewritten by decay.
