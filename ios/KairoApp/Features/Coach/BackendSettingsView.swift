@@ -66,43 +66,66 @@ struct BackendSettingsView: View {
                               connection: model.backend.state)
     }
 
+    /// Split into a body and a footer, and the footer into a stored string,
+    /// because Swift 6.1.2 gave up type-checking this as one expression:
+    /// "unable to type-check this expression in reasonable time". Swift 6.4
+    /// solves it, which is why it compiled here and failed in CI.
+    ///
+    /// The expensive half is the footer. A chain of `+` over six string literals
+    /// is six overload resolutions the solver has to carry through the whole
+    /// `ViewBuilder` closure; a single multi-line literal is one token. The
+    /// house style uses `+ "…"` in a dozen other views and they are fine — this
+    /// one sat beside five conditional rows, which is what tipped it over.
     private var provenanceSection: some View {
         Section {
-            LabeledContent("Decided the ledger") {
-                Text(provenance.label).foregroundStyle(provenance.tint)
-            }
-            // S7 — read off the sealed record, so this says which backend
-            // answered *that* pass rather than which one happens to be bound now.
-            if let provider = model.servingProvider {
-                LabeledContent("Answered by") { Text(provider).foregroundStyle(.secondary) }
-            }
-            if let modelID = model.servingModelID {
-                LabeledContent("Bidding model") {
-                    Text(modelID).foregroundStyle(.secondary)
-                }
-            }
-            if !model.contributingRoles.isEmpty {
-                LabeledContent("Roles that contributed") {
-                    Text("\(Set(model.contributingRoles).count) of \(AgentID.allCases.count)")
-                        .monospacedDigit()
-                }
-            }
-            if let last = model.backend.lastServedByBackend {
-                LabeledContent("Last answered") {
-                    Text(last, style: .relative).foregroundStyle(.secondary)
-                }
-            }
+            provenanceRows
         } header: {
             Text("This pass")
         } footer: {
-            Text(provenance.oneLine + "\n\n"
-                 + "The bidding model is the fast tier — the one the roles bid with. A "
-                 + "sentence written at the deep tier came from a different model on the "
-                 + "same provider.\n\n"
-                 + "Either way the readings are this phone's. Sleep and movement come from "
-                 + "Health, water from the watch — and where nothing was measured, nothing "
-                 + "is claimed.")
+            Text(Self.provenanceFooter(provenance.oneLine))
         }
+    }
+
+    @ViewBuilder
+    private var provenanceRows: some View {
+        LabeledContent("Decided the ledger") {
+            Text(provenance.label).foregroundStyle(provenance.tint)
+        }
+        // S7 — read off the sealed record, so this says which backend
+        // answered *that* pass rather than which one happens to be bound now.
+        if let provider = model.servingProvider {
+            LabeledContent("Answered by") { Text(provider).foregroundStyle(.secondary) }
+        }
+        if let modelID = model.servingModelID {
+            LabeledContent("Bidding model") {
+                Text(modelID).foregroundStyle(.secondary)
+            }
+        }
+        if !model.contributingRoles.isEmpty {
+            LabeledContent("Roles that contributed") {
+                Text("\(Set(model.contributingRoles).count) of \(AgentID.allCases.count)")
+                    .monospacedDigit()
+            }
+        }
+        if let last = model.backend.lastServedByBackend {
+            LabeledContent("Last answered") {
+                Text(last, style: .relative).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private static func provenanceFooter(_ oneLine: String) -> String {
+        """
+        \(oneLine)
+
+        The bidding model is the fast tier — the one the roles bid with. A \
+        sentence written at the deep tier came from a different model on the \
+        same provider.
+
+        Either way the readings are this phone's. Sleep and movement come from \
+        Health, water from the watch — and where nothing was measured, nothing \
+        is claimed.
+        """
     }
 
     // MARK: - Which model, and whether its ids exist
@@ -246,14 +269,21 @@ struct BackendSettingsView: View {
         } header: {
             Text("Agent backend")
         } footer: {
-            Text("The address of the machine running `python -m kairo`. Leave it empty "
-                 + "to stay on the device. On a phone this must be the Mac's address on "
-                 + "your network, not localhost — localhost on a phone is the phone."
-                 + "\n\nAnything that is not on this machine must be https. The token is "
-                 + "kept in the keychain, not in preferences, and does not travel in a "
-                 + "device backup.")
+            Text(Self.addressFooter)
         }
     }
+
+    /// Stored rather than built inline, for the reason on `provenanceSection`:
+    /// I grew this from three `+` terms to six in the same commit that put the
+    /// keychain note here, and six is where the solver starts struggling.
+    private static let addressFooter = """
+        The address of the machine running `python -m kairo`. Leave it empty to \
+        stay on the device. On a phone this must be the Mac's address on your \
+        network, not localhost — localhost on a phone is the phone.
+
+        Anything that is not on this machine must be https. The token is kept in \
+        the keychain, not in preferences, and does not travel in a device backup.
+        """
 
     // MARK: - Figure 14
 

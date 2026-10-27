@@ -109,25 +109,7 @@ struct TodayView: View {
                             spacing: Kairo.Space.gutter) {
                 AttentionDial(spent: model.schedule.spent, total: model.schedule.dailyBudget)
             } detail: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("ATTENTION BUDGET")
-                        .font(.kairoLabel).tracking(1.1)
-                        .foregroundStyle(Kairo.inkFaint)
-                    Text("\(model.schedule.spent) of \(model.schedule.dailyBudget) spent")
-                        .font(.kairoHeadline)
-                        .foregroundStyle(Kairo.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Interruptions, not notifications. Tap to change the ceiling.")
-                        .font(.kairoCaption)
-                        .foregroundStyle(Kairo.inkSoft)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if let c = model.contract, c.state == .active {
-                        Pill(text: "plan contract active", icon: "checkmark.seal.fill",
-                             tint: Kairo.teal)
-                            .padding(.top, 2)
-                    }
-                }
+                dialDetail
             } trailing: {
                 Image(systemName: "chevron.right")
                     .font(.kairoGlyph(11))
@@ -137,10 +119,41 @@ struct TodayView: View {
         }
         .buttonStyle(.kairoPress)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(model.schedule.spent) of \(model.schedule.dailyBudget) "
-                            + "interruptions spent today")
+        .accessibilityLabel(dialAccessibilityLabel)
         .accessibilityHint("Opens your attention contract")
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// Lifted out of `dial` for the same reason `provenanceSection` was split in
+    /// BackendSettingsView: measured with `-warn-long-function-bodies`, this
+    /// getter was the slowest thing left in the app at 368ms on Swift 6.4. CI
+    /// runs Swift 6.1.2, where the equivalent expression next door had already
+    /// crossed from slow into "unable to type-check in reasonable time" — so
+    /// this is the one that fails next, on a build nobody has changed.
+    private var dialDetail: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("ATTENTION BUDGET")
+                .font(.kairoLabel).tracking(1.1)
+                .foregroundStyle(Kairo.inkFaint)
+            Text("\(model.schedule.spent) of \(model.schedule.dailyBudget) spent")
+                .font(.kairoHeadline)
+                .foregroundStyle(Kairo.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Interruptions, not notifications. Tap to change the ceiling.")
+                .font(.kairoCaption)
+                .foregroundStyle(Kairo.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let c = model.contract, c.state == .active {
+                Pill(text: "plan contract active", icon: "checkmark.seal.fill",
+                     tint: Kairo.teal)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    private var dialAccessibilityLabel: String {
+        "\(model.schedule.spent) of \(model.schedule.dailyBudget) interruptions spent today"
     }
 
     // MARK: - Water
