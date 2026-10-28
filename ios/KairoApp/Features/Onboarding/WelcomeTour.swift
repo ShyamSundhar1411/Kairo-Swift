@@ -20,7 +20,12 @@ struct WelcomeTour: View {
     /// cold launch is worse than no tour.
     @AppStorage("kairo.tour.completed") private var completed = false
     @Environment(\.dismiss) private var dismiss
-    @Environment(AppModel.self) private var app
+    /// Passed in rather than read from the environment, and that is the whole
+    /// point: this view is presented from exactly one place, and an
+    /// `@Environment` object nobody provided does not degrade — it traps. It
+    /// did, on first launch, for every new user. A parameter makes the same
+    /// mistake a compile error.
+    let app: AppModel
     /// Seeded from the stored profile, so reopening the tour shows the choice
     /// already made rather than the default.
     @State private var ceiling = 6

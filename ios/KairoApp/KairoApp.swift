@@ -33,7 +33,16 @@ struct KairoApp: App {
                         }
                     }
             } else {
-                WelcomeTour()
+                // Handed the model explicitly. The tour sets AG-1's ceiling
+                // (SCRUM-21), so it needs one — and taking it as a parameter
+                // means it cannot be presented without one, which an
+                // `@Environment` lookup allowed right up until it trapped at
+                // runtime on the first launch of a fresh install.
+                //
+                // It does not bootstrap. Constructing the model is cheap and
+                // reads nothing; `bootstrap()` is what touches HealthKit, and
+                // running before that is the entire reason the tour exists.
+                WelcomeTour(app: model)
             }
         }
     }

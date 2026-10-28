@@ -92,8 +92,14 @@ jobs:
 
       - name: Build the app and the watch app
         working-directory: mobile
-        # KairoWatch is a dependency of KairoApp, so this builds both. A
-        # destination by name would break the day the runner image changes its
+        # Both schemes, explicitly. KairoWatch *is* a dependency of KairoApp and
+        # does get built and embedded at KairoApp.app/Watch/KairoWatch.app — but
+        # for a long time it had no scheme of its own, so it could not be
+        # selected, run or debugged, and nothing here would have noticed. "It is
+        # in the bundle" and "somebody can run it" are different claims, and
+        # this job should check the second one too.
+        #
+        # A destination by name would break the day the runner image changes its
         # simulator list; `generic/platform` compiles without booting anything.
         #
         # One build, captured once. Checking warnings with a second xcodebuild
@@ -113,6 +119,18 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             build > build.log 2>&1 || echo "BUILD_FAILED" > build.failed
+          xcodebuild \
+            -project Kairo.xcodeproj \
+            -scheme KairoWatch \
+            -destination 'generic/platform=watchOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build >> build.log 2>&1 || echo "BUILD_FAILED" > build.failed
+          # Proof it is actually embedded, not merely compiled alongside.
+          if ! find ~/Library/Developer/Xcode/DerivedData -path '*KairoApp.app/Watch/KairoWatch.app' \
+               -maxdepth 8 | grep -q .; then
+            echo "::error::KairoWatch.app is not embedded in KairoApp.app/Watch/"
+            echo "BUILD_FAILED" > build.failed
+          fi
           tail -40 build.log
 
       - name: Report compiler errors

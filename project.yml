@@ -110,6 +110,12 @@ targets:
   KairoWatch:
     type: application
     platform: watchOS
+    # XcodeGen only emits a scheme for a target that asks for one. Without this
+    # the watch app built and embedded correctly — it is in
+    # KairoApp.app/Watch/KairoWatch.app — and was still impossible to select,
+    # run or debug on its own, because Xcode's scheme list had no entry for it.
+    # "It is in the bundle" and "you can run it" are different claims.
+    scheme: {}
     sources:
       - path: watch/KairoWatch
     dependencies:
