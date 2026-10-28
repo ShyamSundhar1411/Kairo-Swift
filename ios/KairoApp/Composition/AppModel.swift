@@ -44,6 +44,11 @@ final class AppModel {
     /// `wristAvailable` — in preview there is no session to be reachable.
     private(set) var wristLinked = false
 
+    /// The link in the states the pairing screen needs apart (SCRUM-21's
+    /// companion half). `wristLinked` stays as the one-bit answer the rest of
+    /// the app asks for; this is the one a person is shown.
+    private(set) var wristLink: WristLink = .connecting
+
     /// True when this configuration has a phone/watch session at all. False in
     /// preview, and false on a phone with no watch paired, which are different
     /// situations from "linked but out of range".
@@ -219,6 +224,26 @@ final class AppModel {
     /// without an entitlement this project does not have, which is why the
     /// setting is a window the user states rather than one Kairo detects.
     var isQuietNow: Bool { userProfile.isQuiet(at: env.clock.now) }
+
+    /// Watch the link without starting the rest of the app.
+    ///
+    /// `attachWrist()` runs inside `bootstrap()`, and the tour deliberately runs
+    /// *before* bootstrap — bootstrap reads HealthKit, and explaining the app
+    /// before iOS asks for health data is the whole reason the tour exists. So
+    /// the pairing page needs the link and nothing else: this wires that one
+    /// observer and seeds the current value, and leaves events, arbitration and
+    /// the day's state alone.
+    ///
+    /// Safe to call more than once; it only ever replaces the same handler.
+    @MainActor
+    func observeWristLink() {
+        guard let wrist = env.wrist else {
+            wristLink = .unsupported
+            return
+        }
+        wrist.onLinkChange = { [weak self] link in self?.wristLink = link }
+        wristLink = wrist.link
+    }
 
     /// CF10. Read from wherever the agents retrieve, so the book and the facts
     /// the roles reason over cannot be two different lists.
@@ -582,6 +607,11 @@ final class AppModel {
         guard let wrist = env.wrist else { return }
         wrist.onWristEvent = { [weak self] event in self?.handle(event) }
         wrist.onReachabilityChange = { [weak self] reachable in self?.wristLinked = reachable }
+        wrist.onLinkChange = { [weak self] link in self?.wristLink = link }
+        // Seeded rather than waited for: a watch already paired and reachable
+        // fires no callback on launch, so a screen that only listened would
+        // show "looking for your watch" at one that was right there.
+        wristLink = wrist.link
         // Worth showing rather than swallowing: this fires when a phone and a
         // watch are on builds that disagree about the envelope version, and the
         // symptom without it is silence that looks exactly like the old bug.

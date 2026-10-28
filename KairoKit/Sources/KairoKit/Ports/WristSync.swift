@@ -253,3 +253,35 @@ public struct HydrationLog: Sendable, Equatable {
                        expectedCount: max(1, expectedSips))
     }
 }
+
+/// How the phone and the wrist stand, in the states a person can act on.
+///
+/// A single `isReachable` boolean could not tell "you do not own a watch" from
+/// "your watch is in the next room", and those are opposite instructions: the
+/// first means *this part is not for you*, the second means *wait a moment*.
+/// Collapsing them is how a setup screen tells somebody to go and buy a device
+/// they are already wearing.
+public enum WristLink: String, Sendable, CaseIterable {
+    /// No WatchConnectivity on this device at all — an iPad, or a simulator
+    /// with no paired watch runtime.
+    case unsupported
+    /// The session has not finished activating. Transient, and not a failure.
+    case connecting
+    /// No watch is paired to this iPhone.
+    case noWatch
+    /// A watch is paired, and Kairo is not installed on it.
+    case appNotInstalled
+    /// Installed, but not reachable this second — out of range, or asleep.
+    /// Taps made on it still arrive later; the outbox holds them.
+    case outOfReach
+    /// Reachable now.
+    case connected
+
+    /// Whether anything tapped on the wrist can reach the phone eventually.
+    /// `outOfReach` is true: the watch keeps an outbox and re-sends on
+    /// reconnect, so a glass logged on a walk is not lost, only late.
+    public var carriesTaps: Bool {
+        self == .connected || self == .outOfReach
+    }
+
+}

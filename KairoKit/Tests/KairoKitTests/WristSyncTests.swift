@@ -368,3 +368,34 @@ struct DayLogTests {
         #expect(oneSip.isEmpty == false)
     }
 }
+
+@Suite("The wrist link, in the states a person can act on")
+struct WristLinkTests {
+
+    @Test("a watch in the next room still carries what was tapped on it")
+    func outOfReachIsNotLost() {
+        // The outbox re-sends on reconnect, so a glass logged on a walk is late
+        // rather than gone. A screen that treated this as a failure would be
+        // telling the truth about the radio and a lie about the data.
+        #expect(WristLink.outOfReach.carriesTaps)
+        #expect(WristLink.connected.carriesTaps)
+    }
+
+    @Test("not owning a watch is not a failure state")
+    func noWatchCarriesNothingAndIsNotActionable() {
+        #expect(!WristLink.noWatch.carriesTaps)
+        #expect(!WristLink.unsupported.carriesTaps)
+    }
+
+    @Test("only the two live states carry taps")
+    func carryingIsNarrow() {
+        let carrying = WristLink.allCases.filter(\.carriesTaps)
+        #expect(Set(carrying) == [.connected, .outOfReach])
+    }
+
+    @Test("connecting is transient, and not drawn as a failure")
+    func connectingIsNeither() {
+        // The page says "this takes a second" here, not "error".
+        #expect(!WristLink.connecting.carriesTaps)
+    }
+}

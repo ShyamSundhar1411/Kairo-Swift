@@ -31,7 +31,7 @@ struct WelcomeTour: View {
     @State private var ceiling = 6
     @State private var page = 0
 
-    private static let pageCount = 6
+    private static let pageCount = 7
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,7 +42,8 @@ struct WelcomeTour: View {
                 rosterPage.tag(2)
                 contestPage.tag(3)
                 wherePage.tag(4)
-                healthPage.tag(5)
+                wristPage.tag(5)
+                healthPage.tag(6)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             footer
@@ -291,6 +292,32 @@ struct WelcomeTour: View {
                 TourState(chip: "needs a token", colour: Kairo.amber,
                           meaning: "Found one, but it wants a key. Agents screen.")
             }
+        }
+    }
+
+    /// The wrist, before Health rather than after: the watch is where a water
+    /// tap and an answered interruption actually happen, so somebody deciding
+    /// whether to grant Health access is better off knowing what is on the other
+    /// end of it.
+    ///
+    /// There is no second sign-in here and there will not be one. The watch
+    /// never contacts the backend — it talks to this phone, and the pairing iOS
+    /// established is what says whose wrist it is (AS-15,
+    /// `docs/TRUST-BOUNDARIES.md`).
+    private var wristPage: some View {
+        TourPage(
+            eyebrow: "Your wrist",
+            title: "One tap, no typing.",
+            copy: """
+            Water goes in with one tap on the watch, and an interruption Kairo \
+            decides is worth having can be answered there without reaching for \
+            the phone.
+
+            There is nothing to sign in to. The watch is yours because iOS \
+            paired it to this iPhone, and the same account covers both.
+            """
+        ) {
+            WristPairing(app: app)
         }
     }
 

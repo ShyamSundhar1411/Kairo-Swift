@@ -32,6 +32,11 @@ final class PhoneConnectivityBridge: NSObject, @unchecked Sendable {
     /// Activation finished, or reachability changed. Main queue.
     var onReachabilityChange: ((Bool) -> Void)?
 
+    /// The link state changed in any way the pairing screen cares about —
+    /// including a watch being paired or the app being installed on it, which
+    /// `onReachabilityChange` does not cover. Main queue.
+    var onLinkChange: ((WristLink) -> Void)?
+
     /// Something arrived that this build could not read — a version mismatch
     /// between a phone and a watch on different builds, most likely. Surfaced
     /// rather than swallowed, because a silently ignored message is exactly the
@@ -48,6 +53,21 @@ final class PhoneConnectivityBridge: NSObject, @unchecked Sendable {
     var isReachable: Bool {
         guard let session, session.activationState == .activated else { return false }
         return session.isReachable
+    }
+
+    /// The link, in the four states a person can actually do something about.
+    ///
+    /// `isReachable` alone could not tell "you have no watch" from "your watch
+    /// is in the other room", and those are opposite instructions — one is
+    /// *this feature is not for you*, the other is *wait a moment*. The pairing
+    /// screen needs them apart, so the bridge draws the distinction rather than
+    /// the view guessing from a boolean.
+    var link: WristLink {
+        guard let session else { return .unsupported }
+        guard session.activationState == .activated else { return .connecting }
+        if !session.isPaired { return .noWatch }
+        if !session.isWatchAppInstalled { return .appNotInstalled }
+        return session.isReachable ? .connected : .outOfReach
     }
 
     override init() {
@@ -109,7 +129,15 @@ extension PhoneConnectivityBridge: WCSessionDelegate {
             report("watch session did not activate: \(error.localizedDescription)")
         }
         let reachable = error == nil && activationState == .activated && session.isReachable
-        hop { self.onReachabilityChange?(reachable) }
+        hop { self.onReachabilityChange?(reachable); self.onLinkChange?(self.link) }
+    }
+
+    /// A watch was paired, unpaired, or had the app installed or removed.
+    /// Reachability does not change for any of those, so without this the
+    /// pairing screen would sit on "no watch" while one was being set up two
+    /// feet away.
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        hop { self.onLinkChange?(self.link) }
     }
 
     func sessionReachabilityDidChange(_ session: WCSession) {
