@@ -79,3 +79,36 @@ enum KeychainStore {
         return status == errSecSuccess || status == errSecItemNotFound
     }
 }
+
+/// SCRUM-21 — the profile, kept on the device as well as on the server.
+///
+/// `UserDefaults` rather than the Keychain, deliberately: an interruption
+/// ceiling and a quiet window are preferences, not credentials, and putting
+/// non-secrets in the Keychain trains whoever reads this next that the Keychain
+/// is just storage. The token stays where it belongs, next door.
+///
+/// It exists at all because AG-1's ceiling is a grant the user made, NFR9 says
+/// the app keeps working with no network, and a preference that lives only on a
+/// backend vanishes the moment the backend does — which is precisely when a
+/// ceiling most needs to be respected.
+enum ProfileStore {
+    private static let key = "kairo.profile"
+
+    static func load() -> RemoteAgentClient.UserProfile {
+        guard let raw = UserDefaults.standard.dictionary(forKey: key) else {
+            return RemoteAgentClient.UserProfile()
+        }
+        return RemoteAgentClient.UserProfile(json: raw)
+    }
+
+    static func save(_ p: RemoteAgentClient.UserProfile) {
+        UserDefaults.standard.set([
+            "displayName": p.displayName,
+            "locale": p.locale,
+            "timezone": p.timezone,
+            "dailyInterruptionCeiling": p.dailyInterruptionCeiling,
+            "quietHoursStart": p.quietHoursStart,
+            "quietHoursEnd": p.quietHoursEnd,
+        ], forKey: key)
+    }
+}

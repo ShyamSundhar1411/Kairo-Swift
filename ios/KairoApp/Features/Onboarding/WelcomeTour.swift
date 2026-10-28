@@ -8,7 +8,10 @@ import KairoKit
 /// as a bug until you know that losing is the normal outcome of a contest. The
 /// app previously opened straight onto that screen and explained none of it.
 ///
-/// Four pages, because four is what the idea actually needs — the budget, the
+/// Six pages: the idea, the grant the user makes against it, the roster, the
+/// contest, where the reasoning runs, and the Health permission.
+///
+/// Was four pages, because four is what the idea actually needs — the budget, the
 /// roster, the contest, and where the reasoning is happening. It is skippable
 /// from the first page and never shown again once finished; nobody should have
 /// to sit through a tour twice to get to their own data.
@@ -17,24 +20,30 @@ struct WelcomeTour: View {
     /// cold launch is worse than no tour.
     @AppStorage("kairo.tour.completed") private var completed = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppModel.self) private var app
+    /// Seeded from the stored profile, so reopening the tour shows the choice
+    /// already made rather than the default.
+    @State private var ceiling = 6
     @State private var page = 0
 
-    private static let pageCount = 5
+    private static let pageCount = 6
 
     var body: some View {
         VStack(spacing: 0) {
             header
             TabView(selection: $page) {
                 budgetPage.tag(0)
-                rosterPage.tag(1)
-                contestPage.tag(2)
-                wherePage.tag(3)
-                healthPage.tag(4)
+                ceilingPage.tag(1)
+                rosterPage.tag(2)
+                contestPage.tag(3)
+                wherePage.tag(4)
+                healthPage.tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             footer
         }
         .background(Kairo.canvas.ignoresSafeArea())
+        .onAppear { seedCeiling() }
     }
 
     // MARK: - Chrome
@@ -73,6 +82,8 @@ struct WelcomeTour: View {
         .padding(.bottom, 26)
     }
 
+    private func seedCeiling() { ceiling = app.userProfile.dailyInterruptionCeiling }
+
     private func finish() {
         completed = true
         dismiss()
@@ -97,6 +108,87 @@ struct WelcomeTour: View {
             // Showing the thing itself beats an illustration of the thing.
             AttentionDial(spent: 2, total: 6, size: 150)
                 .frame(height: 190)
+        }
+    }
+
+    /// AG-1 has two halves: the company commits to at most six a day, and the
+    /// user grants the ceiling if they choose to change it. The commitment is
+    /// the page before this one. This is where the grant is actually made —
+    /// immediately after the idea is explained and before anything has been
+    /// spent, which is the only moment the number means anything to a reader.
+    ///
+    /// It was previously settable only on a screen nobody reaches until they
+    /// have already been interrupted a few times, and it reset on every launch.
+    private var ceilingPage: some View {
+        TourPage(
+            eyebrow: "Your half of it",
+            title: "How many is too many?",
+            copy: """
+            Six is the default, and it is a commitment rather than a target — Kairo \
+            will use fewer whenever fewer is enough. Set it lower if you want, now or \
+            later on the attention screen.
+
+            Zero is allowed. Kairo keeps reasoning and keeps the ledger; it simply \
+            never interrupts, and you go to it instead.
+            """
+        ) {
+            VStack(spacing: 14) {
+                AttentionDial(spent: 0, total: max(ceiling, 1), size: 128)
+                    .frame(height: 150)
+                    .opacity(ceiling == 0 ? 0.45 : 1)
+
+                HStack(spacing: 18) {
+                    ceilingStep("minus", enabled: ceiling > 0) { setCeiling(ceiling - 1) }
+                    Text("\(ceiling)")
+                        .font(.system(size: 40, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(Kairo.ink)
+                        .frame(minWidth: 56)
+                        .contentTransition(.numericText())
+                    ceilingStep("plus", enabled: ceiling < 12) { setCeiling(ceiling + 1) }
+                }
+                .accessibilityElement()
+                .accessibilityLabel("Interruptions allowed per day")
+                .accessibilityValue("\(ceiling)")
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: setCeiling(ceiling + 1)
+                    case .decrement: setCeiling(ceiling - 1)
+                    @unknown default: break
+                    }
+                }
+
+                Text(ceiling == 0
+                     ? "Kairo will never interrupt you."
+                     : "At most \(ceiling) a day, none during quiet hours.")
+                    .font(.kairoCaption)
+                    .foregroundStyle(Kairo.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func ceilingStep(_ icon: String, enabled: Bool,
+                             action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Kairo.inkFaint.opacity(0.14)))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(enabled ? Kairo.ink : Kairo.inkFaint)
+        .disabled(!enabled)
+        .accessibilityHidden(true)
+    }
+
+    private func setCeiling(_ value: Int) {
+        let clamped = min(max(value, 0), 12)
+        guard clamped != ceiling else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { ceiling = clamped }
+        Task {
+            await app.updateProfile({ $0.dailyInterruptionCeiling = clamped },
+                                    patch: ["dailyInterruptionCeiling": clamped])
         }
     }
 

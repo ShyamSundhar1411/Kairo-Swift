@@ -54,6 +54,15 @@ final class AppModel {
     /// already spent, so a phone that had delivered nothing opened on "5 of 6
     /// spent" and had one interruption left for the whole day it had not yet had.
     var schedule: NudgeSchedule
+
+    /// SCRUM-21. The primary user's settings (AS-3: there is one).
+    ///
+    /// Held here and persisted locally as well as on the server, because AG-1's
+    /// ceiling is a grant the user made and NFR9 says the app keeps working with
+    /// no network. A preference that only exists on a backend is one that
+    /// vanishes the moment the backend does — and the ceiling is the single
+    /// setting whose job is to be respected when nothing else is working.
+    private(set) var userProfile: RemoteAgentClient.UserProfile = ProfileStore.load()
     var profile: CapabilityProfile = .unrestricted
 
     /// Where the agent backend is, and whether it is answering.
@@ -131,12 +140,14 @@ final class AppModel {
 
     @MainActor
     func bootstrap() async {
+        applyProfile(userProfile)
         await reloadMemories()
         refreshObservations()
         attachWrist()
         // Ask the backend who it is before arbitrating, so the first pass either
         // comes from the agents or is honestly labelled as not having.
         await backend.check(userID: userID)
+        await reloadProfile()
         await reloadContract()
         await runArbitration()
         // The wrist may have been showing its own local guess since the last
@@ -148,6 +159,66 @@ final class AppModel {
         // interruption this pass allocated is already in it.
         pushDayLog()
     }
+
+    /// SCRUM-21. The server's copy wins when there is one — it is the record
+    /// another device would read — and the local copy is what the app runs on
+    /// until it answers.
+    @MainActor
+    func reloadProfile() async {
+        guard let client = backend.client else { return }
+        do {
+            let remote = try await client.profile()
+            userProfile = remote
+            ProfileStore.save(remote)
+            applyProfile(remote)
+        } catch {
+            // Not worth surfacing: the locally stored profile is already in
+            // force, and a backend that cannot answer this is already being
+            // reported by the provenance chip for a better reason.
+            Self.log.error("profile reload failed: \(String(describing: error))")
+        }
+    }
+
+    /// Write one change through. Local first, so the setting holds even if the
+    /// request fails — the user moved a control and the app has to behave as
+    /// though they did.
+    @MainActor
+    func updateProfile(_ change: (inout RemoteAgentClient.UserProfile) -> Void,
+                       patch: [String: Any]) async {
+        var updated = userProfile
+        change(&updated)
+        userProfile = updated
+        ProfileStore.save(updated)
+        applyProfile(updated)
+
+        guard let client = backend.client else { return }
+        do {
+            let confirmed = try await client.updateProfile(patch)
+            userProfile = confirmed
+            ProfileStore.save(confirmed)
+            applyProfile(confirmed)
+        } catch {
+            Self.log.error("profile update failed: \(String(describing: error))")
+        }
+    }
+
+    /// AG-1. The ceiling the user set is the one the day is spent against.
+    @MainActor
+    private func applyProfile(_ p: RemoteAgentClient.UserProfile) {
+        guard schedule.dailyBudget != p.dailyInterruptionCeiling else { return }
+        schedule = NudgeSchedule(dayStart: schedule.dayStart,
+                                 dailyBudget: p.dailyInterruptionCeiling,
+                                 spent: schedule.spent)
+    }
+
+    /// NFR8 — "0 during quiet hours and Focus modes".
+    ///
+    /// This was hardcoded `false` on both arbitration paths, so the quiet-hours
+    /// control on the attention contract screen set a value nothing read. The
+    /// Focus half is still not here; a Focus mode is not readable from an app
+    /// without an entitlement this project does not have, which is why the
+    /// setting is a window the user states rather than one Kairo detects.
+    var isQuietNow: Bool { userProfile.isQuiet(at: env.clock.now) }
 
     /// CF10. Read from wherever the agents retrieve, so the book and the facts
     /// the roles reason over cannot be two different lists.
@@ -224,7 +295,7 @@ final class AppModel {
     private func arbitrateRemotely(_ client: RemoteAgentClient) async throws {
         let result = try await client.arbitrate(
             userID: userID, now: env.clock.now, schedule: schedule, coverage: coverage,
-            observations: observations, quietHours: false, profile: profile,
+            observations: observations, quietHours: isQuietNow, profile: profile,
             priorities: priorities)
 
         // Replay the backend's decision through the device's own state machine
@@ -382,7 +453,7 @@ final class AppModel {
             now: now, schedule: schedule,
             bids: weighted(LocalBidSource.bids(at: now, observations: observations)),
             memories: memories, profile: profile,
-            activeContract: contract, quietHours: false)
+            activeContract: contract, quietHours: isQuietNow)
         do {
             let result = try env.arbiter.arbitrate(input, recordID: "dr-\(records.count + 41)")
             arbitration = result

@@ -58,7 +58,14 @@ struct AttentionReceiptView: View {
         .navigationTitle("Your attention contract")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .onAppear { ceiling = model.schedule.dailyBudget }
+        .onAppear {
+            // SCRUM-21. Both controls read the stored profile now. They used to
+            // read `schedule` and a `@State` default, so the ceiling reset to 6
+            // and the quiet window to 21:00 on every launch — a grant the user
+            // made that the app forgot overnight.
+            ceiling = model.userProfile.dailyInterruptionCeiling
+            quietStart = model.userProfile.quietHoursStart
+        }
     }
 
     // MARK: - Ceiling
@@ -205,11 +212,28 @@ struct AttentionReceiptView: View {
     /// pass runs against, so the pass is re-run here rather than at some later
     /// convenient moment.
     private func commitCeiling() {
-        guard ceiling != model.schedule.dailyBudget else { return }
-        model.schedule = NudgeSchedule(dayStart: model.schedule.dayStart,
-                                       dailyBudget: ceiling,
-                                       spent: model.schedule.spent)
-        Task { await model.runArbitration() }
+        guard ceiling != model.userProfile.dailyInterruptionCeiling else { return }
+        let chosen = ceiling
+        Task {
+            // AG-1's user grant. Persisted locally first so it holds with no
+            // network, then written through to the server, which is the copy
+            // another device would read.
+            await model.updateProfile({ $0.dailyInterruptionCeiling = chosen },
+                                      patch: ["dailyInterruptionCeiling": chosen])
+            await model.runArbitration()
+        }
+    }
+
+    private func commitQuietHours() {
+        guard quietStart != model.userProfile.quietHoursStart else { return }
+        let chosen = quietStart
+        Task {
+            await model.updateProfile({ $0.quietHoursStart = chosen },
+                                      patch: ["quietHoursStart": chosen])
+            // NFR8: a window that now contains the current hour has to take
+            // effect on this pass, not the next one.
+            await model.runArbitration()
+        }
     }
 
     // MARK: - Quiet hours
@@ -235,14 +259,17 @@ struct AttentionReceiptView: View {
 
     private var quietCaption: String {
         let start = String(format: "%02d:00", quietStart)
-        return "Quiet from \(start) until morning. Anything Kairo wanted to say inside "
-             + "those hours is listed on Today instead, marked as quiet hours."
+        let end = String(format: "%02d:00", model.userProfile.quietHoursEnd)
+        let now = model.isQuietNow ? " It is quiet hours now." : ""
+        return "Quiet from \(start) until \(end). Anything Kairo wanted to say inside "
+             + "those hours is listed on Today instead, marked as quiet hours.\(now)"
     }
 
     private func hourPill(_ h: Int) -> some View {
         let on = h == quietStart
         return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { quietStart = h }
+            commitQuietHours()
         } label: {
             HStack(spacing: 5) {
                 if on {

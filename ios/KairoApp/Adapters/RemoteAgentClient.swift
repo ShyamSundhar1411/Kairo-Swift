@@ -466,6 +466,66 @@ public struct RemoteAgentClient: Sendable {
             items: items, drinks: drinks)
     }
 
+    // MARK: - SCRUM-21 — the primary user's profile
+
+    /// AS-3 puts one adult primary user behind a deployment, so this is one
+    /// record and there is no account to pick.
+    public struct UserProfile: Sendable, Equatable {
+        public var displayName: String
+        public var locale: String
+        public var timezone: String
+        /// AG-1. The company commits to at most six by default; this is the
+        /// user's half of that agreement, and it has to survive a relaunch or
+        /// it was never a grant.
+        public var dailyInterruptionCeiling: Int
+        public var quietHoursStart: Int
+        public var quietHoursEnd: Int
+
+        public init(displayName: String = "", locale: String = "en-AU",
+                    timezone: String = "Australia/Sydney",
+                    dailyInterruptionCeiling: Int = 6,
+                    quietHoursStart: Int = 22, quietHoursEnd: Int = 7) {
+            self.displayName = displayName
+            self.locale = locale
+            self.timezone = timezone
+            self.dailyInterruptionCeiling = dailyInterruptionCeiling
+            self.quietHoursStart = quietHoursStart
+            self.quietHoursEnd = quietHoursEnd
+        }
+
+        init(json: [String: Any]) {
+            self.init(
+                displayName: json["displayName"] as? String ?? "",
+                locale: json["locale"] as? String ?? "en-AU",
+                timezone: json["timezone"] as? String ?? "Australia/Sydney",
+                dailyInterruptionCeiling: json["dailyInterruptionCeiling"] as? Int ?? 6,
+                quietHoursStart: json["quietHoursStart"] as? Int ?? 22,
+                quietHoursEnd: json["quietHoursEnd"] as? Int ?? 7)
+        }
+
+        /// Whether `at` falls inside the quiet window, which may wrap midnight —
+        /// and usually does, because 22:00 to 07:00 is the normal answer. A
+        /// comparison that assumed start < end would leave the whole night loud.
+        public func isQuiet(at date: Date, calendar: Calendar = .current) -> Bool {
+            let hour = calendar.component(.hour, from: date)
+            if quietHoursStart == quietHoursEnd { return false }
+            return quietHoursStart < quietHoursEnd
+                ? (hour >= quietHoursStart && hour < quietHoursEnd)
+                : (hour >= quietHoursStart || hour < quietHoursEnd)
+        }
+    }
+
+    public func profile() async throws -> UserProfile {
+        UserProfile(json: try await send(request(for: "v1/profile")))
+    }
+
+    /// PATCH, not PUT. Absent keys keep their value on the server, so a client
+    /// that only knows about the ceiling cannot blank a locale it never read.
+    public func updateProfile(_ patch: [String: Any]) async throws -> UserProfile {
+        UserProfile(json: try await send(
+            request(for: "v1/profile", body: patch, method: "PATCH")))
+    }
+
     // MARK: - CF12
 
     public struct Explanation: Sendable {
