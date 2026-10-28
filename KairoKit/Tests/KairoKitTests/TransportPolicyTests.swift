@@ -7,16 +7,16 @@ import Foundation
 struct TransportPolicyTests {
 
     @Test("https to anywhere is fine", arguments: [
-        "https://kairo.fly.dev", "https://192.168.1.10:8080", "https://example.com/v1",
+        "https://kairo.fly.dev", "https://192.168.1.10:9080", "https://example.com/v1",
     ])
     func httpsIsAccepted(address: String) {
         #expect(TransportPolicy.objection(to: address) == nil)
     }
 
     @Test("cleartext to a remote host is refused", arguments: [
-        "http://192.168.1.10:8080",     // the exact thing the settings placeholder suggests
+        "http://192.168.1.10:9080",     // the exact thing the settings placeholder suggests
         "http://kairo.fly.dev",
-        "http://10.0.0.5:8080",
+        "http://10.0.0.5:9080",
     ])
     func cleartextToRemoteIsRefused(address: String) {
         let objection = TransportPolicy.objection(to: address)
@@ -26,8 +26,8 @@ struct TransportPolicyTests {
     }
 
     @Test("loopback stays exempt", arguments: [
-        "http://127.0.0.1:8080", "http://localhost:8080", "http://[::1]:8080",
-        "http://my-mac.local:8080", "http://my-mac.local.:8080",
+        "http://127.0.0.1:9080", "http://localhost:9080", "http://[::1]:9080",
+        "http://my-mac.local:9080", "http://my-mac.local.:9080",
     ])
     func loopbackIsExempt(address: String) {
         // The zero-key local path is a backend on this machine. There is no

@@ -233,7 +233,7 @@ struct BackendSettingsView: View {
     private func addressSection(_ backend: BackendConnection) -> some View {
         @Bindable var backend = backend
         return Section {
-            TextField("http://192.168.1.10:8080", text: $backend.address)
+            TextField("http://192.168.1.10:9080", text: $backend.address)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)
