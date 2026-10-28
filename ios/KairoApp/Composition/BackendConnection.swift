@@ -29,6 +29,20 @@ final class BackendConnection {
         /// app can do with the backend's provider contract, and it was being
         /// thrown away one layer below here.
         case refusing(diagnosis: String)
+        /// The backend answered **401**. It is up, it is reachable, it is not
+        /// misconfigured — it does not know who you are.
+        ///
+        /// Split out for exactly the reason `refusing` was split out of
+        /// `unreachable`: these are three different instructions to the person
+        /// holding the phone. *Unreachable* means check the address, *refusing*
+        /// means read the sentence the server wrote, and this one means paste a
+        /// token. Folding it into either of the others sends somebody to debug
+        /// a network or a config that is already correct.
+        ///
+        /// Reachable at all because `/health` is exempt from the guard, so
+        /// discovery succeeds and the first real request is where the token is
+        /// missed.
+        case unauthenticated
 
         var isConnected: Bool { if case .connected = self { true } else { false } }
 
@@ -39,6 +53,7 @@ final class BackendConnection {
             case .connected:     "Agents connected"
             case .unreachable:   "Backend unreachable"
             case .refusing:      "Agents refusing"
+            case .unauthenticated: "Backend needs a token"
             }
         }
 
@@ -60,6 +75,10 @@ final class BackendConnection {
                 // read, and reformatting it is how a precise instruction turns
                 // into a vague one.
                 diagnosis
+            case .unauthenticated:
+                "This backend is up and will not answer without a token. Paste the one "
+                + "it printed when it started — `serve-lan.sh` shows it — into the field "
+                + "above. Until then the on-device arbiter is deciding."
             }
         }
     }
@@ -194,6 +213,12 @@ final class BackendConnection {
         if let refusal = error as? RemoteAgentClient.Refusal {
             if let p = refusal.provider { provider = p }
             state = .refusing(diagnosis: refusal.diagnosis)
+            return
+        }
+        // A 401 is not a network fault and not a misconfiguration. Reporting it
+        // as "unreachable" sends somebody to check an address that is right.
+        if case let RemoteAgentClient.ClientError.http(status, _) = error, status == 401 {
+            state = .unauthenticated
             return
         }
         state = .unreachable(shortReason(error))

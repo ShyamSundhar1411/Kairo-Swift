@@ -335,6 +335,10 @@ private struct StatusRow: View {
         // Up, and saying no. A different colour from unreachable because it is a
         // different instruction to the reader.
         case .refusing:    Kairo.coral
+        // Up, correctly configured, and does not know you. Amber rather than
+        // coral: nothing is broken, something is missing — and the field that
+        // fixes it is on this very screen.
+        case .unauthenticated: Kairo.amber
         }
     }
 }

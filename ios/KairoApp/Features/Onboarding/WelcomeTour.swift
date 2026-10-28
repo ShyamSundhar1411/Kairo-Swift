@@ -170,9 +170,13 @@ struct WelcomeTour: View {
             title: "On your machine, if you want.",
             copy: """
             Kairo looks for an agent backend on this machine first and connects on its \
-            own — there is nothing to set up and no key to paste. If it finds one, the \
-            five roles do the reasoning there. A model running locally costs nothing \
-            and sends nothing anywhere.
+            own. If that backend is open — the usual case on your own Mac — there is \
+            nothing to set up. If it asks for a token, paste it on the Agents screen; \
+            a backend serving your phone over wifi always will, because the alternative \
+            is leaving your habit memories open to the network.
+
+            Either way the five roles do the reasoning there. A model running locally \
+            costs nothing and sends nothing anywhere.
 
             If it finds none, the app still works: a smaller version of the same \
             arbiter runs on the phone. Today's header always says which of the two you \
@@ -187,6 +191,8 @@ struct WelcomeTour: View {
                           meaning: "No backend found. On-device arbiter.")
                 TourState(chip: "agents refusing", colour: Kairo.coral,
                           meaning: "Backend is up and says what is wrong.")
+                TourState(chip: "needs a token", colour: Kairo.amber,
+                          meaning: "Found one, but it wants a key. Agents screen.")
             }
         }
     }

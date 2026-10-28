@@ -25,6 +25,10 @@ enum ArbitrationProvenance: Equatable {
     case unreachable
     /// The backend answered 503. It is up and it has said what is wrong.
     case refusing
+    /// The backend answered 401. It is up and correctly configured; it does not
+    /// know who you are. A different instruction from the two above — paste a
+    /// token, rather than check an address or read a diagnosis.
+    case needsToken
 
     init(source: AppModel.Source, costing: SuppressionCopy.Costing,
          connection: BackendConnection.State) {
@@ -39,6 +43,7 @@ enum ArbitrationProvenance: Equatable {
             switch connection {
             case .refusing:                      self = .refusing
             case .unreachable:                   self = .unreachable
+            case .unauthenticated:               self = .needsToken
             case .onDevice, .checking, .connected: self = .thisPhone
             }
         }
@@ -51,6 +56,7 @@ enum ArbitrationProvenance: Equatable {
         case .thisPhone:          "this phone"
         case .unreachable:        "agents unreachable"
         case .refusing:           "agents refusing"
+        case .needsToken:         "needs a token"
         }
     }
 
@@ -60,6 +66,7 @@ enum ArbitrationProvenance: Equatable {
         case .thisPhone:                   Kairo.inkSoft
         case .unreachable:                 Kairo.amber
         case .refusing:                    Kairo.coral
+        case .needsToken:                  Kairo.amber
         }
     }
 
@@ -69,6 +76,7 @@ enum ArbitrationProvenance: Equatable {
         case .thisPhone:                   "iphone"
         case .unreachable:                 "antenna.radiowaves.left.and.right.slash"
         case .refusing:                    "exclamationmark.octagon"
+        case .needsToken:                  "key"
         }
     }
 
@@ -87,6 +95,9 @@ enum ArbitrationProvenance: Equatable {
         case .refusing:
             "The agent backend is up and refusing every request. It has said why — open "
             + "the agents sheet."
+        case .needsToken:
+            "The agent backend is up but does not know who you are. Paste its token on "
+            + "the agents sheet; this phone decided in the meantime."
         }
     }
 }
