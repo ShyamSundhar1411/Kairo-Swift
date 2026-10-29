@@ -17,6 +17,11 @@ import KairoKit
 struct BackendSettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var isChecking = false
+    /// Presenting the tour over the app rather than clearing
+    /// `kairo.tour.completed` and flipping the root: closing it should return
+    /// here, not drop the reader on Today.
+    @State private var replayingTour = false
+    @State private var discovery = BackendDiscovery()
 
     var body: some View {
         @Bindable var backend = model.backend
@@ -51,8 +56,11 @@ struct BackendSettingsView: View {
             if let provider = backend.provider, !provider.considered.isEmpty {
                 consideredSection(provider)
             }
+            discoverySection(backend)
             addressSection(backend)
+            wristSection
             if !backend.ports.isEmpty { portsSection(backend.ports) }
+            tourSection
         }
         .navigationTitle("Agents")
         .navigationBarTitleDisplayMode(.inline)
@@ -230,6 +238,130 @@ struct BackendSettingsView: View {
 
     // MARK: - Where it is
 
+    /// Backends found on this network.
+    ///
+    /// A LAN address is the one setting that is both required on a real device
+    /// and guaranteed to go stale — a reboot, a new lease, a different network.
+    /// Typing it in is the work this section deletes.
+    ///
+    /// Only ever offers; `adopt(chosen:)` refuses to overwrite an address
+    /// somebody entered, including when that address is currently wrong.
+    @ViewBuilder private func discoverySection(_ backend: BackendConnection) -> some View {
+        Section {
+            if discovery.denied {
+                Label("Local network access is off. Settings → Kairo → Local Network.",
+                      systemImage: "wifi.exclamationmark")
+                    .font(.kairoCaption)
+                    .foregroundStyle(Kairo.amber)
+            } else if discovery.found.isEmpty {
+                HStack(spacing: 10) {
+                    if discovery.searching { ProgressView() }
+                    Text(discovery.searching
+                         ? "Looking for a backend on this network…"
+                         : "Not looking.")
+                        .font(.kairoCaption)
+                        .foregroundStyle(Kairo.inkSoft)
+                }
+            } else {
+                ForEach(discovery.found) { found in
+                    Button {
+                        backend.adopt(found.url, chosen: true)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(found.name).font(.kairoHeadline)
+                                Text(found.url)
+                                    .font(.kairoCaption)
+                                    .foregroundStyle(Kairo.inkSoft)
+                            }
+                            Spacer()
+                            if backend.address == found.url {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Kairo.teal)
+                            }
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("On this network")
+        } footer: {
+            Text("Bonjour does not cross subnets or most VPNs. On those, type the "
+                 + "address below — it is what `serve-lan.sh` prints.")
+        }
+        .task {
+            discovery.start()
+        }
+        .onDisappear { discovery.stop() }
+        .onChange(of: discovery.found) { _, now in
+            // Exactly one, and nobody has ever chosen: take it. Two is a
+            // question only the person can answer, and asking beats guessing.
+            guard now.count == 1, let only = now.first else { return }
+            backend.adopt(only.url, chosen: false)
+        }
+    }
+
+    /// The wrist, permanently — not only during onboarding.
+    ///
+    /// Somebody who pairs a watch a week after installing needs somewhere to see
+    /// that it worked, and "is it connected?" should have an answer that is not
+    /// inferred from whether a glass of water showed up.
+    ///
+    /// There is deliberately no sign-in here. The watch never contacts the
+    /// backend; it talks to this phone, and the pairing iOS established is what
+    /// says whose wrist it is (AS-15, `docs/TRUST-BOUNDARIES.md`).
+    private var wristSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: WristLinkCopy.icon(model.wristLink))
+                    .font(.kairoGlyph(15, weight: .semibold))
+                    .foregroundStyle(WristLinkCopy.tint(model.wristLink))
+                    .frame(width: 30)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(WristLinkCopy.headline(model.wristLink))
+                        .font(.kairoHeadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(WristLinkCopy.detail(model.wristLink))
+                        .font(.kairoCaption)
+                        .foregroundStyle(Kairo.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 2)
+            .accessibilityElement(children: .combine)
+        } header: {
+            Text("Your watch")
+        } footer: {
+            Text("No second sign-in. The watch is yours because iOS paired it to "
+                 + "this iPhone, and the same account covers both.")
+        }
+        .task { model.observeWristLink() }
+    }
+
+    /// The explanation, available again.
+    ///
+    /// It used to be reachable exactly once, on the first launch of a fresh
+    /// install, and `kairo.tour.completed` had no writer that could clear it.
+    /// Anybody who tapped Skip lost the only description of what the five roles
+    /// are for.
+    private var tourSection: some View {
+        Section {
+            Button {
+                replayingTour = true
+            } label: {
+                Label("Show the welcome tour again", systemImage: "sparkles")
+            }
+        } footer: {
+            Text("What the attention budget is, who the five roles are, and how "
+                 + "to set the daily ceiling.")
+        }
+        .fullScreenCover(isPresented: $replayingTour) {
+            // Presented over the app rather than by flipping the root, so
+            // closing it returns here instead of dropping the reader on Today.
+            WelcomeTour(app: model)
+        }
+    }
+
     private func addressSection(_ backend: BackendConnection) -> some View {
         @Bindable var backend = backend
         return Section {
@@ -237,6 +369,9 @@ struct BackendSettingsView: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)
+                // Typing here is a choice, and a choice outranks anything
+                // discovery finds from then on.
+                .onSubmit { backend.addressWasEditedByHand() }
             // NFR6. The objection is shown here rather than left to surface as
             // a failed request: ATS refuses cleartext to a remote host with an
             // opaque URLError, which this screen would otherwise report as

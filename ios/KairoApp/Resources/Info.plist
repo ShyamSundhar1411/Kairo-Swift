@@ -20,17 +20,25 @@
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>KairoDefaultBackendURL</key>
+	<string>http://127.0.0.1:9080</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_kairo._tcp</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Kairo uses the camera to log a meal from one photo. Photos are analysed on your iPhone; they are only uploaded if you agree, per meal.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Kairo reads your sleep, movement and heart data so it can tell you when you are actually short on rest — and stay quiet when it cannot see enough to say anything useful. This data stays on your iPhone.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Kairo writes the water and mindful minutes you log here back to Health so your other apps stay in sync.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Kairo looks for your own agent backend on this network, so you do not have to type its address. It only looks for Kairo, and nothing about you is sent while it looks.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Kairo can read a meal photo you have already taken instead of asking you to take a new one.</string>
 	<key>NSUserNotificationsUsageDescription</key>

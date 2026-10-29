@@ -51,6 +51,23 @@ targets:
         CFBundleDisplayName: Kairo
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
+        # Where a fresh install looks for the backend, before anybody has typed
+        # anything. Loopback by default, which is right in the simulator and
+        # wrong on a phone — set KAIRO_BACKEND_URL in mobile/signing.env to your
+        # Mac's LAN address and regenerate, and a device build points at it with
+        # nothing entered on the device. A stored address still wins, so this
+        # only ever supplies the first value.
+        KairoDefaultBackendURL: ${KAIRO_BACKEND_URL}
+        # Bonjour, so the phone can find the backend instead of being told an
+        # address that changes with the network. Both keys are required on
+        # iOS 14+: without NSBonjourServices the browser returns nothing and
+        # reports no error, which is the worst way for a feature to be absent.
+        NSBonjourServices:
+          - _kairo._tcp
+        NSLocalNetworkUsageDescription: >-
+          Kairo looks for your own agent backend on this network, so you do not have
+          to type its address. It only looks for Kairo, and nothing about you is sent
+          while it looks.
         # The screen iOS paints before any code runs. Kairo.canvas and the
         # generated mark, so KairoStartup can open on the same picture and the
         # handover is invisible. Assets come from scripts/make-brand-assets.swift.

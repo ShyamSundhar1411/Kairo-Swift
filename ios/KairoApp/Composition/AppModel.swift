@@ -145,6 +145,9 @@ final class AppModel {
 
     @MainActor
     func bootstrap() async {
+        // So the connection can retry on its own — on a settings edit, or when
+        // the app comes back and the backend that was down is now up.
+        backend.userIDForRecheck = { [userID] in userID }
         applyProfile(userProfile)
         await reloadMemories()
         refreshObservations()
@@ -224,6 +227,20 @@ final class AppModel {
     /// without an entitlement this project does not have, which is why the
     /// setting is a window the user states rather than one Kairo detects.
     var isQuietNow: Bool { userProfile.isQuiet(at: env.clock.now) }
+
+    /// The app came back to the foreground.
+    ///
+    /// The ordinary way to see "backend unreachable" is to launch before
+    /// starting the server; the ordinary fix is to start it. Without this the
+    /// app had no reason to look again and held a stale verdict until somebody
+    /// went and found the Connect button.
+    @MainActor
+    func returnedToForeground() async {
+        await backend.recheckIfNotConnected()
+        guard backend.state.isConnected else { return }
+        await reloadProfile()
+        await runArbitration()
+    }
 
     /// Watch the link without starting the rest of the app.
     ///

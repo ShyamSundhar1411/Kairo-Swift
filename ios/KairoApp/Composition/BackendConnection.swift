@@ -107,11 +107,23 @@ final class BackendConnection {
     /// health check because it is the only place the money may be rendered.
     private(set) var budget: RemoteAgentClient.Budget?
 
+    /// Edits re-check on their own. Pressing a button to apply an address you
+    /// have just finished typing is work the app can do for you, and the state
+    /// it leaves behind otherwise — a new address with the old verdict still on
+    /// screen — is actively misleading.
     var address: String {
-        didSet { UserDefaults.standard.set(address, forKey: Self.key) }
+        didSet {
+            UserDefaults.standard.set(address, forKey: Self.key)
+            guard address != oldValue else { return }
+            scheduleRecheck()
+        }
     }
     var token: String {
-        didSet { KeychainStore.set(token, for: Self.tokenAccount) }
+        didSet {
+            KeychainStore.set(token, for: Self.tokenAccount)
+            guard token != oldValue else { return }
+            scheduleRecheck()
+        }
     }
 
     /// Where a backend is, before anyone has told us otherwise.
@@ -126,7 +138,23 @@ final class BackendConnection {
     /// resolves to `.unreachable` with the reason on screen, which is the state
     /// this class already exists to make visible. A wrong guess that announces
     /// itself beats a blank field that explains nothing.
-    static let defaultAddress = "http://127.0.0.1:9080"
+    ///
+    /// Which is still a poor first run on a phone, so the build can supply a
+    /// better guess: set `KAIRO_BACKEND_URL` in `mobile/signing.env`, and
+    /// `generate.sh` bakes it into Info.plist as `KairoDefaultBackendURL`. It
+    /// is machine-specific and changes with the network, which is exactly why
+    /// it belongs in a build setting rather than committed in this file.
+    ///
+    /// A stored address always wins — see `init`. This is only ever the value
+    /// nobody has overridden yet.
+    static let defaultAddress: String = {
+        let configured = Bundle.main.object(forInfoDictionaryKey: "KairoDefaultBackendURL")
+        guard let text = (configured as? String)?.trimmingCharacters(in: .whitespaces),
+              !text.isEmpty else {
+            return "http://127.0.0.1:9080"
+        }
+        return text
+    }()
 
     init(address: String? = nil) {
         let stored = UserDefaults.standard.string(forKey: Self.key)
@@ -174,6 +202,69 @@ final class BackendConnection {
     var addressObjection: String? { TransportPolicy.objection(to: address) }
 
     @MainActor
+    /// Who to re-check as, set once by the composition root. Held here so the
+    /// connection can retry without a caller present to pass it.
+    var userIDForRecheck: (() -> String)?
+
+    private var recheckTask: Task<Void, Never>?
+
+    /// Debounced, because `address` changes on every keystroke and a request
+    /// per character would be both useless and rude to whatever is listening.
+    private func scheduleRecheck(after seconds: Double = 0.8) {
+        recheckTask?.cancel()
+        // Read on the main actor, inside the task: `didSet` runs wherever the
+        // write did, and reaching for an isolated property from there is the
+        // compile error this shape avoids.
+        recheckTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self, let whoami = self.userIDForRecheck else { return }
+            await self.check(userID: whoami())
+        }
+    }
+
+    /// Whether anybody has chosen an address, as opposed to inheriting one.
+    ///
+    /// Discovery may fill an untouched field; it must never overwrite a typed
+    /// one. Somebody who entered an address meant it, including when it is
+    /// currently wrong.
+    private(set) var addressWasChosen = UserDefaults.standard.bool(
+        forKey: "kairo.backend.addressChosen")
+
+    /// Take a discovered backend.
+    ///
+    /// `chosen` is false when this is the app adopting the only thing on the
+    /// network by itself, and true when a person tapped it in a list.
+    @MainActor
+    func adopt(_ url: String, chosen: Bool) {
+        guard chosen || !addressWasChosen else { return }
+        if chosen {
+            addressWasChosen = true
+            UserDefaults.standard.set(true, forKey: "kairo.backend.addressChosen")
+        }
+        guard url != address else { return }
+        address = url          // the didSet re-checks on its own
+    }
+
+    /// Record that the address on screen was typed rather than inherited.
+    @MainActor
+    func addressWasEditedByHand() {
+        addressWasChosen = true
+        UserDefaults.standard.set(true, forKey: "kairo.backend.addressChosen")
+    }
+
+    /// Try again now, if there is anything to try.
+    ///
+    /// Called when the app comes back to the foreground, which is the moment
+    /// that matters: the usual way to see "backend unreachable" is to launch
+    /// before starting the server, and the usual fix is to start it — after
+    /// which the app had no reason to look again and sat on a stale verdict
+    /// until somebody found this screen.
+    @MainActor
+    func recheckIfNotConnected() async {
+        guard !state.isConnected, let userIDForRecheck else { return }
+        await check(userID: userIDForRecheck())
+    }
+
     func check(userID: String) async {
         guard let client else {
             state = .onDevice

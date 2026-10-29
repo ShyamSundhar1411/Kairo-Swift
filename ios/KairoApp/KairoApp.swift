@@ -3,6 +3,7 @@ import KairoKit
 
 @main
 struct KairoApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     // One environment, all of it real. This used to read `.preview` — a frozen
     // clock, a stub health port and three seeded memories — which is why the app
     // on a device opened on the report's Tuesday whoever was wearing it.
@@ -31,6 +32,13 @@ struct KairoApp: App {
                         if let report = await KairoHealthSeeding.runIfRequested() {
                             print(report)
                         }
+                    }
+                    // Coming back is the moment a failed connection is most
+                    // likely to have been fixed — the server was started while
+                    // the app was in the background. Nothing to press.
+                    .onChange(of: scenePhase) { _, phase in
+                        guard phase == .active else { return }
+                        Task { await model.returnedToForeground() }
                     }
             } else {
                 // Handed the model explicitly. The tour sets AG-1's ceiling

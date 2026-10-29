@@ -115,7 +115,17 @@ struct WristPairing: View {
 
     private var carries: Bool { link.carriesTaps }
 
-    private var tint: Color {
+    private var tint: Color { WristLinkCopy.tint(link) }
+    private var headline: String { WristLinkCopy.headline(link) }
+    private var detail: String { WristLinkCopy.detail(link) }
+    private var spoken: String { "\(headline) \(detail)" }
+}
+
+/// One source for how the link is described, because it is described in two
+/// places — the onboarding page and the Agents screen — and copy kept in two
+/// switch statements is copy that disagrees by the second edit.
+enum WristLinkCopy {
+    static func tint(_ link: WristLink) -> Color {
         switch link {
         case .connected:                     Kairo.teal
         case .outOfReach:                    Kairo.amber
@@ -124,7 +134,18 @@ struct WristPairing: View {
         }
     }
 
-    private var headline: String {
+    static func icon(_ link: WristLink) -> String {
+        switch link {
+        case .connected:       "applewatch.radiowaves.left.and.right"
+        case .outOfReach:      "applewatch.slash"
+        case .appNotInstalled: "arrow.down.applewatch"
+        case .noWatch:         "applewatch"
+        case .unsupported:     "iphone"
+        case .connecting:      "ellipsis"
+        }
+    }
+
+    static func headline(_ link: WristLink) -> String {
         switch link {
         case .connected:       "Your watch is connected."
         case .outOfReach:      "Paired, and out of range."
@@ -137,7 +158,7 @@ struct WristPairing: View {
 
     /// Every branch says what happens next, and none of them says "error".
     /// Not owning a watch is the common case and is not a failure.
-    private var detail: String {
+    static func detail(_ link: WristLink) -> String {
         switch link {
         case .connected:
             "Tap water on the wrist and it lands here. Interruptions Kairo allows "
@@ -160,6 +181,4 @@ struct WristPairing: View {
             + "below depends on it."
         }
     }
-
-    private var spoken: String { "\(headline) \(detail)" }
 }
