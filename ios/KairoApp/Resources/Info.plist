@@ -21,7 +21,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>KairoDefaultBackendURL</key>
-	<string>http://127.0.0.1:9080</string>
+	<string>${KAIRO_BACKEND_URL}</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

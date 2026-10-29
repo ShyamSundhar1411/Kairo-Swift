@@ -1,78 +1,105 @@
+
 import Foundation
 import Network
 
-/// Finds the agent backend on the local network, so nobody has to type an
-/// address that changes with the network anyway.
+/// Discovers Kairo backends on the local network using Bonjour.
 ///
-/// A LAN address is the one piece of configuration that is both required on a
-/// real device and guaranteed to go stale — a reboot, a new DHCP lease, a
-/// different café. Bonjour removes it: the backend announces `_kairo._tcp`
-/// (`backend/kairo/discovery.py`) and this browses for it.
+/// The backend advertises `_kairo._tcp`. Discovery never overrides a
+/// manually configured address; it only supplies candidates for the UI.
 ///
-/// **What it cannot do**, said here so nobody debugs it for an hour: Bonjour is
-/// link-local. It does not cross subnets, most VPNs, or a guest network that
-/// isolates clients. On any of those the address field is still the answer,
-/// which is why that field stays.
-///
-/// It also never overrides a stored address. Discovery supplies a value when
-/// there is nothing better; a person who typed one meant it.
+/// Bonjour is link-local and will not reliably cross subnets, VPNs,
+/// or networks with client isolation.
 @Observable
 final class BackendDiscovery {
 
     struct Found: Equatable, Identifiable {
-        /// "Kairo on shyams-mac"
+        /// Bonjour service instance name.
         let name: String
+
+        /// Resolved IP address or hostname.
         let host: String
+
         let port: Int
-        /// From the TXT record, so the app can say "found one, it wants a key"
-        /// rather than discovering that on its first 401.
+
+        /// Whether the backend advertises that authentication is required.
         let needsToken: Bool
 
-        var id: String { "\(host):\(port)" }
-        var url: String { "http://\(host):\(port)" }
+        var id: String {
+            "\(host):\(port)"
+        }
+
+        var url: String {
+            "http://\(host):\(port)"
+        }
     }
 
     private(set) var found: [Found] = []
-    /// True while the browser is up. Not an error state — on a network with no
-    /// backend this is simply the answer.
     private(set) var searching = false
-    /// Set when iOS refuses the local-network permission, which is the one
-    /// failure a person can actually fix and which is otherwise silent.
     private(set) var denied = false
 
     private var browser: NWBrowser?
     private var resolvers: [String: NWConnection] = [:]
 
+    /// TXT-record authentication requirements, keyed by service identity.
+    private var tokenRequirements: [String: Bool] = [:]
+
     func start() {
         guard browser == nil else { return }
+
         let parameters = NWParameters.tcp
         parameters.includePeerToPeer = false
+
         let browser = NWBrowser(
-            for: .bonjour(type: "_kairo._tcp", domain: nil), using: parameters)
+            for: .bonjour(type: "_kairo._tcp", domain: nil),
+            using: parameters
+        )
 
         browser.stateUpdateHandler = { [weak self] state in
+            print("[Bonjour] Browser state: \(state)")
+
+            if case .failed(let error) = state {
+                print("[Bonjour] Browser failed: \(error)")
+            }
+
+            if case .waiting(let error) = state {
+                print("[Bonjour] Browser waiting: \(error)")
+            }
+
             Task { @MainActor in
                 guard let self else { return }
+
                 switch state {
                 case .ready:
                     self.searching = true
                     self.denied = false
-                case .waiting, .failed:
-                    // `NWBrowser` reports a refused local-network permission as
-                    // a waiting/failed state rather than anything named, so the
-                    // app says the actionable thing instead of "no results".
-                    self.denied = true
+
+                case .waiting:
                     self.searching = false
+
+                case .failed:
+                    self.searching = false
+                    self.denied = true
+
                 case .cancelled:
                     self.searching = false
+
                 default:
                     break
                 }
             }
         }
 
-        browser.browseResultsChangedHandler = { [weak self] results, _ in
-            Task { @MainActor in self?.resolve(results) }
+        browser.browseResultsChangedHandler = { [weak self] results, changes in
+            print("[Bonjour] Results: \(results.count)")
+
+            for result in results {
+                print("[Bonjour] Endpoint: \(result.endpoint)")
+                print("[Bonjour] Metadata: \(result.metadata)")
+            }
+
+            Task { @MainActor in
+                self?.resolve(results)
+            }
         }
 
         self.browser = browser
@@ -82,73 +109,175 @@ final class BackendDiscovery {
     func stop() {
         browser?.cancel()
         browser = nil
-        for connection in resolvers.values { connection.cancel() }
+
+        for connection in resolvers.values {
+            connection.cancel()
+        }
+
         resolvers.removeAll()
+        tokenRequirements.removeAll()
+        found.removeAll()
         searching = false
+        denied = false
     }
 
-    /// A browse result carries a *name*, not an address. Resolving is a second
-    /// step, and doing it with a short-lived `NWConnection` is the supported
-    /// way — `NetService` resolution is deprecated and was never reliable under
-    /// the iOS 14 permission model.
     @MainActor
     private func resolve(_ results: Set<NWBrowser.Result>) {
         var live: Set<String> = []
 
         for result in results {
-            guard case let .service(name, type, domain, _) = result.endpoint else { continue }
+            guard case let .service(name, type, domain, _) = result.endpoint
+            else {
+                continue
+            }
+
             let key = "\(name).\(type).\(domain)"
             live.insert(key)
-            guard resolvers[key] == nil else { continue }
 
-            let connection = NWConnection(to: result.endpoint, using: .tcp)
+            // Read the Bonjour TXT record, if provided.
+            if case let .bonjour(txtRecord) = result.metadata {
+                let authValue = txtRecord["auth"]?.lowercased()
+                tokenRequirements[key] = authValue == "required"
+
+                print(
+                    "[Bonjour] Service \(name), auth=\(authValue ?? "unspecified")"
+                )
+            }
+
+            guard resolvers[key] == nil else {
+                continue
+            }
+
+            print("[Bonjour] Starting resolver for \(name)")
+
+            let connection = NWConnection(
+                to: result.endpoint,
+                using: .tcp
+            )
+
             resolvers[key] = connection
+
             connection.stateUpdateHandler = { [weak self] state in
-                guard case .ready = state,
-                      let endpoint = connection.currentPath?.remoteEndpoint,
-                      case let .hostPort(host, port) = endpoint else { return }
-                let text = Self.plain(host)
-                Task { @MainActor in
-                    self?.record(name: name, host: text, port: Int(port.rawValue))
-                    connection.cancel()
+                print("[Bonjour] Resolver \(name): \(state)")
+
+                switch state {
+                case .ready:
+                    guard
+                        let endpoint = connection.currentPath?.remoteEndpoint,
+                        case let .hostPort(host, port) = endpoint
+                    else {
+                        print(
+                            "[Bonjour] Ready, but no host/port: " +
+                            "\(String(describing: connection.currentPath?.remoteEndpoint))"
+                        )
+                        return
+                    }
+
+                    let resolvedHost = Self.plain(host)
+                    let resolvedPort = Int(port.rawValue)
+
+                    print(
+                        "[Bonjour] Resolved \(name) -> " +
+                        "\(resolvedHost):\(resolvedPort)"
+                    )
+
+                    Task { @MainActor in
+                        guard let self else {
+                            connection.cancel()
+                            return
+                        }
+
+                        self.record(
+                            name: name,
+                            host: resolvedHost,
+                            port: resolvedPort,
+                            needsToken: self.tokenRequirements[key] ?? false
+                        )
+
+                        connection.cancel()
+                        self.resolvers.removeValue(forKey: key)
+                    }
+
+                case .failed(let error):
+                    print("[Bonjour] Resolver failed for \(name): \(error)")
+
+                    Task { @MainActor in
+                        self?.resolvers.removeValue(forKey: key)
+                        connection.cancel()
+                    }
+
+                case .cancelled:
+                    print("[Bonjour] Resolver cancelled for \(name)")
+
+                default:
+                    break
                 }
             }
+
             connection.start(queue: .main)
         }
 
-        // Anything that went away takes its entry with it. A list that only
-        // grows would offer a backend that stopped ten minutes ago.
+        // Cancel resolvers for services that disappeared.
         for (key, connection) in resolvers where !live.contains(key) {
             connection.cancel()
             resolvers.removeValue(forKey: key)
+            tokenRequirements.removeValue(forKey: key)
         }
-        let names = Set(results.compactMap { result -> String? in
-            guard case let .service(name, _, _, _) = result.endpoint else { return nil }
-            return name
-        })
-        found.removeAll { !names.contains($0.name) }
+
+        // Remove discovered entries whose service instances disappeared.
+        let liveNames = Set(
+            results.compactMap { result -> String? in
+                guard case let .service(name, _, _, _) = result.endpoint
+                else {
+                    return nil
+                }
+
+                return name
+            }
+        )
+
+        found.removeAll { !liveNames.contains($0.name) }
     }
 
     @MainActor
-    private func record(name: String, host: String, port: Int) {
-        let entry = Found(name: name, host: host, port: port, needsToken: false)
-        guard !found.contains(where: { $0.id == entry.id }) else { return }
+    private func record(
+        name: String,
+        host: String,
+        port: Int,
+        needsToken: Bool
+    ) {
+        let entry = Found(
+            name: name,
+            host: host,
+            port: port,
+            needsToken: needsToken
+        )
+
+        guard !found.contains(where: { $0.id == entry.id }) else {
+            return
+        }
+
         found.append(entry)
+        print("[Bonjour] Added backend: \(entry.url), needsToken=\(needsToken)")
     }
 
-    /// `NWEndpoint.Host` prints an IPv6 scope id (`fe80::1%en0`) and wraps
-    /// nothing in brackets, neither of which goes into a URL unedited.
+    /// Formats an NWEndpoint.Host for use in an HTTP URL.
     private static func plain(_ host: NWEndpoint.Host) -> String {
         switch host {
         case let .ipv4(address):
-            return "\(address)".split(separator: "%").first.map(String.init) ?? "\(address)"
+            return "\(address)" // No interface scope for IPv4.
+
         case let .ipv6(address):
-            let bare = "\(address)".split(separator: "%").first.map(String.init) ?? "\(address)"
+            let value = "\(address)"
+            let bare = value.split(separator: "%").first.map(String.init) ?? value
             return "[\(bare)]"
+
         case let .name(name, _):
             return name
+
         @unknown default:
             return "\(host)"
         }
     }
 }
+
