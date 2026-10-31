@@ -50,6 +50,7 @@ struct BackendSettingsView: View {
                 }
             }
 
+            demoSection
             provenanceSection
             if let provider = backend.provider { providerSection(provider) }
             if let budget = backend.budget { budgetSection(budget) }
@@ -337,6 +338,94 @@ struct BackendSettingsView: View {
         }
         .task { model.observeWristLink() }
     }
+
+    /// Demo mode, for presenting from a phone with no Health history.
+    ///
+    /// The toggle swaps the readings, not the agents: with it on, the next pass
+    /// sends the demo day to the same backend and the same five roles, and the
+    /// backend's `/live` page draws it like any other request.
+    private var demoSection: some View {
+        Section {
+            Toggle(isOn: Binding(get: { model.demoMode },
+                                 set: { on in Task { await model.setDemoMode(on) } })) {
+                Label("Demo day", systemImage: "theatermasks")
+            }
+            if model.demoMode {
+                Toggle(isOn: Binding(get: { model.phoneStreamOn },
+                                     set: { on in Task { @MainActor in model.setPhoneStream(on) } })) {
+                    Label("Simulated wrist on this phone", systemImage: "waveform.path.ecg")
+                }
+                Toggle(isOn: Binding(get: { model.useRecordedHealth },
+                                     set: { on in Task { await model.setUseRecordedHealth(on) } })) {
+                    Label("Prefer recorded Health", systemImage: "heart.text.square")
+                }
+                if KairoHealthSeeding.isAvailable {
+                    Button {
+                        Task { await model.seedSimulatorHealth() }
+                    } label: {
+                        Label("Seed this simulator's Health (a week)", systemImage: "tray.and.arrow.down")
+                    }
+                    Button(role: .destructive) {
+                        Task { await model.removeSeededHealth() }
+                    } label: {
+                        Label("Remove seeded Health", systemImage: "trash")
+                    }
+                    if let report = model.seedReport {
+                        Text(report)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(Kairo.inkSoft)
+                            .textSelection(.enabled)
+                    }
+                }
+                Text(Self.blendNote)
+                    .font(.footnote)
+                    .foregroundStyle(Kairo.inkSoft)
+            }
+            Button {
+                Task { await model.runArbitration() }
+            } label: {
+                Label("Ask the agents again now", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .disabled(model.backend.client == nil)
+            Button {
+                Task { await model.teach(DemoScenario.aboutMe) }
+            } label: {
+                HStack {
+                    Label("Tell Kairo about the demo user", systemImage: "text.bubble")
+                    if model.teaching { Spacer(); ProgressView() }
+                }
+            }
+            .disabled(model.backend.client == nil || model.teaching)
+            if let said = model.lastExtraction {
+                Text(said)
+                    .font(.footnote)
+                    .foregroundStyle(Kairo.inkSoft)
+            }
+        } header: {
+            Text("Presenting")
+        } footer: {
+            Text(Self.demoFooter)
+        }
+    }
+
+    /// How the three sources combine, in one literal for the type-checker.
+    private static let blendNote = """
+        Sleep and the week come from recorded Health when it has them (seed it \
+        above in the simulator), otherwise from the scenario. Sitting, heart rate \
+        and steps come from the watch's Demo page while it streams; the phone's \
+        simulated wrist fills in when the watch is quiet, and holds still while it \
+        talks. A pass is asked for only when something meaningful changes, at \
+        most every 20 seconds.
+        """
+
+    /// One literal, for the type-checker reason on `provenanceSection`.
+    private static let demoFooter = """
+        Demo day replaces your Health readings with a scenario: 5.6 h sleep, 82 \
+        minutes sitting, 800 ml of water and two meals. Nothing is written to \
+        Health, and turning it off removes all of it. The agents, their prompts \
+        and the safety screen are not simulated. "Tell Kairo" sends a short \
+        paragraph to the memory curator, which decides what to remember.
+        """
 
     /// The explanation, available again.
     ///

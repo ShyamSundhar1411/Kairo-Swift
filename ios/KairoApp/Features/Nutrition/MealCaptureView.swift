@@ -724,6 +724,10 @@ struct MealCaptureView: View {
                     withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                         model.confirmAndLog()
                     }
+                    // The machine reaching `.logged` was all this button did:
+                    // the meal never left this screen. Now it joins the day,
+                    // and the agents are asked again with it on the wire.
+                    if model.state == .logged { app.logMeal(model.entry) }
                 }
                 .buttonStyle(.kairoProminent(Kairo.leaf))
             }
@@ -846,6 +850,7 @@ struct MealCaptureView: View {
                        taught: model.entry.taughtByUser) {
                 withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { model.reset() }
             }
+            TrustNote(text: sentLine, icon: "arrow.up.forward.circle")
         }
 
         // CF3 used to be demonstrated here with a hard-coded disagreement about
@@ -863,6 +868,20 @@ struct MealCaptureView: View {
         // the card belongs here.
     }
 
+
+    /// Where the meal went, said plainly. A meal that vanished after "Logged"
+    /// is the bug this replaces, so the screen now says what happened to it.
+    private var sentLine: String {
+        let count = app.meals.count
+        let total = Int(app.kilojoulesLogged.rounded())
+        let meals = count == 1 ? "1 meal" : "\(count) meals"
+        guard app.backend.client != nil else {
+            return "Added to today: \(meals), \(total) kJ. The agents are not connected, "
+                + "so the on-device arbiter decided this pass."
+        }
+        return "Added to today: \(meals), \(total) kJ. Sent to the agents with a fresh "
+            + "pass, and to the memory curator."
+    }
 
     // MARK: - Transitional and error
 

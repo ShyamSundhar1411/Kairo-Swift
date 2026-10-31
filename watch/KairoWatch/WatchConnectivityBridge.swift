@@ -60,12 +60,29 @@ final class WatchConnectivityBridge: NSObject {
         }
         session.sendMessage(payload, replyHandler: nil) { _ in }
     }
+
+    /// Live-only delivery, for the demo's simulated readings. Returns false
+    /// when the phone is out of reach and nothing was sent.
+    ///
+    /// Never queued: a reading about this second is worthless a minute later,
+    /// and application context holds a single payload — queuing one would
+    /// overwrite a nudge outcome waiting there, which the receptivity model
+    /// actually learns from.
+    @discardableResult
+    func sendIfReachable(_ event: WristEvent) -> Bool {
+        guard let session, session.isReachable,
+              let payload = try? WristSync.envelope(event) else { return false }
+        session.sendMessage(payload, replyHandler: nil) { _ in }
+        return true
+    }
     #else
     /// Without the framework there is no phone on the other end to wait for.
     var linkState: WatchModel.LinkState { .unreachable }
 
     override init() { super.init() }
     func send(_ event: WristEvent) {}
+    @discardableResult
+    func sendIfReachable(_ event: WristEvent) -> Bool { false }
     #endif
 
     /// The one place an inbound dictionary becomes an event, shared by both

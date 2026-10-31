@@ -192,6 +192,44 @@ final class WatchModel {
         WaterOutbox.save(unacknowledgedSips)
     }
 
+    // MARK: - Demo wrist
+
+    /// Demo mode's simulated wrist: the same script the phone's fallback runs
+    /// (`SimulatedWrist` in KairoKit), driven from this page so the audience
+    /// sees the signal start on the watch. The phone accepts the readings only
+    /// while its own Demo day is on.
+    private(set) var demo = SimulatedWrist()
+    private(set) var demoStreaming = false
+    /// False when the last reading could not be sent because the phone was out
+    /// of reach — said on the page rather than looking like it worked.
+    private(set) var demoDelivered = true
+    private var demoTask: Task<Void, Never>?
+
+    func setDemoStreaming(_ on: Bool) {
+        demoTask?.cancel()
+        demoTask = nil
+        demoStreaming = on
+        guard on else { return }
+        sendDemo(demo.readings(at: Date()))
+        demoTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard let self, !Task.isCancelled else { return }
+                let tick = self.demo.advance(at: Date())
+                self.sendDemo(tick.readings)
+            }
+        }
+    }
+
+    func demoSitLonger() { sendDemo(demo.sitLonger(by: 15, at: Date())) }
+    func demoStandUp() { sendDemo(demo.standUp(at: Date())) }
+    func demoHeartRateSpike() { sendDemo(demo.spikeHeartRate(at: Date())) }
+
+    private func sendDemo(_ readings: [SimulatedReading]) {
+        energy.record(.transmission, at: Date())
+        demoDelivered = bridge.sendIfReachable(.simulatedReadings(readings))
+    }
+
     // MARK: - Outbound
 
     func accept() {

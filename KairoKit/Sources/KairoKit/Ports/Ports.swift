@@ -30,12 +30,19 @@ public struct Observations: Sendable {
     public var kilojoulesTarget: Double?
     public var minutesSinceLastNudge: Int?
     public var inMeeting: Bool?
+    /// Beats per minute now, and steps so far today. Only the demo's
+    /// simulated wrist fills these at present; HealthKit's heart-rate series is
+    /// read for wear, not handed to the agents. Optional and omitted from the
+    /// prompt when absent, so every existing caller is unchanged.
+    public var heartRateBPM: Int?
+    public var stepsToday: Int?
 
     public init(sedentaryMinutes: Int? = nil, hydrationML: Int? = nil,
                 hydrationTargetML: Int? = nil, sleepHoursLastNight: Double? = nil,
                 sleepDebtHours: Double? = nil, kilojoulesLogged: Double? = nil,
                 kilojoulesTarget: Double? = nil, minutesSinceLastNudge: Int? = nil,
-                inMeeting: Bool? = nil) {
+                inMeeting: Bool? = nil, heartRateBPM: Int? = nil,
+                stepsToday: Int? = nil) {
         self.sedentaryMinutes = sedentaryMinutes
         self.hydrationML = hydrationML
         self.hydrationTargetML = hydrationTargetML
@@ -45,6 +52,8 @@ public struct Observations: Sendable {
         self.kilojoulesTarget = kilojoulesTarget
         self.minutesSinceLastNudge = minutesSinceLastNudge
         self.inMeeting = inMeeting
+        self.heartRateBPM = heartRateBPM
+        self.stepsToday = stepsToday
     }
 
     public static let none = Observations()
@@ -75,6 +84,8 @@ public struct Observations: Sendable {
         }
         if let mins = minutesSinceLastNudge { out.append("last interrupted: \(mins) minutes ago") }
         if let meeting = inMeeting, meeting { out.append("currently in a calendar event") }
+        if let bpm = heartRateBPM { out.append("heart rate: \(bpm) bpm now") }
+        if let steps = stepsToday { out.append("steps today: \(steps)") }
         return out
     }
 }

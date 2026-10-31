@@ -67,7 +67,7 @@ struct BodyView: View {
             .background(KairoCanvas())
             .toolbar(.hidden, for: .navigationBar)
         }
-        .task { await load() }
+        .task(id: model.demoMode) { await load() }
     }
 
     // MARK: - Sleep
@@ -461,9 +461,9 @@ struct BodyView: View {
         // whole reason live sleep read as nil forever.
         debt = await week(endingOn: day).sleepDebt()
 
-        night = .read(try? model.env.health.sleepHours(on: day))
-        wearHours = .some(try? model.env.health.wearHours(on: day))
-        sedentaryMinutes = .some(try? model.env.health.sedentaryMinutes(at: model.env.clock.now))
+        night = .read(try? model.health.sleepHours(on: day))
+        wearHours = .some(try? model.health.wearHours(on: day))
+        sedentaryMinutes = .some(try? model.health.sedentaryMinutes(at: model.env.clock.now))
     }
 
     /// The last seven nights, blanks included.
@@ -476,14 +476,14 @@ struct BodyView: View {
     /// the screen has to have something sensible to say from one night.
     private func week(endingOn day: Date) async -> [NightReading] {
         let nights = SleepSummary.defaultWindowNights
-        if let windowed = model.env.health as? SleepWindowSource {
+        if let windowed = model.health as? SleepWindowSource {
             return await windowed.nightReadings(endingOn: day, nights: nights)
         }
         let keys = (0..<nights).reversed().compactMap {
             Calendar.current.date(byAdding: .day, value: -$0, to: day)
         }
         var observed: [Date: Double] = [:]
-        if let lastNight = try? model.env.health.sleepHours(on: day), let key = keys.last {
+        if let lastNight = try? model.health.sleepHours(on: day), let key = keys.last {
             observed[key] = lastNight
         }
         return SleepSummary.slots(for: keys, observedHours: observed)

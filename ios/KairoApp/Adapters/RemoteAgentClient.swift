@@ -324,13 +324,7 @@ public struct RemoteAgentClient: Sendable {
                           coverage: DayCoverage, observations: Observations,
                           quietHours: Bool, profile: CapabilityProfile,
                           priorities: [String: Double] = [:]) async throws -> Arbitration {
-        var coveragePayload: [String: Any] = [:]
-        for domain in CoverageDomain.allCases {
-            if let m = coverage.metrics[domain] {
-                coveragePayload[domain.rawValue] = ["observed": m.observedCount,
-                                                    "expected": m.expectedCount]
-            }
-        }
+        let coveragePayload = Self.coveragePayload(coverage)
         let json = try await send(request(for: "v1/arbitrate", body: [
             "userID": userID,
             "now": Self.instant.string(from: now),
@@ -375,6 +369,19 @@ public struct RemoteAgentClient: Sendable {
             biddingModelID: record["modelID"] as? String,
             costing: budget["costing"] as? String ?? "metered",
             costIsNotional: budget["notional"] as? Bool ?? false)
+    }
+
+    /// Counts, not fractions, so the backend computes coverage with its own
+    /// floor rather than trusting a number the phone rounded.
+    static func coveragePayload(_ coverage: DayCoverage) -> [String: Any] {
+        var out: [String: Any] = [:]
+        for domain in CoverageDomain.allCases {
+            if let m = coverage.metrics[domain] {
+                out[domain.rawValue] = ["observed": m.observedCount,
+                                        "expected": m.expectedCount]
+            }
+        }
+        return out
     }
 
     private static func nudge(_ raw: [String: Any]) -> RemoteNudge? {
@@ -464,6 +471,69 @@ public struct RemoteAgentClient: Sendable {
             failure: json["failure"] as? String,
             clarifyingQuestion: json["clarifyingQuestion"] as? String,
             items: items, drinks: drinks)
+    }
+
+    // MARK: - CF2
+
+    public struct MealSuggestion: Sendable, Equatable {
+        public let suggestion: String
+        public let reason: String
+        public let kilojoules: Double?
+    }
+
+    /// The Nutrition Analyst's next-meal recommendation, given what has actually
+    /// been logged. `kilojoulesSoFar` is the day's ledger, never an assumption.
+    public func recommendMeal(userID: String, kilojoulesSoFar: Double,
+                              targetKilojoules: Double,
+                              coverage: DayCoverage) async throws -> MealSuggestion {
+        let json = try await send(request(for: "v1/meals/recommend", body: [
+            "userID": userID,
+            "kilojoulesSoFar": kilojoulesSoFar,
+            "targetKilojoules": targetKilojoules,
+            "coverage": Self.coveragePayload(coverage),
+        ]))
+        return MealSuggestion(suggestion: json["suggestion"] as? String ?? "",
+                              reason: json["reason"] as? String ?? "",
+                              kilojoules: json["kilojoules"] as? Double)
+    }
+
+    // MARK: - CF10 capture
+
+    /// What the Habit Memory Curator did with one piece of material.
+    public struct Extraction: Sendable, Equatable {
+        public let stored: Int
+        public let alreadyKnown: Int
+        public let notKept: Int
+        public let contradictions: Int
+
+        /// One sentence a person can read, saying what happened and no more.
+        public var summary: String {
+            var parts: [String] = []
+            if stored > 0 { parts.append("\(stored) new fact\(stored == 1 ? "" : "s") remembered") }
+            if alreadyKnown > 0 { parts.append("\(alreadyKnown) already known") }
+            if contradictions > 0 {
+                parts.append("\(contradictions) contradicting what Kairo knew")
+            }
+            if notKept > 0 { parts.append("\(notKept) not kept") }
+            return parts.isEmpty ? "The curator found nothing worth remembering in that."
+                                 : parts.joined(separator: ", ") + "."
+        }
+    }
+
+    /// FR10.1. Material goes to the curator, which decides what is a fact. The
+    /// phone never writes a memory directly — that is the point of a curator.
+    public func extractMemories(userID: String, material: String,
+                                coverage: DayCoverage) async throws -> Extraction {
+        let json = try await send(request(for: "v1/memories/extract", body: [
+            "userID": userID,
+            "material": material,
+            "coverage": Self.coveragePayload(coverage),
+        ]))
+        return Extraction(
+            stored: (json["stored"] as? [Any])?.count ?? 0,
+            alreadyKnown: (json["alreadyKnown"] as? [Any])?.count ?? 0,
+            notKept: (json["notKept"] as? [Any])?.count ?? 0,
+            contradictions: (json["contradictions"] as? [Any])?.count ?? 0)
     }
 
     // MARK: - SCRUM-21 — the primary user's profile
@@ -713,6 +783,8 @@ private extension Observations {
         if let v = kilojoulesTarget { out["kilojoulesTarget"] = v }
         if let v = minutesSinceLastNudge { out["minutesSinceLastNudge"] = v }
         if let v = inMeeting { out["inMeeting"] = v }
+        if let v = heartRateBPM { out["heartRateBPM"] = v }
+        if let v = stepsToday { out["stepsToday"] = v }
         return out
     }
 }

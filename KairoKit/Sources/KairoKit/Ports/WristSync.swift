@@ -21,6 +21,36 @@ public enum WristEvent: Codable, Sendable, Equatable {
     /// CF7 — what the user did with an interruption. The receptivity model
     /// learns from these, so losing one is worse than delivering it late.
     case nudgeOutcome(bidID: String, outcome: String, at: Date)
+    /// Demo mode only: readings a *simulated* wrist produced, not a sensor.
+    ///
+    /// Named for what it is so nobody can mistake it for HealthKit data. The
+    /// phone accepts these only while its Demo day is on and drops them
+    /// otherwise, so a watch left streaming can never write a fictional reading
+    /// into a real day. One message per tick, carrying every reading for that
+    /// tick, so a stream is one transmission every few seconds rather than three.
+    case simulatedReadings([SimulatedReading])
+}
+
+/// One reading from the simulated wrist. See `WristEvent.simulatedReadings`.
+public struct SimulatedReading: Codable, Sendable, Equatable {
+    public enum Kind: String, Codable, Sendable, CaseIterable {
+        /// The current unbroken run of sitting, in minutes.
+        case sittingMinutes
+        /// Beats per minute, now.
+        case heartRate
+        /// Steps so far today.
+        case stepsToday
+    }
+
+    public let kind: Kind
+    public let value: Double
+    public let at: Date
+
+    public init(kind: Kind, value: Double, at: Date) {
+        self.kind = kind
+        self.value = value
+        self.at = at
+    }
 }
 
 // MARK: - Phone to watch

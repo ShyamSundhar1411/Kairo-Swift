@@ -27,12 +27,17 @@ struct TodayView: View {
             ScrollView {
                 VStack(spacing: Kairo.Space.stack) {
                     header
+                    if model.demoMode {
+                        demoBanner
+                        liveSignalsCard
+                    }
                     dial
                     BidLedgerCard(delivered: model.arbitration?.delivered ?? [],
                                   suppressed: model.arbitration?.suppressed ?? [],
                                   costing: model.arbitrationCosting,
                                   record: model.arbitration?.record)
                     waterStrip
+                    mealStrip
 
                     if let c = model.contract, c.state == .proposed {
                         ContractProposalCard(contract: c)
@@ -214,6 +219,208 @@ struct TodayView: View {
             totalMillilitres: log.totalMillilitres,
             targetMillilitres: log.targetMillilitres,
             sipCount: log.sips.count))
+    }
+
+    // MARK: - Demo
+
+    /// Said on the first screen, every time. An audience is about to watch the
+    /// agents reason over this day, and they are owed the fact that the readings
+    /// are a scenario — the reasoning over them is not.
+    private var demoBanner: some View {
+        NavigationLink { BackendSettingsView() } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "theatermasks.fill")
+                    .font(.kairoGlyph(13, weight: .semibold))
+                    .foregroundStyle(Kairo.violet)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Demo mode")
+                        .font(.kairoHeadline).foregroundStyle(Kairo.ink)
+                    Text("Sleep, sitting, water and two meals are a scenario. "
+                         + "The agents' answers are real.")
+                        .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.kairoGlyph(11))
+                    .foregroundStyle(Kairo.inkFaint)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .kairoCard(padding: 14, tint: Kairo.violet)
+        }
+        .buttonStyle(.kairoPress)
+    }
+
+    /// The demo's live wrist, with where each figure came from. In front of an
+    /// audience "where did 97 minutes come from?" deserves an answer on screen.
+    private var liveSignalsCard: some View {
+        let live = model.live
+        let source = live.source?.label ?? "scenario (nothing streaming)"
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(live.source == nil ? Kairo.inkFaint : Kairo.leaf)
+                    .frame(width: 7, height: 7)
+                Text("LIVE SIGNALS")
+                    .font(.kairoLabel).tracking(1.1)
+                    .foregroundStyle(Kairo.inkFaint)
+                Spacer(minLength: 4)
+                Text(source)
+                    .font(.kairoLabel)
+                    .foregroundStyle(live.source == .watch ? Kairo.sky : Kairo.inkSoft)
+            }
+            HStack(spacing: 10) {
+                signalTile(value: "\(model.observations.sedentaryMinutes ?? DemoHealthSource.sittingMinutes)",
+                           unit: "min", caption: "sitting", tint: Kairo.amber)
+                signalTile(value: live.heartRateBPM.map(String.init) ?? "—",
+                           unit: "bpm", caption: "heart rate", tint: Kairo.coral)
+                signalTile(value: live.stepsToday.map(String.init) ?? "—",
+                           unit: "", caption: "steps", tint: Kairo.teal)
+            }
+            Text(model.sleepIsRecorded
+                 ? "Sleep and the week: recorded Health (the simulator's seeded week)."
+                 : "Sleep and the week: scenario. Seed the simulator's Health to use recorded data.")
+                .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .kairoCard(padding: 14)
+    }
+
+    private func signalTile(value: String, unit: String, caption: String,
+                            tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.kairoHeadline).monospacedDigit()
+                    .foregroundStyle(Kairo.ink)
+                    .contentTransition(.numericText())
+                if !unit.isEmpty {
+                    Text(unit).font(.kairoLabel).foregroundStyle(Kairo.inkFaint)
+                }
+            }
+            Text(caption.uppercased())
+                .font(.kairoLabel).tracking(0.8)
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Meals
+
+    /// CF1 / CF2 — the day's ledger. This card did not exist, which is half of
+    /// why a logged meal looked as though it had gone nowhere.
+    private var mealStrip: some View {
+        let logged = !model.meals.isEmpty
+        let tint = Kairo.colour(for: .meals)
+        let fraction = model.kilojoulesTarget > 0
+            ? model.kilojoulesLogged / model.kilojoulesTarget : 0
+
+        return VStack(alignment: .leading, spacing: 12) {
+            AdaptiveHeroRow(stacked: typeSize.isAccessibilitySize,
+                            spacing: Kairo.Space.gutter) {
+                MetricRing(progress: logged ? fraction : 0,
+                           tint: logged ? tint : Kairo.inkFaint,
+                           icon: Kairo.icon(for: .meals),
+                           centreText: logged ? "\(Int((fraction * 100).rounded()))%" : nil,
+                           size: 62)
+            } detail: {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("MEALS")
+                        .font(.kairoLabel).tracking(1.1)
+                        .foregroundStyle(Kairo.inkFaint)
+                    if logged {
+                        Text("\(Int(model.kilojoulesLogged.rounded())) of "
+                             + "\(Int(model.kilojoulesTarget)) kJ")
+                            .font(.kairoHeadline)
+                            .foregroundStyle(Kairo.ink)
+                            .contentTransition(.numericText())
+                    } else {
+                        Text("Nothing logged yet")
+                            .font(.kairoHeadline)
+                            .foregroundStyle(Kairo.inkSoft)
+                    }
+                    PillWrap {
+                        Pill(text: logged
+                                ? "\(model.meals.count) of \(AppModel.expectedMeals) meals seen"
+                                : "log one from the Meals tab",
+                             icon: logged ? "fork.knife" : "camera",
+                             tint: logged ? tint : Kairo.inkFaint)
+                    }
+                }
+            }
+
+            if logged {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(model.meals) { meal in
+                        mealRow(meal)
+                    }
+                }
+            }
+
+            suggestion
+        }
+        .kairoCard(tint: logged ? tint : Kairo.inkFaint)
+    }
+
+    private func mealRow(_ meal: LoggedMeal) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(meal.at.formatted(date: .omitted, time: .shortened))
+                .font(.kairoMono)
+                .foregroundStyle(Kairo.inkFaint)
+                .frame(minWidth: 52, alignment: .leading)
+            Text(meal.title)
+                .font(.kairoCaption)
+                .foregroundStyle(Kairo.ink)
+                .lineLimit(2)
+            Spacer(minLength: 6)
+            Text("\(Int(meal.kilojoules.rounded())) kJ")
+                .font(.kairoMono)
+                .foregroundStyle(meal.confidence < 0.6 ? Kairo.coral : Kairo.inkSoft)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// CF2 — the Nutrition role's next-meal suggestion, on request. Asked for
+    /// rather than fetched on every launch: it is a model call, and a card that
+    /// spends money just by being looked at is not one this app would ship.
+    @ViewBuilder private var suggestion: some View {
+        if let s = model.mealSuggestion, !s.suggestion.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles").font(.kairoGlyph(10))
+                    Text("NEXT MEAL · NUTRITION ANALYST")
+                        .font(.kairoLabel).tracking(0.9)
+                }
+                .foregroundStyle(Kairo.colour(for: .meals))
+                Text(s.suggestion)
+                    .font(.kairoHeadline).foregroundStyle(Kairo.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !s.reason.isEmpty {
+                    Text(s.reason)
+                        .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if model.backend.client != nil {
+            Button {
+                Task { await model.suggestNextMeal() }
+            } label: {
+                HStack(spacing: 8) {
+                    if model.suggestingMeal {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "sparkles")
+                    }
+                    Text(model.suggestingMeal ? "Asking the Nutrition Analyst…"
+                                              : "What should I eat next?")
+                }
+            }
+            .buttonStyle(.kairoSoft(Kairo.colour(for: .meals)))
+            .disabled(model.suggestingMeal)
+        }
     }
 
     /// FR8.5's spoken form, from the one source the ring reads, so the two

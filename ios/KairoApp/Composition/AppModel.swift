@@ -35,6 +35,69 @@ final class AppModel {
     /// being counted twice.
     private(set) var hydration: HydrationLog
 
+    /// CF1 / CF2 — today's confirmed meals. Before this, a confirmed meal reached
+    /// `.logged` inside its capture screen and was never seen again: meal
+    /// coverage stayed at zero and the agents were told energy was not measured.
+    private(set) var meals: [LoggedMeal]
+    /// A reference figure for the Nutrition role, stated as one on screen. It is
+    /// the same 8,700 kJ the backend's recommendation route defaults to.
+    let kilojoulesTarget: Double = 8_700
+    var kilojoulesLogged: Double { meals.reduce(0) { $0 + $1.kilojoules } }
+
+    /// The Nutrition Analyst's last next-meal suggestion, and whether one is
+    /// being asked for.
+    private(set) var mealSuggestion: RemoteAgentClient.MealSuggestion?
+    private(set) var suggestingMeal = false
+    /// What the curator did with the last thing it was told (CF10).
+    private(set) var lastExtraction: String?
+    private(set) var teaching = false
+
+    /// Readings from `DemoScenario` instead of HealthKit, for a phone with no
+    /// history in front of an audience. Persisted so a relaunch mid-demo does
+    /// not drop back to an empty day; announced on Today whenever it is on.
+    private(set) var demoMode: Bool = UserDefaults.standard.bool(forKey: DemoScenario.defaultsKey)
+
+    /// The health port every reading goes through. One switch, so no screen
+    /// can read HealthKit while the agents are being sent the demo day.
+    ///
+    /// In demo mode this is the blend: recorded Health where it has an answer,
+    /// the live wrist for sitting, and the scenario for the rest.
+    var health: HealthDataSource {
+        demoMode ? demoHealth : env.health
+    }
+
+    private var demoHealth: DemoBlendHealth {
+        DemoBlendHealth(recorded: useRecordedHealth ? env.health : nil, live: live)
+    }
+
+    // MARK: Demo signals
+
+    /// The demo wrist's latest readings, from the watch or the phone simulator.
+    private(set) var live = LiveSignals()
+    /// Whether the phone's own simulated wrist is running.
+    private(set) var phoneStreamOn = false
+    /// Recorded Health takes precedence over the scenario in demo mode. On by
+    /// default; off makes the demo the fixed scenario plus the live wrist.
+    private(set) var useRecordedHealth: Bool =
+        UserDefaults.standard.object(forKey: "kairo.demo.useRecordedHealth") as? Bool ?? true
+    /// Where last night's sleep came from, for the screens to say so.
+    private(set) var sleepIsRecorded = false
+    /// What the simulator's Health seeder last did, in its own words.
+    private(set) var seedReport: String?
+
+    private var simulatedWrist = SimulatedWrist()
+    private var streamTask: Task<Void, Never>?
+    private var lastSignalPass = Date.distantPast
+    private var lastWatchSignal = Date.distantPast
+    /// Readings from the watch this recently mean the watch is driving, and the
+    /// phone simulator holds still rather than talking over it.
+    private static let watchPrecedence: TimeInterval = 10
+    /// The fewest seconds between two passes the signals ask for. A pass is
+    /// five model calls; a stream must not turn into a bill.
+    private static let signalPassSpacing: TimeInterval = 20
+    /// Real seconds per simulated minute on the phone's stream.
+    private static let streamTickInterval: UInt64 = 2_000_000_000
+
     /// What is actually happening right now, as the agents see it. Nothing filled
     /// this in before: the roles have bid on `hydrationML` since day one and were
     /// handed nil every time.
@@ -124,6 +187,8 @@ final class AppModel {
         self.backend = backend
         let dayStart = Calendar.current.startOfDay(for: environment.clock.now)
         self.hydration = HydrationLog(dayStart: dayStart)
+        let todaysMeals = MealDiary.load(dayStart: dayStart)
+        self.meals = todaysMeals
 
         // The report's Tuesday opens mid-afternoon with four interruptions
         // already behind it; a real day starts at zero and is spent as it goes.
@@ -140,8 +205,15 @@ final class AppModel {
             // honestly so — four of five sips was never observed.
             c.record(CoverageMetric(domain: .hydration, observedCount: 4, expectedCount: 5))
         }
+        if !todaysMeals.isEmpty {
+            c.record(CoverageMetric(domain: .meals, observedCount: todaysMeals.count,
+                                    expectedCount: Self.expectedMeals))
+        }
         self.coverage = c
     }
+
+    /// Three meals is the day coverage is measured against.
+    static let expectedMeals = 3
 
     @MainActor
     func bootstrap() async {
@@ -150,6 +222,10 @@ final class AppModel {
         backend.userIDForRecheck = { [userID] in userID }
         applyProfile(userProfile)
         await reloadMemories()
+        if demoMode {
+            seedDemoDay()
+            await primeRecordedHealth()
+        }
         refreshObservations()
         attachWrist()
         // Ask the backend who it is before arbitrating, so the first pass either
@@ -305,6 +381,256 @@ final class AppModel {
         }
         try? env.memoryStore.delete(id: memory.id)
         reloadLocalMemories()
+    }
+
+    // MARK: - CF1 / CF2 — the day's meals
+
+    /// A meal the user confirmed. This is the step that was missing: the entry
+    /// now changes meal coverage, travels to the agents as `kilojoulesLogged`
+    /// on the next pass (which runs straight away), reaches the wrist's digest,
+    /// and is handed to the curator as material for habit memory.
+    ///
+    /// Not `@MainActor`, like `record(_:)`: it is called synchronously from a
+    /// button and touches nothing that needs the actor until the tasks it starts.
+    func logMeal(_ entry: MealEntry) {
+        guard entry.state == .logged,
+              !meals.contains(where: { $0.id == entry.id }) else { return }
+        let meal = LoggedMeal(entry: entry, at: env.clock.now)
+        meals.append(meal)
+        meals.sort { $0.at < $1.at }
+        MealDiary.save(meals, dayStart: schedule.dayStart)
+        recordMealCoverage()
+        mealSuggestion = nil
+        refreshObservations()
+        pushDayLog()
+        Task { await runArbitration() }
+        Task { await remember(meal) }
+    }
+
+    private func recordMealCoverage() {
+        coverage.record(CoverageMetric(domain: .meals, observedCount: meals.count,
+                                       expectedCount: Self.expectedMeals))
+    }
+
+    /// FR10.1 — a logged meal is material for habit memory. The curator decides
+    /// whether it says anything durable; most single meals do not, and the
+    /// Memory Book shows that decision as well as any fact it keeps.
+    @MainActor
+    private func remember(_ meal: LoggedMeal) async {
+        let time = meal.at.formatted(date: .omitted, time: .shortened)
+        let material = "At \(time) today I ate \(meal.title), about "
+            + "\(Int(meal.kilojoules)) kJ (an estimate \(Int(meal.confidence * 100))% confident)."
+        _ = await teach(material)
+    }
+
+    /// CF2 — ask the Nutrition Analyst what to eat next, given the real ledger.
+    @MainActor
+    func suggestNextMeal() async {
+        guard let client = backend.client else {
+            lastError = "Connect to the backend first: suggestions come from the Nutrition role."
+            return
+        }
+        suggestingMeal = true
+        defer { suggestingMeal = false }
+        do {
+            mealSuggestion = try await client.recommendMeal(
+                userID: userID, kilojoulesSoFar: kilojoulesLogged,
+                targetKilojoules: kilojoulesTarget, coverage: coverage)
+        } catch {
+            backend.noteFailure(error)
+        }
+    }
+
+    // MARK: - CF10 — telling Kairo something
+
+    /// Sends `material` to the Habit Memory Curator and reloads the book. The
+    /// phone never writes a fact itself; it hands over what was said and shows
+    /// what the curator kept. Returns the curator's answer in words.
+    @MainActor
+    @discardableResult
+    func teach(_ material: String) async -> String {
+        let text = material.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return "Nothing to send." }
+        guard let client = backend.client else {
+            let why = "Not connected to the agents. Facts are learned by the curator on "
+                + "the backend, so nothing can be remembered offline."
+            lastExtraction = why
+            return why
+        }
+        teaching = true
+        defer { teaching = false }
+        do {
+            let result = try await client.extractMemories(userID: userID, material: text,
+                                                          coverage: coverage)
+            lastExtraction = result.summary
+            await reloadMemories()
+            return result.summary
+        } catch {
+            backend.noteFailure(error)
+            let why = "The curator could not be reached: \(error.localizedDescription)"
+            lastExtraction = why
+            return why
+        }
+    }
+
+    // MARK: - Demo mode
+
+    /// Switches the readings between HealthKit and `DemoScenario`, then runs a
+    /// real pass so the agents react to the change straight away.
+    @MainActor
+    func setDemoMode(_ on: Bool) async {
+        guard on != demoMode else { return }
+        demoMode = on
+        UserDefaults.standard.set(on, forKey: DemoScenario.defaultsKey)
+        if on {
+            seedDemoDay()
+            await primeRecordedHealth()
+        } else {
+            setPhoneStream(false)
+            live = LiveSignals()
+            clearDemoDay()
+        }
+        mealSuggestion = nil
+        refreshObservations()
+        pushDayState()
+        pushDayLog()
+        await runArbitration()
+    }
+
+    // MARK: - Demo signals: the watch, the phone simulator, recorded Health
+
+    /// Option 2 — the phone's own simulated wrist, one simulated minute every
+    /// two seconds. It starts from wherever the readings already are, so
+    /// switching it on mid-demo continues the day rather than restarting it.
+    @MainActor
+    func setPhoneStream(_ on: Bool) {
+        streamTask?.cancel()
+        streamTask = nil
+        phoneStreamOn = on && demoMode
+        guard phoneStreamOn else { return }
+        simulatedWrist = SimulatedWrist(
+            sittingMinutes: live.sittingMinutes ?? DemoHealthSource.sittingMinutes,
+            heartRateBPM: live.heartRateBPM ?? 66,
+            stepsToday: live.stepsToday ?? 3_400)
+        streamTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: Self.streamTickInterval)
+                guard let self, !Task.isCancelled else { return }
+                self.streamTick()
+            }
+        }
+    }
+
+    @MainActor
+    private func streamTick() {
+        // The watch is streaming: it is the better-placed source, so the phone
+        // holds still rather than talking over it, and resumes when it stops.
+        guard Date().timeIntervalSince(lastWatchSignal) > Self.watchPrecedence else { return }
+        let now = env.clock.now
+        let tick = simulatedWrist.advance(at: now)
+        apply(tick.readings, from: .phone)
+        if let ml = tick.sipMillilitres {
+            // `record` runs its own pass: new water is new evidence.
+            record(HydrationLog.Sip(id: "\(DemoScenario.prefix)stream-\(simulatedWrist.minute)",
+                                    at: now, millilitres: ml))
+            pushDayState()
+        }
+    }
+
+    /// Option 1 — readings from the watch's Demo page, or from the phone's own
+    /// stream. Every tick refreshes what the agents would be sent; only a
+    /// significant change spends a pass, and never more often than
+    /// `signalPassSpacing`.
+    private func apply(_ readings: [SimulatedReading], from source: LiveSignals.Source) {
+        let before = live
+        for reading in readings { live.apply(reading, from: source) }
+        refreshObservations()
+        let significant = LiveSignals.isSignificant(from: before, to: live)
+        // The wrist's own sitting page reads the phone's figure, so it is told
+        // when that figure moves meaningfully, and every few minutes otherwise.
+        if significant || simulatedWrist.minute % 5 == 0 { pushDayState() }
+        guard significant,
+              Date().timeIntervalSince(lastSignalPass) >= Self.signalPassSpacing else { return }
+        lastSignalPass = Date()
+        Task { await runArbitration() }
+    }
+
+    /// Option 3 — recorded Health first. Off makes the demo the fixed scenario
+    /// plus the live wrist, which is the dependable choice on a phone whose own
+    /// Health data should not be on a projector.
+    @MainActor
+    func setUseRecordedHealth(_ on: Bool) async {
+        useRecordedHealth = on
+        UserDefaults.standard.set(on, forKey: "kairo.demo.useRecordedHealth")
+        await primeRecordedHealth()
+        refreshObservations()
+        await runArbitration()
+    }
+
+    /// Writes the seeder's synthetic week into this simulator's Health store,
+    /// then reads it back through the real HealthKit adapter.
+    @MainActor
+    func seedSimulatorHealth() async {
+        seedReport = "Writing a week of samples…"
+        seedReport = await KairoHealthSeeding.seedNow()
+        await primeRecordedHealth()
+        refreshObservations()
+        await runArbitration()
+    }
+
+    @MainActor
+    func removeSeededHealth() async {
+        seedReport = await KairoHealthSeeding.deleteNow()
+        await primeRecordedHealth()
+        refreshObservations()
+        await runArbitration()
+    }
+
+    /// The HealthKit adapter answers its synchronous getters from caches that
+    /// a window read fills, so the week is read once before anything asks for
+    /// last night. Without this the blend would see "no sleep" and fall back to
+    /// the scenario even with a seeded store.
+    @MainActor
+    private func primeRecordedHealth() async {
+        guard demoMode, useRecordedHealth,
+              let window = env.health as? SleepWindowSource else { return }
+        let day = Calendar.current.startOfDay(for: env.clock.now)
+        _ = await window.nightReadings(endingOn: day, nights: SleepSummary.defaultWindowNights)
+    }
+
+    /// The demo day's sips and meals, added beside anything real. Ids carry
+    /// `DemoScenario.prefix`, so `record` de-duplicates a second seeding and
+    /// `clearDemoDay` can find every one of them.
+    @MainActor
+    private func seedDemoDay() {
+        let now = env.clock.now
+        for sip in DemoScenario.sips(dayStart: schedule.dayStart, now: now) {
+            hydration.record(sip)
+        }
+        coverage.record(hydration.coverageMetric())
+        for meal in DemoScenario.meals(dayStart: schedule.dayStart, now: now)
+        where !meals.contains(where: { $0.id == meal.id }) {
+            meals.append(meal)
+        }
+        meals.sort { $0.at < $1.at }
+        recordMealCoverage()
+    }
+
+    /// Removes exactly what `seedDemoDay` added. Real taps and real meals stay.
+    @MainActor
+    private func clearDemoDay() {
+        var kept = HydrationLog(dayStart: hydration.dayStart,
+                                targetMillilitres: hydration.targetMillilitres)
+        for sip in hydration.sips where !sip.id.hasPrefix(DemoScenario.prefix) {
+            kept.record(sip)
+        }
+        hydration = kept
+        meals.removeAll { $0.demo }
+        coverage.record(hydration.coverageMetric())
+        recordMealCoverage()
+        // The demo's wear hours must not outlive it. `refreshMovement` puts a
+        // real figure back if HealthKit has one.
+        coverage.record(MovementSummary.coverageMetric(observedHours: 0))
     }
 
     /// CF7 — one pass of the attention budget. Called on launch, on a new bid, and
@@ -681,6 +1007,17 @@ final class AppModel {
 
         case let .nudgeOutcome(bidID, outcome, at):
             recordOutcome(bidID: bidID, outcome: outcome, at: at)
+
+        case let .simulatedReadings(readings):
+            // Only ever accepted into a demo day. A watch left streaming after
+            // the demo must not write a fictional reading into a real one.
+            guard demoMode else {
+                lastError = "The watch is streaming demo readings, but Demo day is off "
+                    + "on this phone, so they were ignored."
+                return
+            }
+            lastWatchSignal = Date()
+            apply(readings, from: .watch)
         }
     }
 
@@ -800,22 +1137,28 @@ final class AppModel {
             // interruption as though it were a weak reading.
         }
 
+        // CF1 — the meals actually confirmed today. `confidence` travels here,
+        // unlike for water: a meal's kilojoules are an estimate, and the wrist
+        // should show a weak one as weak.
+        for meal in meals.suffix(DayLog.entryLimit) {
+            entries.append(DayLog.Entry(
+                id: "meal-\(meal.id)",
+                kind: .meal,
+                at: meal.at,
+                headline: meal.title,
+                detail: "\(Int(meal.kilojoules.rounded())) kJ",
+                confidence: meal.confidence))
+        }
+
         return DayLog(
             generatedAt: env.clock.now,
             entries: entries,
             waterMillilitres: hydration.totalMillilitres,
             waterTargetMillilitres: hydration.targetMillilitres,
-            // HOOK — the day's meal ledger. Both of these are nil, and nil on
-            // purpose: nothing in `AppModel` holds an `EnergyLedger`.
-            // `MealLogModel` owns a single in-flight `MealEntry` and is built per
-            // capture screen, so the phone genuinely does not know what was eaten
-            // today. When a day's ledger lives on this model, this is where
-            // `EnergySummary.observations(for:)` supplies these two figures and
-            // where the `.meal` entries above come from. Until then the wrist is
-            // told "not measured", because a plausible number invented to fill
-            // the gap is exactly the failure this project refuses.
-            kilojoulesLogged: nil,
-            kilojoulesTarget: nil,
+            // The day's meal ledger, or "not measured" when nothing is logged —
+            // never a zero standing in for a day nobody recorded.
+            kilojoulesLogged: meals.isEmpty ? nil : kilojoulesLogged,
+            kilojoulesTarget: meals.isEmpty ? nil : kilojoulesTarget,
             // A real reading or nothing. This is `HealthDataSource.sleepHours`
             // by way of `refreshObservations()` — the same port, and the same
             // nil-means-unmeasured contract, as the sitting figure already on the
@@ -840,7 +1183,7 @@ final class AppModel {
     private func refreshObservations() {
         let now = env.clock.now
         refreshMovement()
-        let sleepHours = (try? env.health.sleepHours(on: now)) ?? nil
+        let sleepHours = (try? health.sleepHours(on: now)) ?? nil
         // One night, either read or not. `nil` here means HealthKit returned
         // nothing — which is also the only signal a denied read ever produces —
         // so it is recorded as zero coverage rather than as a night of no sleep.
@@ -852,10 +1195,20 @@ final class AppModel {
             // buckets against a wear denominator, where the port's getter has
             // only the instant. Falls back to the port so a fake still answers.
             sedentaryMinutes: movement?.unbrokenSedentaryMinutes
-                ?? (try? env.health.sedentaryMinutes(at: now)),
+                ?? (try? health.sedentaryMinutes(at: now)),
             hydrationML: hydration.sips.isEmpty ? nil : hydration.totalMillilitres,
             hydrationTargetML: hydration.targetMillilitres,
-            sleepHoursLastNight: sleepHours)
+            sleepHoursLastNight: sleepHours,
+            // nil, not 0, before anything is logged — the same absent-versus-
+            // zero rule as water. This was never filled in, so the Nutrition role
+            // was told "energy logged: not measured" right after lunch was logged.
+            kilojoulesLogged: meals.isEmpty ? nil : kilojoulesLogged,
+            kilojoulesTarget: meals.isEmpty ? nil : kilojoulesTarget,
+            // Only the demo's simulated wrist produces these. Never sent from a
+            // real day, so a real user's prompt is unchanged by them.
+            heartRateBPM: demoMode ? live.heartRateBPM : nil,
+            stepsToday: demoMode ? live.stepsToday : nil)
+        sleepIsRecorded = demoMode && demoHealth.sleepIsRecorded(on: now)
     }
 
     /// The richer movement read lives on the concrete adapter rather than on the
@@ -863,7 +1216,7 @@ final class AppModel {
     /// in-memory fake the domain is tested against. So it is asked for by
     /// conformance, and simply absent when the bound source cannot answer.
     private func refreshMovement() {
-        guard let source = env.health as? MovementDaySource else {
+        guard let source = health as? MovementDaySource else {
             movement = nil
             return
         }

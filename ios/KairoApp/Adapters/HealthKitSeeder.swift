@@ -111,6 +111,45 @@ enum KairoHealthSeeding {
         #endif
     }
 
+    /// True only in a Debug simulator build — the one place the writer exists.
+    /// The Presenting section shows its buttons only when this is true.
+    static var isAvailable: Bool {
+        #if targetEnvironment(simulator) && DEBUG && canImport(HealthKit)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// The same seed as `-KairoSeedHealthKit`, from a button. Every guard in
+    /// this file still applies; this only removes the need for a launch flag,
+    /// which is awkward to pass in front of an audience. iOS still asks for the
+    /// write permission once, in its own sheet.
+    static func seedNow() async -> String {
+        #if targetEnvironment(simulator) && DEBUG && canImport(HealthKit)
+        do {
+            return try await HealthKitSeeder.seed().summary
+        } catch {
+            return "HealthKit seed failed: \(error.localizedDescription)"
+        }
+        #else
+        return "Seeding Health is only possible in a Debug simulator build."
+        #endif
+    }
+
+    /// Removes exactly what `seedNow()` wrote.
+    static func deleteNow() async -> String {
+        #if targetEnvironment(simulator) && DEBUG && canImport(HealthKit)
+        do {
+            return try await HealthKitSeeder.deleteSeededSamples()
+        } catch {
+            return "HealthKit seed deletion failed: \(error.localizedDescription)"
+        }
+        #else
+        return "Seeding Health is only possible in a Debug simulator build."
+        #endif
+    }
+
     /// The metadata key every seeded sample carries.
     ///
     /// Exposed outside the `#if` so that a diagnostic screen or a test can name

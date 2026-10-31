@@ -151,8 +151,88 @@ struct QuietView: View {
             SittingPage()
             LogPage()
             SilencePage()
+            DemoWristPage()
         }
         .tabViewStyle(.verticalPage)
+    }
+}
+
+// MARK: - Demo wrist
+
+/// Demo mode's signal source, on the wrist. Last in the stack and labelled
+/// DEMO, so it is never mistaken for a reading this watch measured.
+///
+/// Stream sends a simulated minute every two seconds; the three buttons jump
+/// the script to the moments worth showing an audience. The phone ignores all
+/// of it unless its own Demo day is on.
+private struct DemoWristPage: View {
+    @Environment(WatchModel.self) private var model
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                WatchPill(text: "Demo wrist", icon: "theatermasks.fill", tint: Kairo.violet)
+
+                HStack(spacing: 6) {
+                    reading("\(model.demo.sittingMinutes)", "MIN", Kairo.amber)
+                    reading("\(model.demo.heartRateBPM)", "BPM", Kairo.coral)
+                    reading(stepsText, "STEPS", Kairo.teal)
+                }
+
+                Button {
+                    model.setDemoStreaming(!model.demoStreaming)
+                } label: {
+                    Label(model.demoStreaming ? "Stop stream" : "Stream",
+                          systemImage: model.demoStreaming ? "stop.fill" : "dot.radiowaves.left.and.right")
+                        .font(.wButton)
+                        .frame(maxWidth: .infinity)
+                }
+                .tint(model.demoStreaming ? Kairo.coral : Kairo.leaf)
+
+                HStack(spacing: 5) {
+                    demoButton("chair.fill", "+15 min sitting") { model.demoSitLonger() }
+                    demoButton("figure.walk", "Stand up") { model.demoStandUp() }
+                    demoButton("heart.fill", "Heart rate spike") { model.demoHeartRateSpike() }
+                }
+
+                Text(model.demoDelivered
+                     ? "Simulated readings. Your phone needs Demo day on."
+                     : "Phone out of reach: that reading was not sent.")
+                    .font(.wMicro)
+                    .foregroundStyle(model.demoDelivered ? Kairo.inkFaint : Kairo.coral)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 2)
+        }
+        .navigationTitle("Demo")
+        .containerBackground(Kairo.quietWash, for: .navigation)
+    }
+
+    private var stepsText: String {
+        let s = model.demo.stepsToday
+        return s >= 1_000 ? String(format: "%.1fk", Double(s) / 1_000) : "\(s)"
+    }
+
+    private func reading(_ value: String, _ unit: String, _ tint: Color) -> some View {
+        VStack(spacing: 0) {
+            Text(value)
+                .font(.wTitle).monospacedDigit()
+                .foregroundStyle(Kairo.ink)
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .contentTransition(.numericText())
+            Text(unit).font(.wMicro).foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func demoButton(_ icon: String, _ label: String,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 14, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 30)
+        }
+        .accessibilityLabel(label)
     }
 }
 

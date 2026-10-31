@@ -11,6 +11,9 @@ import KairoKit
 struct MemoryBookView: View {
     @Environment(AppModel.self) private var model
     @State private var openRecordID: String?
+    /// What the user is about to tell Kairo. Sent to the curator, never stored
+    /// as a fact directly.
+    @State private var draft = ""
     /// A 44-point disc beside prose leaves the prose 190 points at 375, which
     /// iOS's own audit reported as clipped text at accessibility XXXL.
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -36,6 +39,8 @@ struct MemoryBookView: View {
                     }
                 }
 
+                composer.kairoListRow()
+
                 decisions.kairoListRow()
 
                 TrustNote(text: "Facts marked on-device never leave this phone. "
@@ -48,6 +53,10 @@ struct MemoryBookView: View {
             .scrollContentBackground(.hidden)
             .background(KairoCanvas())
             .toolbar(.hidden, for: .navigationBar)
+            // The book was read once, at launch, so a fact the curator stored
+            // afterwards — from a meal, say — never appeared until a relaunch.
+            .task { await model.reloadMemories() }
+            .refreshable { await model.reloadMemories() }
             .navigationDestination(item: $openRecordID) { id in
                 if let record = model.records.first(where: { $0.id == id }) {
                     WhyView(record: record)
@@ -87,13 +96,70 @@ struct MemoryBookView: View {
                 Text("Kairo remembers nothing about you")
                     .font(.kairoHeadline).foregroundStyle(Kairo.ink)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Facts appear here as they are learned, and only after they "
-                     + "have been corroborated.")
+                Text(emptyReason)
                     .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .kairoCard(tint: Kairo.teal)
+    }
+
+    /// Why the book is empty, which is a different answer on and off the
+    /// network. "Zero facts" was shown with no explanation, and the honest one
+    /// is that nothing had ever told the curator anything.
+    private var emptyReason: String {
+        guard model.backend.client != nil else {
+            return "The agents are not connected. Facts live with the curator on the "
+                + "backend, so this fills in once Kairo can reach it."
+        }
+        return "Nothing has been told to the curator yet. Log a meal, or say "
+            + "something below, and it decides what is worth remembering."
+    }
+
+    // MARK: - Telling Kairo something
+
+    /// FR10.1 from the user's side. What is typed goes to the Habit Memory
+    /// Curator; what comes back in the list above is what it chose to keep.
+    private var composer: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "Tell Kairo", icon: "text.bubble", tint: Kairo.teal)
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField("e.g. I run before work on Tuesdays", text: $draft, axis: .vertical)
+                    .lineLimit(1...4)
+                    .font(.subheadline)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Kairo.hairline.opacity(0.06)))
+                Button {
+                    let said = draft
+                    draft = ""
+                    Task { await model.teach(said) }
+                } label: {
+                    if model.teaching {
+                        ProgressView().frame(width: 36, height: 36)
+                    } else {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(Kairo.teal)
+                    }
+                }
+                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty
+                          || model.teaching || model.backend.client == nil)
+                .accessibilityLabel("Send to the memory curator")
+            }
+            if model.demoMode, model.memories.isEmpty, !model.teaching {
+                Button("Use the demo user's story") {
+                    Task { await model.teach(DemoScenario.aboutMe) }
+                }
+                .buttonStyle(.kairoSoft(Kairo.teal))
+            }
+            if let said = model.lastExtraction {
+                Text(said)
+                    .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .kairoCard()
     }
 
     // MARK: - Recent decisions
