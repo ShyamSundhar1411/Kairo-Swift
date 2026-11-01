@@ -13,6 +13,18 @@ struct KairoApp: App {
     /// state; this only reads it to decide which of the two roots to build.
     @AppStorage("kairo.tour.completed") private var tourCompleted = false
 
+    /// `-KairoFirstRun` in the scheme's arguments (or `KAIRO_FIRST_RUN=1`)
+    /// opens on the welcome tour as a fresh install would, for presenting the
+    /// whole setup. Opt-in only: an ordinary launch never shows the tour twice.
+    /// The backend address and token are kept, so the demo still connects.
+    init() {
+        let process = ProcessInfo.processInfo
+        if process.arguments.contains("-KairoFirstRun")
+            || process.environment["KAIRO_FIRST_RUN"] == "1" {
+            UserDefaults.standard.set(false, forKey: "kairo.tour.completed")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             // The tour runs BEFORE bootstrap, not over it. bootstrap() reads

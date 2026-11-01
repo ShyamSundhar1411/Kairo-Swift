@@ -22,6 +22,9 @@ struct BackendSettingsView: View {
     /// here, not drop the reader on Today.
     @State private var replayingTour = false
     @State private var discovery = BackendDiscovery()
+    /// The same key `KairoApp` reads to pick its root, so clearing it here
+    /// returns the whole app to the first-launch tour, not a sheet over it.
+    @AppStorage("kairo.tour.completed") private var tourCompleted = true
 
     var body: some View {
         @Bindable var backend = model.backend
@@ -37,6 +40,13 @@ struct BackendSettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(Kairo.coral)
                         .textSelection(.enabled)
+                }
+                // A request that failed while the backend stayed up. Said here
+                // rather than by marking the whole connection down.
+                if backend.state.isConnected, let problem = backend.lastRequestProblem {
+                    Text("Last request failed: \(problem)")
+                        .font(.footnote)
+                        .foregroundStyle(Kairo.amber)
                 }
             } header: {
                 Text("Status")
@@ -380,6 +390,11 @@ struct BackendSettingsView: View {
                 Text(Self.blendNote)
                     .font(.footnote)
                     .foregroundStyle(Kairo.inkSoft)
+            }
+            Button {
+                tourCompleted = false
+            } label: {
+                Label("Start the demo from the welcome tour", systemImage: "play.rectangle")
             }
             Button {
                 Task { await model.runArbitration() }

@@ -220,6 +220,8 @@ final class AppModel {
         // So the connection can retry on its own — on a settings edit, or when
         // the app comes back and the backend that was down is now up.
         backend.userIDForRecheck = { [userID] in userID }
+        // Reconnects on its own if the backend starts late or blips mid-demo.
+        backend.startAutoRetry()
         applyProfile(userProfile)
         await reloadMemories()
         if demoMode {
