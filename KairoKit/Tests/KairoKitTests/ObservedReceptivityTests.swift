@@ -9,12 +9,12 @@ private final class ArrayOutcomeLog: NudgeOutcomeLog, @unchecked Sendable {
     func append(_ outcome: NudgeOutcome) { stored.append(outcome) }
 }
 
-@Suite("ObservedReceptivityModel — learned, not tabled")
+@Suite("ObservedReceptivityModel - learned, not tabled")
 struct ObservedReceptivityTests {
     private let noon = DateHelp.at(2026, 9, 10, 12, 0)
     /// The fixtures are built in Australia/Sydney by `DateHelp`, so the model
     /// has to read them in the same calendar. `.current` agreed with that on a
-    /// laptop in Sydney and disagreed on the first CI run, in UTC — the hour
+    /// laptop in Sydney and disagreed on the first CI run, in UTC - the hour
     /// bucket a 7am fixture lands in is not 7 anywhere else.
     private var calendar: Calendar { DateHelp.calendar }
 

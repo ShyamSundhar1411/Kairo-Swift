@@ -1,10 +1,10 @@
 import Foundation
 
-/// FR11.7 — where a red flag actually goes, on the device.
+/// FR11.7 - where a red flag actually goes, on the device.
 ///
 /// This exists on both sides for the same reason the arbiter does: NFR9 says
 /// logging and scheduled nudges keep working with no backend, so the on-device
-/// gate blocks messages in a room with no network — and a block that names
+/// gate blocks messages in a room with no network - and a block that names
 /// nowhere to go is the gap this whole feature closes. A referral that only
 /// works when the server is reachable is a referral that fails in the one
 /// situation where nobody can look anything up for themselves.
@@ -32,7 +32,7 @@ public struct EscalationService: Sendable, Equatable, Codable {
     public let scope: String
     public let url: String
     /// Offered beside the primary service, never instead of it. These depend on
-    /// who the caller is — something this system does not know and will not guess.
+    /// who the caller is - something this system does not know and will not guess.
     public let alternatives: [EscalationService]
 
     public init(name: String, telephone: String, hours: String, scope: String,
@@ -86,7 +86,7 @@ public enum Escalation {
 
     /// The routing table. Australian, because NFR7 declares the classifier
     /// validated for en-AU and a directory is only as portable as the classifier
-    /// feeding it — a locale this gate cannot screen is held for a human rather
+    /// feeding it - a locale this gate cannot screen is held for a human rather
     /// than handed an Australian phone number.
     public static let directory: [FlagType: EscalationService] = [
         .eatingDisorder: butterfly,
@@ -118,7 +118,7 @@ public struct RedFlag: Sendable, Equatable {
 
     /// Deliberately narrow, and deliberately not widened here. Every entry is an
     /// eating-disorder pattern because that is what this list has always
-    /// detected — naming the type adds routing, not detection. Adding self-harm
+    /// detected - naming the type adds routing, not detection. Adding self-harm
     /// or mental-health patterns is a clinical decision about false positives
     /// and false negatives, and it belongs to whoever owns NFR14.
     public static let defaults: [RedFlag] = [

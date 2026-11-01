@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member A — CF1 Photo-based meal logging, CF3 dissent, OF1 ungrounded-dish protocol.
+/// Member A - CF1 Photo-based meal logging, CF3 dissent, OF1 ungrounded-dish protocol.
 ///
 /// The `ungrounded` branch is the feature: when the analyst cannot ground a dish it
 /// says so and asks to be taught, instead of publishing a plausible wrong number.

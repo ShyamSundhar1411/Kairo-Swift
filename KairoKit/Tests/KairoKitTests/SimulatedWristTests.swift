@@ -3,9 +3,9 @@ import Foundation
 @testable import KairoKit
 
 /// Demo mode's simulated wrist. What matters for a presentation is that the
-/// script reaches the moments the agents react to — a long sitting run, a walk
-/// break, a heart-rate spike — and does so the same way every run.
-@Suite("Simulated wrist — the demo's signal script")
+/// script reaches the moments the agents react to - a long sitting run, a walk
+/// break, a heart-rate spike - and does so the same way every run.
+@Suite("Simulated wrist - the demo's signal script")
 struct SimulatedWristTests {
     let t = DateHelp.at(2026, 9, 7, 15, 0)
 

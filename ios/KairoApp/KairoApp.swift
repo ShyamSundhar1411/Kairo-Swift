@@ -4,8 +4,8 @@ import KairoKit
 @main
 struct KairoApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    // One environment, all of it real. This used to read `.preview` — a frozen
-    // clock, a stub health port and three seeded memories — which is why the app
+    // One environment, all of it real. This used to read `.preview` - a frozen
+    // clock, a stub health port and three seeded memories - which is why the app
     // on a device opened on the report's Tuesday whoever was wearing it.
     @State private var model = AppModel(environment: .live)
 
@@ -28,7 +28,7 @@ struct KairoApp: App {
     var body: some Scene {
         WindowGroup {
             // The tour runs BEFORE bootstrap, not over it. bootstrap() reads
-            // HealthKit, and the first read triggers iOS's permission sheet —
+            // HealthKit, and the first read triggers iOS's permission sheet -
             // so launching straight into it meant the very first thing a new
             // user saw was a system dialog asking for their health data, with
             // nothing on screen explaining who was asking or why. Explain, then
@@ -37,7 +37,7 @@ struct KairoApp: App {
                 KairoStartup { RootView() }
                     .environment(model)
                     // Simulator-only, opt-in, and a no-op without an explicit launch
-                    // flag — see Adapters/HealthKitSeeder.swift for the guards. It
+                    // flag - see Adapters/HealthKitSeeder.swift for the guards. It
                     // exists because the HealthKit read paths cannot be executed
                     // against an empty Health store, and a simulator has one.
                     .task {
@@ -46,7 +46,7 @@ struct KairoApp: App {
                         }
                     }
                     // Coming back is the moment a failed connection is most
-                    // likely to have been fixed — the server was started while
+                    // likely to have been fixed - the server was started while
                     // the app was in the background. Nothing to press.
                     .onChange(of: scenePhase) { _, phase in
                         guard phase == .active else { return }
@@ -54,7 +54,7 @@ struct KairoApp: App {
                     }
             } else {
                 // Handed the model explicitly. The tour sets AG-1's ceiling
-                // (SCRUM-21), so it needs one — and taking it as a parameter
+                // (SCRUM-21), so it needs one - and taking it as a parameter
                 // means it cannot be presented without one, which an
                 // `@Environment` lookup allowed right up until it trapped at
                 // runtime on the first launch of a fresh install.

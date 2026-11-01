@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member C — CF7. The project's headline mechanism.
+/// Member C - CF7. The project's headline mechanism.
 ///
 /// Every agent bids for the user's attention; this allocates a bounded daily
 /// budget across those bids. Spending nothing is a legitimate outcome, and the
@@ -15,7 +15,7 @@ public struct ArbitrationInput: Sendable {
     public let quietHours: Bool
     /// Remaining margin for this user this month (Section 7.1, the second budget).
     public let costRemaining: Money
-    /// CF6 — what was actually measured today. A bid making a claim about a domain
+    /// CF6 - what was actually measured today. A bid making a claim about a domain
     /// with no coverage behind it is suppressed rather than delivered.
     ///
     /// Optional because the arbiter must stay usable without it, and because
@@ -107,7 +107,7 @@ public struct NudgeArbiter: Sendable {
             // gate existed and was wired to one badge on one screen, so every
             // nudge the arbiter delivered went out unscreened. A model that has
             // been told "energy logged: not measured" and answers "No meals logged
-            // today" is not lying about a number — there is no number — which is
+            // today" is not lying about a number - there is no number - which is
             // why the check cannot only look for digits.
             if let coverage = input.coverage,
                let domain = CoverageDomain.claimed(byNudgeClass: n.bid.nudgeClass),

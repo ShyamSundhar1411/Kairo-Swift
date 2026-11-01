@@ -5,8 +5,8 @@ import Foundation
 // Every figure in this file is synthetic and round on purpose: an 8 h need
 // against nights of 6, 7 and 10 hours, so a shortfall is 2, 1 or 0 and a week's
 // debt can be checked by eye. None of it is anybody's sleep. This project treats
-// an unverified real-looking number as a defect — the whole reason this suite
-// exists is that the screen used to print "2.4 hours" as a string literal — so
+// an unverified real-looking number as a defect - the whole reason this suite
+// exists is that the screen used to print "2.4 hours" as a string literal - so
 // the fixtures here are obviously fake and stay that way.
 private enum Nights {
     /// Seven consecutive nights, oldest first, ending on the 25th.
@@ -28,12 +28,12 @@ private enum Nights {
     }
 }
 
-/// Member B — CF4 / CF6. The debt, and how much of one may be said out loud.
+/// Member B - CF4 / CF6. The debt, and how much of one may be said out loud.
 ///
 /// The behaviour that distinguishes this from every other sleep tracker is the
 /// gap: what the number does when a night is missing, and what the app is then
 /// allowed to say.
-@Suite("Member B — sleep debt")
+@Suite("Member B - sleep debt")
 struct SleepSummaryTests {
 
     // MARK: - The sum
@@ -57,7 +57,7 @@ struct SleepSummaryTests {
         #expect(SleepSummary.defaultNightlyNeedHours == 8)
     }
 
-    @Test("a gap contributes nothing at all — not a zero, not an interpolation")
+    @Test("a gap contributes nothing at all - not a zero, not an interpolation")
     func gapsAreExcludedFromTheSum() {
         // Five nights of 6 h and two nights the watch was off. The debt is 10 h,
         // over five nights.
@@ -90,7 +90,7 @@ struct SleepSummaryTests {
         let d = Nights.window([10, 6]).sleepDebt()
         #expect(d.hours == 2)
         // And a week entirely above need is a debt of zero, which is a real
-        // measured zero — every night was seen.
+        // measured zero - every night was seen.
         let rested = Nights.window(Array(repeating: 10, count: 7)).sleepDebt()
         #expect(rested.hours == 0)
         #expect(rested.observedNights == 7)
@@ -187,7 +187,7 @@ struct SleepSummaryTests {
         #expect(d.hours == 4)
         #expect(d.permittedForm < .assertion)
         // 2/7 = 0.286, below half the 0.6 floor, which DayCoverage calls a
-        // question — weaker than the two-night window limit of a range.
+        // question - weaker than the two-night window limit of a range.
         #expect(d.permittedForm == .question)
     }
 

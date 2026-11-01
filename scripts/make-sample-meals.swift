@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 // would invite exactly the "is this a real reading?" confusion the app is built
 // to avoid.
 //
-// Drop real photographs over the top if you have them — same names, same folder:
+// Drop real photographs over the top if you have them - same names, same folder:
 //
 //     swift scripts/make-sample-meals.swift
 
@@ -82,7 +82,7 @@ func blob(_ ctx: CGContext, _ x: Double, _ y: Double, _ w: Double, _ h: Double,
     ctx.restoreGState()
 }
 
-// MARK: - 1. Grilled salmon and rice — the confident path
+// MARK: - 1. Grilled salmon and rice - the confident path
 
 func salmon() -> CGContext {
     let ctx = newContext()
@@ -121,7 +121,7 @@ func salmon() -> CGContext {
     return ctx
 }
 
-// MARK: - 2. Stir-fried noodles — the ambiguous portion
+// MARK: - 2. Stir-fried noodles - the ambiguous portion
 
 func noodles() -> CGContext {
     let ctx = newContext()
@@ -151,7 +151,7 @@ func noodles() -> CGContext {
     return ctx
 }
 
-// MARK: - 3. A dish Kairo has never seen — the ungrounded path
+// MARK: - 3. A dish Kairo has never seen - the ungrounded path
 
 func unfamiliar() -> CGContext {
     let ctx = newContext()

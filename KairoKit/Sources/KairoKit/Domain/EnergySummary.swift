@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member A — CF1 / CF2, meeting Member B's CF6 gate.
+/// Member A - CF1 / CF2, meeting Member B's CF6 gate.
 ///
 /// An `EnergyLedger` is a day's arithmetic. Two other parts of the system need
 /// something from it and neither of them wants the arithmetic:
@@ -22,7 +22,7 @@ public enum EnergySummary {
     ///
     /// This is the population default. `DayCoverage`'s doc comment describes
     /// `expectedCount` as coming from "this user's learned pattern", so callers
-    /// that know better — a two-meal-a-day user — should pass their own figure.
+    /// that know better - a two-meal-a-day user - should pass their own figure.
     public static let expectedMealsPerDay = 3
 
     // MARK: - Filling in the observations
@@ -31,7 +31,7 @@ public enum EnergySummary {
     ///
     /// Absent readings stay absent. `Observations.lines` is explicit that its job
     /// is to let the model tell "zero" from "not measured", so a day with nothing
-    /// logged reports `nil` rather than 0 kJ — otherwise the Nutrition Analyst
+    /// logged reports `nil` rather than 0 kJ - otherwise the Nutrition Analyst
     /// reads an untouched morning as a fast.
     public static func observations(for ledger: EnergyLedger) -> Observations {
         Observations(
@@ -48,11 +48,11 @@ public enum EnergySummary {
     /// A day's total is only as strong as the portions behind it, so this is the
     /// weaker of two independent limits:
     ///
-    /// 1. **Coverage** — how much of the day is visible at all. That ladder is
+    /// 1. **Coverage** - how much of the day is visible at all. That ladder is
     ///    already written, in `DayCoverage.permittedForm(for:)`, and is not
     ///    restated here: two of three meals is a qualified claim, one of three is
     ///    a range. Duplicating it would give the project two floors to retune.
-    /// 2. **Portion precision** — how the visible portions were arrived at. See
+    /// 2. **Portion precision** - how the visible portions were arrived at. See
     ///    `portionForm(weakestConfidence:)`.
     ///
     /// The weaker limit wins, because both failures are real: a fully weighed
@@ -85,7 +85,7 @@ public enum EnergySummary {
     ///   belongs to the composition table rather than to the user, and a bare
     ///   number is defensible.
     /// * `>= 0.65` → `.qualified`. The weakest portion was a household measure
-    ///   (0.70) — a real measure with real variance. The number may be spoken but
+    ///   (0.70) - a real measure with real variance. The number may be spoken but
     ///   must carry the caveat that it came from cups and slices.
     /// * `>= 0.30` → `.range`. The weakest portion was the user's estimate by eye
     ///   (0.45). This is the case the feature exists for: a day built from four
@@ -110,7 +110,7 @@ public extension EnergyLedger {
     /// Entries that actually contribute energy.
     ///
     /// An entry sitting in `.ungrounded` or `.awaitingTeaching` has no items yet,
-    /// so it adds no kilojoules and must not add coverage either — otherwise
+    /// so it adds no kilojoules and must not add coverage either - otherwise
     /// photographing a dish the analyst could not identify would make the day
     /// *look* better covered while telling us nothing about what was eaten.
     var loggedMealCount: Int {

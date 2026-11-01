@@ -6,13 +6,13 @@ import KairoKit
 /// The iOS target has the full system (`KairoTheme` / `KairoComponents`); none of
 /// it is compiled into the watch target, so this is the deliberately small
 /// equivalent: the palette, a type scale, the nudge-class vocabulary, and the two
-/// primitives the wrist actually needs — a pill and a ring.
+/// primitives the wrist actually needs - a pill and a ring.
 ///
 /// watchOS is always dark, so there is no dark/light pair and no trait lookup:
 /// literal colours are both correct and simpler.
 ///
 /// The split the palette encodes is the product thesis. Amber is attention being
-/// *spent* — it belongs to interruptions. Teal is Kairo staying quiet, and it
+/// *spent* - it belongs to interruptions. Teal is Kairo staying quiet, and it
 /// belongs to the screen the user sees most of the time.
 enum Kairo {
 
@@ -122,7 +122,7 @@ enum Kairo {
     /// The nudge class a logged entry belongs to, so the two vocabularies stay
     /// one. `.interruption` deliberately maps to no class: it is not *about*
     /// hydration or sitting, it is the attention that was spent, so it takes the
-    /// default branch above — amber and a bell. Amber is attention being spent,
+    /// default branch above - amber and a bell. Amber is attention being spent,
     /// which is the whole point of the palette, so that default is the right
     /// answer rather than an accident.
     static func nudgeClass(for kind: DayLog.Entry.Kind) -> String {
@@ -156,7 +156,7 @@ enum Kairo {
 // MARK: - Type scale
 //
 // Rounded everywhere a number or a claim is the point, matching the phone. Sizes
-// are the watch's own — a 40mm screen is 162pt wide and nothing here assumes more.
+// are the watch's own - a 40mm screen is 162pt wide and nothing here assumes more.
 
 extension Font {
     /// The one number a page is about.
@@ -170,7 +170,7 @@ extension Font {
     /// a secondary figure in a summary. Anything under this stops being readable
     /// on a 40mm screen, so this is the floor rather than a starting point.
     static let wMicro    = Font.system(size: 9, weight: .regular)
-    /// Small, tracked, uppercase — pills and unit labels.
+    /// Small, tracked, uppercase - pills and unit labels.
     static let wLabel    = Font.system(size: 10, weight: .semibold, design: .rounded)
 }
 
@@ -243,7 +243,7 @@ struct WatchSegmentedRing: View {
     var segments: Int = 5
     var filled: Int = 3
     /// Index of the first lit segment, so the lit run can be moved around the
-    /// ring — which is all the loader does.
+    /// ring - which is all the loader does.
     var firstLit: Int = 0
     /// Stroke weight as a fraction of the diameter, so the proportions hold from
     /// a 20pt mark to a 60pt one.
@@ -297,7 +297,7 @@ struct WatchSegmentedRing: View {
 /// The logo on its own: the segmented ring with the moment at its centre.
 struct WatchMark: View {
     var size: CGFloat = 44
-    /// Collapses the mark to one colour, for a state that should not look live —
+    /// Collapses the mark to one colour, for a state that should not look live -
     /// the link being down, for instance.
     var monochrome: Color?
     var animatesIn: Bool = false
@@ -324,8 +324,8 @@ struct WatchMark: View {
 }
 
 /// The mark in motion: the same ring, turning, so the lit segments chase around
-/// it. Used for the one state that is genuinely still loading — the phone link
-/// activating — instead of a stock spinner.
+/// it. Used for the one state that is genuinely still loading - the phone link
+/// activating - instead of a stock spinner.
 ///
 /// Reduce Motion stops the turn outright and leaves the mark standing still; the
 /// copy beside it, not the animation, is what says the watch is still connecting.

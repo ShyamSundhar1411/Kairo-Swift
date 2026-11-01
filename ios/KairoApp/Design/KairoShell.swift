@@ -2,7 +2,7 @@ import SwiftUI
 import KairoKit
 
 /// The app shell. One canvas behind everything, four resident screens, and a
-/// floating bar instead of the system tab bar — the screens keep their state
+/// floating bar instead of the system tab bar - the screens keep their state
 /// while switching, which matters because a half-logged meal must survive a
 /// glance at Today.
 enum KairoTab: String, CaseIterable, Identifiable {
@@ -48,7 +48,7 @@ enum KairoTab: String, CaseIterable, Identifiable {
         case .today:  Kairo.amber
         case .meals:  Kairo.leaf
         // Teal, because the Lifestyle analyst is the role that reasons about
-        // both halves of this screen — not violet, which now belongs to Memory
+        // both halves of this screen - not violet, which now belongs to Memory
         // on the tab bar as it already did on every agent chip.
         case .body:   Kairo.teal
         case .memory: Kairo.violet
@@ -90,7 +90,7 @@ struct RootView: View {
 struct KairoTabBar: View {
     @Binding var selection: KairoTab
     @Namespace private var pill
-    /// Four labels cannot share 375 points at an accessibility size — "Today"
+    /// Four labels cannot share 375 points at an accessibility size - "Today"
     /// and "Memory" both rendered as three letters and an ellipsis. The icons
     /// are already the thing being aimed at; the words come off rather than
     /// being abbreviated into noise, and VoiceOver still announces each tab by

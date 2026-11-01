@@ -30,12 +30,12 @@ final class AppModel {
     private(set) var records: [DecisionRecord] = []
     private(set) var lastError: String?
 
-    /// CF8 — the day's water as a log of taps rather than a running integer, so a
+    /// CF8 - the day's water as a log of taps rather than a running integer, so a
     /// message WatchConnectivity re-delivers can be discarded by id instead of
     /// being counted twice.
     private(set) var hydration: HydrationLog
 
-    /// CF1 / CF2 — today's confirmed meals. Before this, a confirmed meal reached
+    /// CF1 / CF2 - today's confirmed meals. Before this, a confirmed meal reached
     /// `.logged` inside its capture screen and was never seen again: meal
     /// coverage stayed at zero and the agents were told energy was not measured.
     private(set) var meals: [LoggedMeal]
@@ -104,7 +104,7 @@ final class AppModel {
     private(set) var observations: Observations = .none
 
     /// Whether the wrist can be reached right now. Only meaningful when
-    /// `wristAvailable` — in preview there is no session to be reachable.
+    /// `wristAvailable` - in preview there is no session to be reachable.
     private(set) var wristLinked = false
 
     /// The link in the states the pairing screen needs apart (SCRUM-21's
@@ -128,7 +128,7 @@ final class AppModel {
     /// Held here and persisted locally as well as on the server, because AG-1's
     /// ceiling is a grant the user made and NFR9 says the app keeps working with
     /// no network. A preference that only exists on a backend is one that
-    /// vanishes the moment the backend does — and the ceiling is the single
+    /// vanishes the moment the backend does - and the ceiling is the single
     /// setting whose job is to be respected when nothing else is working.
     private(set) var userProfile: RemoteAgentClient.UserProfile = ProfileStore.load()
     var profile: CapabilityProfile = .unrestricted
@@ -151,13 +151,13 @@ final class AppModel {
     private(set) var arbitrationCosting: SuppressionCopy.Costing = .notional
 
     /// Which backend sealed the record on screen, and the FAST-tier model that
-    /// did the bidding in it. Settings facts — a user does not need to know
-    /// they are talking to a particular model to drink water — so these are
+    /// did the bidding in it. Settings facts - a user does not need to know
+    /// they are talking to a particular model to drink water - so these are
     /// held for the agents sheet and read nowhere else.
     private(set) var servingProvider: String?
     private(set) var servingModelID: String?
 
-    /// OF3 — how much each class is worth an interruption, 0...1.
+    /// OF3 - how much each class is worth an interruption, 0...1.
     ///
     /// Read by `runArbitration()` on both paths: it scales the bids the local
     /// source raises, and it is sent to the agents so the roles bid against the
@@ -174,7 +174,7 @@ final class AppModel {
     ///   the report's scenario still on screen after the clock and the health port
     ///   became real: a phone that had measured nothing still displayed "seen 4 of
     ///   5". Coverage is what `SafetyGate` consults to decide how strongly Kairo
-    ///   may speak, so a seeded figure does not merely mislead the reader — it
+    ///   may speak, so a seeded figure does not merely mislead the reader - it
     ///   licenses assertions the readings never supported.
     ///
     ///   Unseeded, a domain nothing has measured reports a fraction of zero and
@@ -202,7 +202,7 @@ final class AppModel {
             c.record(CoverageMetric(domain: .movement, observedCount: 20, expectedCount: 24))
             // The first sip that actually arrives from the wrist replaces this
             // with `hydration.coverageMetric()`, which will read lower and
-            // honestly so — four of five sips was never observed.
+            // honestly so - four of five sips was never observed.
             c.record(CoverageMetric(domain: .hydration, observedCount: 4, expectedCount: 5))
         }
         if !todaysMeals.isEmpty {
@@ -217,7 +217,7 @@ final class AppModel {
 
     @MainActor
     func bootstrap() async {
-        // So the connection can retry on its own — on a settings edit, or when
+        // So the connection can retry on its own - on a settings edit, or when
         // the app comes back and the backend that was down is now up.
         backend.userIDForRecheck = { [userID] in userID }
         // Reconnects on its own if the backend starts late or blips mid-demo.
@@ -246,8 +246,8 @@ final class AppModel {
         pushDayLog()
     }
 
-    /// SCRUM-21. The server's copy wins when there is one — it is the record
-    /// another device would read — and the local copy is what the app runs on
+    /// SCRUM-21. The server's copy wins when there is one - it is the record
+    /// another device would read - and the local copy is what the app runs on
     /// until it answers.
     @MainActor
     func reloadProfile() async {
@@ -266,7 +266,7 @@ final class AppModel {
     }
 
     /// Write one change through. Local first, so the setting holds even if the
-    /// request fails — the user moved a control and the app has to behave as
+    /// request fails - the user moved a control and the app has to behave as
     /// though they did.
     @MainActor
     func updateProfile(_ change: (inout RemoteAgentClient.UserProfile) -> Void,
@@ -297,7 +297,7 @@ final class AppModel {
                                  spent: schedule.spent)
     }
 
-    /// NFR8 — "0 during quiet hours and Focus modes".
+    /// NFR8 - "0 during quiet hours and Focus modes".
     ///
     /// This was hardcoded `false` on both arbitration paths, so the quiet-hours
     /// control on the attention contract screen set a value nothing read. The
@@ -323,7 +323,7 @@ final class AppModel {
     /// Watch the link without starting the rest of the app.
     ///
     /// `attachWrist()` runs inside `bootstrap()`, and the tour deliberately runs
-    /// *before* bootstrap — bootstrap reads HealthKit, and explaining the app
+    /// *before* bootstrap - bootstrap reads HealthKit, and explaining the app
     /// before iOS asks for health data is the whole reason the tour exists. So
     /// the pairing page needs the link and nothing else: this wires that one
     /// observer and seeds the current value, and leaves events, arbitration and
@@ -371,11 +371,14 @@ final class AppModel {
 
     /// CF10: the delete is real, and it happens where the retrieval happens.
     @MainActor
-    func forget(_ memory: MemoryItem) async {
+    /// FR10.6. `neverAgain` makes the deletion durable against the Curator,
+    /// which would otherwise re-extract the same fact from the same material.
+    func forget(_ memory: MemoryItem, neverAgain: Bool = false) async {
         if let client = backend.client {
             do {
-                try await client.forget(memoryID: memory.id)
+                try await client.forget(memoryID: memory.id, neverAgain: neverAgain)
                 await reloadMemories()
+                await reloadSuppressed()
                 return
             } catch {
                 backend.noteFailure(error)
@@ -385,7 +388,32 @@ final class AppModel {
         reloadLocalMemories()
     }
 
-    // MARK: - CF1 / CF2 — the day's meals
+    /// FR10.6. What the user has asked Kairo never to remember.
+    private(set) var neverRemembered: [String] = []
+
+    @MainActor
+    func reloadSuppressed() async {
+        guard let client = backend.client else { return }
+        neverRemembered = (try? await client.neverRemembered()) ?? neverRemembered
+    }
+
+    @MainActor
+    func allowAgain(_ text: String) async {
+        guard let client = backend.client else { return }
+        try? await client.allowAgain(text: text)
+        await reloadSuppressed()
+    }
+
+    /// FR10.6's export. Returns nil rather than an empty file when there is no
+    /// backend: handing somebody a file that silently is not their data would
+    /// be worse than saying it could not be made.
+    @MainActor
+    func exportMemories() async -> Data? {
+        guard let client = backend.client else { return nil }
+        return try? await client.exportMemories()
+    }
+
+    // MARK: - CF1 / CF2 - the day's meals
 
     /// A meal the user confirmed. This is the step that was missing: the entry
     /// now changes meal coverage, travels to the agents as `kilojoulesLogged`
@@ -414,7 +442,7 @@ final class AppModel {
                                        expectedCount: Self.expectedMeals))
     }
 
-    /// FR10.1 — a logged meal is material for habit memory. The curator decides
+    /// FR10.1 - a logged meal is material for habit memory. The curator decides
     /// whether it says anything durable; most single meals do not, and the
     /// Memory Book shows that decision as well as any fact it keeps.
     @MainActor
@@ -425,7 +453,7 @@ final class AppModel {
         _ = await teach(material)
     }
 
-    /// CF2 — ask the Nutrition Analyst what to eat next, given the real ledger.
+    /// CF2 - ask the Nutrition Analyst what to eat next, given the real ledger.
     @MainActor
     func suggestNextMeal() async {
         guard let client = backend.client else {
@@ -443,7 +471,7 @@ final class AppModel {
         }
     }
 
-    // MARK: - CF10 — telling Kairo something
+    // MARK: - CF10 - telling Kairo something
 
     /// Sends `material` to the Habit Memory Curator and reloads the book. The
     /// phone never writes a fact itself; it hands over what was said and shows
@@ -501,7 +529,7 @@ final class AppModel {
 
     // MARK: - Demo signals: the watch, the phone simulator, recorded Health
 
-    /// Option 2 — the phone's own simulated wrist, one simulated minute every
+    /// Option 2 - the phone's own simulated wrist, one simulated minute every
     /// two seconds. It starts from wherever the readings already are, so
     /// switching it on mid-demo continues the day rather than restarting it.
     @MainActor
@@ -539,7 +567,7 @@ final class AppModel {
         }
     }
 
-    /// Option 1 — readings from the watch's Demo page, or from the phone's own
+    /// Option 1 - readings from the watch's Demo page, or from the phone's own
     /// stream. Every tick refreshes what the agents would be sent; only a
     /// significant change spends a pass, and never more often than
     /// `signalPassSpacing`.
@@ -557,7 +585,7 @@ final class AppModel {
         Task { await runArbitration() }
     }
 
-    /// Option 3 — recorded Health first. Off makes the demo the fixed scenario
+    /// Option 3 - recorded Health first. Off makes the demo the fixed scenario
     /// plus the live wrist, which is the dependable choice on a phone whose own
     /// Health data should not be on a projector.
     @MainActor
@@ -635,12 +663,12 @@ final class AppModel {
         coverage.record(MovementSummary.coverageMetric(observedHours: 0))
     }
 
-    /// CF7 — one pass of the attention budget. Called on launch, on a new bid, and
+    /// CF7 - one pass of the attention budget. Called on launch, on a new bid, and
     /// whenever the user changes their attention contract (OF3).
     /// CF7. The five roles bid when the backend is reachable; the on-device
     /// arbiter does when it is not.
     ///
-    /// The fallback is not a degraded copy — it is the same allocation policy,
+    /// The fallback is not a degraded copy - it is the same allocation policy,
     /// which is what NFR9 requires and what the cross-language conformance test
     /// pins. What differs is where the *bids* come from: real reasoning over the
     /// current readings, or the seeded ones. That difference is reported rather
@@ -671,7 +699,7 @@ final class AppModel {
         // Replay the backend's decision through the device's own state machine
         // rather than rendering the JSON directly. The views then need no second
         // code path, and `Lifecycle` rejects any combination the machine does not
-        // allow — a backend that claimed a nudge was both suppressed and
+        // allow - a backend that claimed a nudge was both suppressed and
         // delivered would be caught here instead of drawn.
         let now = env.clock.now
         let local = try replay(result, at: now)
@@ -724,8 +752,8 @@ final class AppModel {
         }
 
         // OF3 on the remote path. The roles are sent the weights and bid
-        // against them, but the promise the contract screen makes — a class at
-        // zero is never worth an interruption — has to hold even against a
+        // against them, but the promise the contract screen makes - a class at
+        // zero is never worth an interruption - has to hold even against a
         // backend that ignored them, so it is enforced on the way in. A bid
         // demoted here is shown in the ledger as suspended rather than dropped,
         // and the interruption it would have spent is handed back below.
@@ -738,7 +766,7 @@ final class AppModel {
 
         var record = DecisionRecord(id: result.recordID, createdAt: now)
         // What each role said, not merely that it spoke. These three fields used
-        // to be `("backend", "", 1)` — a blank claim at full confidence — so the
+        // to be `("backend", "", 1)` - a blank claim at full confidence - so the
         // role timeline in `WhyView`, the screen whose entire purpose is to show
         // that five roles are not five relabelled prompts, rendered five empty
         // rows whenever the backend served the pass. The data was on the wire
@@ -771,7 +799,7 @@ final class AppModel {
                                  schedule: schedule, record: record)
     }
 
-    /// OF3 — a class the user has turned off entirely.
+    /// OF3 - a class the user has turned off entirely.
     func isSilenced(_ nudgeClass: String) -> Bool { (priorities[nudgeClass] ?? 1) <= 0 }
 
     /// The bids the local source raised, scaled by what the user said each class
@@ -793,7 +821,7 @@ final class AppModel {
         }
     }
 
-    /// OF3 — committed from the contract screen, which then re-runs the pass.
+    /// OF3 - committed from the contract screen, which then re-runs the pass.
     @MainActor
     func setPriority(_ value: Double, for nudgeClass: String) {
         guard priorities[nudgeClass] != value else { return }
@@ -854,7 +882,7 @@ final class AppModel {
     /// dead code: nothing in `ios/` ever called it, and it could not honestly be
     /// called from here. It built its own `DisruptionSignal`s out of strings
     /// handed to it by the caller, and the phone has no thermometer, no calendar
-    /// and no time-zone watcher to derive one from — so every entry point that
+    /// and no time-zone watcher to derive one from - so every entry point that
     /// could have existed would have had to invent the corroborating evidence
     /// that CF9's two-signal rule exists to demand.
     ///
@@ -903,7 +931,7 @@ final class AppModel {
         let now = env.clock.now
         // Optimistic, but only where the machine allows it. These used to be
         // `try?` with the result dropped, so a refused transition left the
-        // contract untouched and the next line showed it as accepted anyway —
+        // contract untouched and the next line showed it as accepted anyway -
         // and with no backend to correct it, the screen kept that answer.
         do {
             if accept {
@@ -935,7 +963,7 @@ final class AppModel {
         await runArbitration()
     }
 
-    /// CF6 + CF11 — anything the Coach wants to say passes the gate first.
+    /// CF6 + CF11 - anything the Coach wants to say passes the gate first.
     func screened(_ text: String, domain: CoverageDomain?, locale: String = "en-AU") -> ScreeningVerdict {
         env.safety.screen(text, locale: locale, claimDomain: domain, coverage: coverage)
     }
@@ -944,7 +972,7 @@ final class AppModel {
 
     /// Attaches this model to the phone half of the watch link.
     ///
-    /// A no-op in preview, where `env.wrist` is nil — which is what keeps the
+    /// A no-op in preview, where `env.wrist` is nil - which is what keeps the
     /// recorded demo offline and identical on every run. Every handler below is
     /// invoked on the main queue by the bridge, which is the contract that lets
     /// them mutate observable state from what began as a delegate callback.
@@ -963,7 +991,7 @@ final class AppModel {
         wrist.onDecodeFailure = { [weak self] why in self?.lastError = why }
     }
 
-    /// CF7 / CF8 — one message from the wrist.
+    /// CF7 / CF8 - one message from the wrist.
     ///
     /// Internal rather than private so a preview or a test can drive it directly
     /// without a paired watch.
@@ -971,7 +999,7 @@ final class AppModel {
     ///
     /// `record` returns false for a sip already in the log. WatchConnectivity
     /// re-delivers the current application context on every activation, so the
-    /// same tap genuinely does arrive more than once — and a total that
+    /// same tap genuinely does arrive more than once - and a total that
     /// double-counts is worse than one that arrives late. A photographed drink
     /// the user accepted twice is the same hazard with a different cause, which
     /// is why both come through here.
@@ -995,7 +1023,7 @@ final class AppModel {
         case let .waterLogged(millilitres, at, id):
             // `record` returns false for a sip already in the log. WatchConnectivity
             // re-delivers the current application context on every activation, so
-            // the same tap genuinely does arrive more than once — and a total that
+            // the same tap genuinely does arrive more than once - and a total that
             // double-counts is worse than one that arrives late.
             record(HydrationLog.Sip(id: id, at: at, millilitres: millilitres))
 
@@ -1023,12 +1051,12 @@ final class AppModel {
         }
     }
 
-    /// CF7 — what the user did with an interruption on the wrist.
+    /// CF7 - what the user did with an interruption on the wrist.
     ///
     /// Two things happen, and they are different kinds of durable.
     ///
     /// The outcome is appended to the current decision record, which is
-    /// append-only after sealing and is shown to the user in WhyView — so a
+    /// append-only after sealing and is shown to the user in WhyView - so a
     /// dismissal is visible in the receipt for the pass that spent the
     /// interruption. That part does not survive a relaunch; `records` is
     /// in-memory until the backend seals them.
@@ -1065,7 +1093,7 @@ final class AppModel {
     }
 
     /// The class of a bid this pass raised. Nil when the wrist reports on
-    /// something this launch never saw — after a relaunch, say — in which case
+    /// something this launch never saw - after a relaunch, say - in which case
     /// the outcome is recorded in the receipt but not learned from, because
     /// guessing the class would teach the model about the wrong one.
     private func nudgeClass(forBid bidID: String) -> String? {
@@ -1097,7 +1125,7 @@ final class AppModel {
     func dayLog() -> DayLog {
         var entries: [DayLog.Entry] = []
 
-        // CF8 — one entry per tap, which is what `hydration` actually holds.
+        // CF8 - one entry per tap, which is what `hydration` actually holds.
         // Trimmed here as well as in `DayLog`'s initialiser: the cap keeps the
         // screen readable, and trimming before encoding keeps the envelope small
         // on a transport that has to carry it while the watch is asleep.
@@ -1113,7 +1141,7 @@ final class AppModel {
             // a number here would have the wrist mark an exact figure as rough.
         }
 
-        // CF7 — what the attention budget was actually spent on.
+        // CF7 - what the attention budget was actually spent on.
         //
         // This is the most recent pass only, because that is all the phone has:
         // `arbitration` is overwritten each pass and nothing stores delivered
@@ -1126,7 +1154,7 @@ final class AppModel {
                 kind: .interruption,
                 // When the arbiter allocated it. `Nudge` carries no delivery
                 // timestamp, so the lifecycle history is the only real one there
-                // is — and a real one is worth more than `Date()`.
+                // is - and a real one is worth more than `Date()`.
                 at: nudge.lifecycle.history.last { $0.to == .scheduled }?.at
                     ?? nudge.bid.windowOpens,
                 // The class, in the same words the phone uses for it. Reusing
@@ -1139,7 +1167,7 @@ final class AppModel {
             // interruption as though it were a weak reading.
         }
 
-        // CF1 — the meals actually confirmed today. `confidence` travels here,
+        // CF1 - the meals actually confirmed today. `confidence` travels here,
         // unlike for water: a meal's kilojoules are an estimate, and the wrist
         // should show a weak one as weak.
         for meal in meals.suffix(DayLog.entryLimit) {
@@ -1157,12 +1185,12 @@ final class AppModel {
             entries: entries,
             waterMillilitres: hydration.totalMillilitres,
             waterTargetMillilitres: hydration.targetMillilitres,
-            // The day's meal ledger, or "not measured" when nothing is logged —
+            // The day's meal ledger, or "not measured" when nothing is logged -
             // never a zero standing in for a day nobody recorded.
             kilojoulesLogged: meals.isEmpty ? nil : kilojoulesLogged,
             kilojoulesTarget: meals.isEmpty ? nil : kilojoulesTarget,
             // A real reading or nothing. This is `HealthDataSource.sleepHours`
-            // by way of `refreshObservations()` — the same port, and the same
+            // by way of `refreshObservations()` - the same port, and the same
             // nil-means-unmeasured contract, as the sitting figure already on the
             // wire. There is no fallback constant behind it.
             sleepHoursLastNight: observations.sleepHoursLastNight,
@@ -1187,7 +1215,7 @@ final class AppModel {
         refreshMovement()
         let sleepHours = (try? health.sleepHours(on: now)) ?? nil
         // One night, either read or not. `nil` here means HealthKit returned
-        // nothing — which is also the only signal a denied read ever produces —
+        // nothing - which is also the only signal a denied read ever produces -
         // so it is recorded as zero coverage rather than as a night of no sleep.
         coverage.record(CoverageMetric(domain: .sleep,
                                        observedCount: sleepHours == nil ? 0 : 1,
@@ -1201,7 +1229,7 @@ final class AppModel {
             hydrationML: hydration.sips.isEmpty ? nil : hydration.totalMillilitres,
             hydrationTargetML: hydration.targetMillilitres,
             sleepHoursLastNight: sleepHours,
-            // nil, not 0, before anything is logged — the same absent-versus-
+            // nil, not 0, before anything is logged - the same absent-versus-
             // zero rule as water. This was never filled in, so the Nutrition role
             // was told "energy logged: not measured" right after lunch was logged.
             kilojoulesLogged: meals.isEmpty ? nil : kilojoulesLogged,

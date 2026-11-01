@@ -122,7 +122,7 @@ struct WristPairing: View {
 }
 
 /// One source for how the link is described, because it is described in two
-/// places — the onboarding page and the Agents screen — and copy kept in two
+/// places - the onboarding page and the Agents screen - and copy kept in two
 /// switch statements is copy that disagrees by the second edit.
 enum WristLinkCopy {
     static func tint(_ link: WristLink) -> Color {
@@ -168,7 +168,7 @@ enum WristLinkCopy {
             + "time the two are together."
         case .appNotInstalled:
             "Open the Watch app on your iPhone and install Kairo. It will connect "
-            + "here on its own — there is no code to enter, and no second sign-in: "
+            + "here on its own - there is no code to enter, and no second sign-in: "
             + "the watch is yours because iOS paired it."
         case .noWatch:
             "Everything works without one. Water is logged here, and the one or two "
@@ -177,7 +177,7 @@ enum WristLinkCopy {
             "Everything works without one. This is the phone's own account either "
             + "way."
         case .connecting:
-            "This takes a second. If you do not have an Apple Watch, skip — nothing "
+            "This takes a second. If you do not have an Apple Watch, skip - nothing "
             + "below depends on it."
         }
     }

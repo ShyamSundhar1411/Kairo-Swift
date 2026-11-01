@@ -11,7 +11,7 @@ import KairoKit
 /// Six pages: the idea, the grant the user makes against it, the roster, the
 /// contest, where the reasoning runs, and the Health permission.
 ///
-/// Was four pages, because four is what the idea actually needs — the budget, the
+/// Was four pages, because four is what the idea actually needs - the budget, the
 /// roster, the contest, and where the reasoning is happening. It is skippable
 /// from the first page and never shown again once finished; nobody should have
 /// to sit through a tour twice to get to their own data.
@@ -22,7 +22,7 @@ struct WelcomeTour: View {
     @Environment(\.dismiss) private var dismiss
     /// Passed in rather than read from the environment, and that is the whole
     /// point: this view is presented from exactly one place, and an
-    /// `@Environment` object nobody provided does not degrade — it traps. It
+    /// `@Environment` object nobody provided does not degrade - it traps. It
     /// did, on first launch, for every new user. A parameter makes the same
     /// mistake a compile error.
     let app: AppModel
@@ -107,7 +107,7 @@ struct WelcomeTour: View {
             be interrupted a small number of times a day before you stop listening \
             altogether.
 
-            So it sets a ceiling — and spends against it.
+            So it sets a ceiling - and spends against it.
             """
         ) {
             // The dial is the app's own component, drawn with a real budget.
@@ -119,7 +119,7 @@ struct WelcomeTour: View {
 
     /// AG-1 has two halves: the company commits to at most six a day, and the
     /// user grants the ceiling if they choose to change it. The commitment is
-    /// the page before this one. This is where the grant is actually made —
+    /// the page before this one. This is where the grant is actually made -
     /// immediately after the idea is explained and before anything has been
     /// spent, which is the only moment the number means anything to a reader.
     ///
@@ -130,7 +130,7 @@ struct WelcomeTour: View {
             eyebrow: "Your half of it",
             title: "How many is too many?",
             copy: """
-            Six is the default, and it is a commitment rather than a target — Kairo \
+            Six is the default, and it is a commitment rather than a target - Kairo \
             will use fewer whenever fewer is enough. Set it lower if you want, now or \
             later on the attention screen.
 
@@ -241,7 +241,7 @@ struct WelcomeTour: View {
             eyebrow: "What you will see",
             title: "The ones that lost are listed too.",
             copy: """
-            On Today, every request from this round appears on one shared scale — the \
+            On Today, every request from this round appears on one shared scale - the \
             one that won at full strength, the rest faded, each with the reason it was \
             held back.
 
@@ -268,7 +268,7 @@ struct WelcomeTour: View {
             title: "On your machine, if you want.",
             copy: """
             Kairo looks for an agent backend on this machine first and connects on its \
-            own. If that backend is open — the usual case on your own Mac — there is \
+            own. If that backend is open - the usual case on your own Mac - there is \
             nothing to set up. If it asks for a token, paste it on the Agents screen; \
             a backend serving your phone over wifi always will, because the alternative \
             is leaving your habit memories open to the network.
@@ -301,7 +301,7 @@ struct WelcomeTour: View {
     /// end of it.
     ///
     /// There is no second sign-in here and there will not be one. The watch
-    /// never contacts the backend — it talks to this phone, and the pairing iOS
+    /// never contacts the backend - it talks to this phone, and the pairing iOS
     /// established is what says whose wrist it is (AS-15,
     /// `docs/TRUST-BOUNDARIES.md`).
     private var wristPage: some View {
@@ -322,8 +322,8 @@ struct WelcomeTour: View {
     }
 
     /// Last, immediately before iOS asks. A permission sheet is a bad place to
-    /// learn what an app does with the data, and NFR5 — that the raw series
-    /// never leave this phone — is the single most reassuring fact Kairo has.
+    /// learn what an app does with the data, and NFR5 - that the raw series
+    /// never leave this phone - is the single most reassuring fact Kairo has.
     /// Saying it here, unprompted, is worth more than any wording in the sheet.
     private var healthPage: some View {
         TourPage(
@@ -335,8 +335,8 @@ struct WelcomeTour: View {
             nothing at all.
 
             The raw readings never leave this phone. What goes to the agents is a \
-            short summary — how long you have been sitting, how far behind your water \
-            you are — never the underlying series, and never a health-sensitive \
+            short summary - how long you have been sitting, how far behind your water \
+            you are - never the underlying series, and never a health-sensitive \
             memory. You can refuse, and the app will keep working with less to go on.
 
             Tapping Start will bring up iOS's own permission sheet.

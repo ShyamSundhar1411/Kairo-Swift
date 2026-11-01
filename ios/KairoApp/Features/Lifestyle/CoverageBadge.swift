@@ -1,10 +1,10 @@
 import SwiftUI
 import KairoKit
 
-/// Member B — CF6. Renders what the evidence actually supports. The badge is not
+/// Member B - CF6. Renders what the evidence actually supports. The badge is not
 /// decoration: it is the same `AssertionForm` the Steward enforces on the text.
 ///
-/// `AssertionForm` is an ordered ladder, so the badge draws it as one — a word for
+/// `AssertionForm` is an ordered ladder, so the badge draws it as one - a word for
 /// the rung and five dots for how high that rung sits. "partial" on its own does
 /// not tell you it is one step short of a bare number; the dots do.
 struct CoverageBadge: View {
@@ -74,7 +74,7 @@ struct CoverageBadge: View {
 }
 
 /// A claim rendered at whatever strength the evidence permits. Views never print
-/// a bare number themselves — they ask the gate first.
+/// a bare number themselves - they ask the gate first.
 ///
 /// Each verdict gets its own card treatment, because "we softened this", "we
 /// rewrote this" and "we refused to say this" are different events and must not

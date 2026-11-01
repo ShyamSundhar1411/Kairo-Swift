@@ -1,9 +1,9 @@
-# SCRUM-93 — the checks that used to be run by hand, or not at all.
+# SCRUM-93 - the checks that used to be run by hand, or not at all.
 #
 # `scripts/verify.sh` has always existed and has always been somebody
 # remembering to type it. Worse, it covers KairoKit and the backend and stops
 # there, so `mobile/ios` and `mobile/watch` were never compiled by anything but
-# a person opening Xcode — the status table in the README said so in as many
+# a person opening Xcode - the status table in the README said so in as many
 # words. A target nothing builds is a target that is broken the moment nobody
 # is looking at it.
 #
@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   backend:
-    name: backend — agents, domain and API
+    name: backend - agents, domain and API
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
         run: python -m pytest -q
 
   kairokit:
-    name: KairoKit — domain and state machines
+    name: KairoKit - domain and state machines
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
         run: swift run -q kairo-uml audit
 
   apps:
-    name: iOS and watchOS — compile
+    name: iOS and watchOS - compile
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
       - name: Build the app and the watch app
         working-directory: mobile
         # Both schemes, explicitly. KairoWatch *is* a dependency of KairoApp and
-        # does get built and embedded at KairoApp.app/Watch/KairoWatch.app — but
+        # does get built and embedded at KairoApp.app/Watch/KairoWatch.app - but
         # for a long time it had no scheme of its own, so it could not be
         # selected, run or debugged, and nothing here would have noticed. "It is
         # in the bundle" and "somebody can run it" are different claims, and
@@ -143,7 +143,7 @@ jobs:
             echo "::endgroup::"
           fi
           if [ -f build.failed ]; then
-            echo "::error::xcodebuild failed — see the compiler output above"
+            echo "::error::xcodebuild failed - see the compiler output above"
             exit 1
           fi
 

@@ -254,7 +254,7 @@ struct MetricRing: View {
 /// The hero of the Today screen: one arc segment per interruption the day is
 /// allowed to contain, warm where it has been spent and dark where it has not.
 ///
-/// The ring itself is `SegmentedRing` from KairoLogo.swift — the same shape as
+/// The ring itself is `SegmentedRing` from KairoLogo.swift - the same shape as
 /// the app icon and the brand mark, at a different size. The dial is that shape
 /// with today's real numbers in it, which is the whole point of the mark.
 struct AttentionDial: View {
@@ -288,7 +288,7 @@ struct AttentionDial: View {
 
 struct StatTile: View {
     /// nil while the number is still being read. The tile keeps its size either
-    /// way, so nothing on the screen moves when the value lands — and an unknown
+    /// way, so nothing on the screen moves when the value lands - and an unknown
     /// reading is never drawn as a zero.
     let value: String?
     let caption: String
@@ -396,7 +396,7 @@ struct KairoSoftButtonStyle: ButtonStyle {
     }
 }
 
-/// No chrome of its own — just the press feedback, for buttons that already sit
+/// No chrome of its own - just the press feedback, for buttons that already sit
 /// inside a card.
 struct KairoPressButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -424,7 +424,7 @@ extension ButtonStyle where Self == KairoPressButtonStyle {
 
 // MARK: - Hero rows
 
-/// A fixed-width graphic beside a block of prose — and above it instead, once
+/// A fixed-width graphic beside a block of prose - and above it instead, once
 /// the prose needs the whole screen.
 ///
 /// Kairo's hero cards are all this shape: a dial, a ring or a loader on the

@@ -2,9 +2,9 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// Member B — CF6. The contribution is not a better sleep number; it is
+/// Member B - CF6. The contribution is not a better sleep number; it is
 /// governing when a number may be spoken at all.
-@Suite("Member B — evidence sufficiency")
+@Suite("Member B - evidence sufficiency")
 struct CoverageTests {
     let day = DateHelp.at(2026, 8, 25)
 
@@ -77,7 +77,7 @@ struct CoverageTests {
     }
 }
 
-/// NFR7 — the hole the multi-lens sweep found in the first draft of the report.
+/// NFR7 - the hole the multi-lens sweep found in the first draft of the report.
 @Suite("Safety gate honesty")
 struct SafetyGateTests {
     @Test("a red-flag pattern is blocked")

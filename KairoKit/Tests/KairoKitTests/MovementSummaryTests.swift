@@ -5,7 +5,7 @@ import Foundation
 // Every number in this file is synthetic and round on purpose, so the arithmetic
 // can be checked by eye rather than trusted. Buckets are the default five
 // minutes wide and anchored on the hour, sitting buckets carry 0 steps, and a
-// movement bucket carries 400 — an obviously-walking figure well clear of the
+// movement bucket carries 400 - an obviously-walking figure well clear of the
 // 25-step threshold rather than a plausible-looking one. None of it is a real
 // day. This project treats an unverified real-looking number as a defect.
 private enum Fixture {
@@ -28,9 +28,9 @@ private enum Fixture {
     }
 }
 
-/// Member B — CF5 / CF6. The unbroken sitting run, which used to be a constant
+/// Member B - CF5 / CF6. The unbroken sitting run, which used to be a constant
 /// 82 in the fake and a refusal in the live adapter.
-@Suite("Member B — sedentary run")
+@Suite("Member B - sedentary run")
 struct SedentaryRunTests {
 
     @Test("an hour of stillness plus three minutes of the open bucket is 63 minutes")
@@ -88,7 +88,7 @@ struct SedentaryRunTests {
     @Test("stale buckets give nil rather than a run that looks current")
     func staleDataIsNotACurrentRun() {
         // Last observation 09:00–09:05, asked about 12:00. Three hours are
-        // unobserved, so there is no current run to report — reporting five
+        // unobserved, so there is no current run to report - reporting five
         // minutes would read as "you have just sat down".
         let b = Fixture.buckets(from: Fixture.nineAM, count: 1)
         #expect(MovementSummary.unbrokenSedentaryMinutes(buckets: b, at: Fixture.past9(180)) == nil)
@@ -134,8 +134,8 @@ struct SedentaryRunTests {
     }
 }
 
-/// Member B — the wear proxy, whose only job is to be an honest denominator.
-@Suite("Member B — wear hours from sample density")
+/// Member B - the wear proxy, whose only job is to be an honest denominator.
+@Suite("Member B - wear hours from sample density")
 struct WearHoursTests {
 
     @Test("nobody has looked is nil, and looking and finding nothing is zero")
@@ -167,8 +167,8 @@ struct WearHoursTests {
     }
 }
 
-/// Member B — CF6. The movement coverage metric and the assertion ladder over it.
-@Suite("Member B — movement coverage")
+/// Member B - CF6. The movement coverage metric and the assertion ladder over it.
+@Suite("Member B - movement coverage")
 struct MovementCoverageTests {
 
     @Test("the metric is hours recorded over hours expected, in the movement domain")
@@ -190,7 +190,7 @@ struct MovementCoverageTests {
 
     @Test("a day worn round the clock clamps at full coverage")
     func overExpectationClamps() {
-        // 24 hours against a 16-hour expectation is 1.0, not 1.5 — a ring cannot
+        // 24 hours against a 16-hour expectation is 1.0, not 1.5 - a ring cannot
         // overflow and a fraction above one is not a thing.
         #expect(MovementSummary.coverageMetric(observedHours: 24).observedFraction == 1)
     }
@@ -229,7 +229,7 @@ struct MovementCoverageTests {
     func shortWindowTrap() {
         // The reason the absolute limit exists. Four hours of an expected four is
         // a coverage fraction of 1.0, which the coverage ladder alone would call
-        // an assertion — about a day it saw four hours of.
+        // an assertion - about a day it saw four hours of.
         #expect(MovementSummary.permittedForm(hoursWorn: 4, expectedHours: 4) == .range)
     }
 
@@ -256,8 +256,8 @@ struct MovementCoverageTests {
     }
 }
 
-/// Member B — what the day hands to the agents.
-@Suite("Member B — movement day")
+/// Member B - what the day hands to the agents.
+@Suite("Member B - movement day")
 struct MovementDayTests {
 
     @Test("an unmeasured sitting run stays nil in the observations")

@@ -3,7 +3,7 @@
 Written because somebody asked a question the code could not answer out loud:
 **does the watch authenticate?**
 
-It does not, and it does not need to — but "it does not need to" was an
+It does not, and it does not need to - but "it does not need to" was an
 assumption nobody had written down, which is the same condition the
 `stewardVetoed` edge was in. An assumption that is only in somebody's head is
 not a design decision, it is a thing that happens to be true until it isn't.
@@ -26,10 +26,10 @@ only `http://` strings in that directory are the DOCTYPE lines in two plists.
 So there is no missing watch credential. The phone is the sole client of the
 backend, and the watch is a remote control for the phone.
 
-## AS-15 — the assumption this rests on
+## AS-15 - the assumption this rests on
 
 > **AS-15** A watch paired to the phone by iOS is the primary user's own watch.
-> Anything it sends over WatchConnectivity — a water tap, a nudge response — is
+> Anything it sends over WatchConnectivity - a water tap, a nudge response - is
 > attributed to that user without the watch presenting a credential of its own.
 
 This is sound, and it is worth being explicit about *why* rather than waving at
@@ -61,7 +61,7 @@ established cryptographically, and the honest version of that work is one line
 of prose rather than a key in a second Keychain.
 
 It *is* an argument that the pairing is a trust boundary and should be visible
-to the person relying on it — which is why onboarding now has a page about it
+to the person relying on it - which is why onboarding now has a page about it
 rather than leaving the watch to appear, unexplained, in a status chip.
 
 ## Still open

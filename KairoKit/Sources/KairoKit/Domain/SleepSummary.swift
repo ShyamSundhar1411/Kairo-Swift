@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member B — CF4 / CF6. The sleep debt, computed instead of asserted.
+/// Member B - CF4 / CF6. The sleep debt, computed instead of asserted.
 ///
 /// The screen used to print "Your sleep debt is 2.4 hours." as a string literal
 /// and hand it to the evidence gate, which dutifully screened it as though it
@@ -8,8 +8,8 @@ import Foundation
 /// against: a number nobody measured, wearing the badge of one that was.
 ///
 /// So the debt lives here, as arithmetic over readings somebody else was handed.
-/// Every function in this file is pure over its arguments — no clock, no port,
-/// no `Date()` — for the same reason `EnergySummary` is: a week's debt is a
+/// Every function in this file is pure over its arguments - no clock, no port,
+/// no `Date()` - for the same reason `EnergySummary` is: a week's debt is a
 /// property of the nights that were observed, and asking the wall clock about it
 /// would only make it untestable.
 ///
@@ -27,7 +27,7 @@ import Foundation
 /// badly and somebody who charged their watch produce very different nights, and
 /// a `Double` cannot tell them apart.
 public struct NightReading: Sendable, Equatable, Identifiable {
-    /// The day the sleep is attributed to — by convention the morning the user
+    /// The day the sleep is attributed to - by convention the morning the user
     /// woke up, which is how Health itself buckets a night that crosses midnight.
     /// Callers should pass a start-of-day date; nothing here depends on that, but
     /// two readings for the same night must compare equal to be de-duplicated.
@@ -108,7 +108,7 @@ public struct SleepDebt: Sendable, Equatable {
 
     /// The coverage ring's input, so the ring stops being a constant.
     ///
-    /// `observedCount` is nights with a reading, not nights that went well —
+    /// `observedCount` is nights with a reading, not nights that went well -
     /// coverage is about how much of the week Kairo could see.
     public var coverageMetric: CoverageMetric {
         CoverageMetric(domain: .sleep,
@@ -131,7 +131,7 @@ public enum SleepSummary {
 
     /// The flat reference night. Eight hours is a population figure, not a
     /// personalised prescription, and every surface that draws it is required to
-    /// say so — `SleepView` calls it "a flat 8 h reference" for that reason.
+    /// say so - `SleepView` calls it "a flat 8 h reference" for that reason.
     /// A caller who knows this user's actual need should pass it.
     public static let defaultNightlyNeedHours: Double = 8
 
@@ -145,7 +145,7 @@ public enum SleepSummary {
     /// Debt over a window: the sum of each observed night's shortfall.
     ///
     /// `sum of max(0, need - slept)` across the nights that were **actually
-    /// observed**. Unobserved nights are excluded from the sum — not zero-filled,
+    /// observed**. Unobserved nights are excluded from the sum - not zero-filled,
     /// not interpolated, not carried forward from the night before. The exclusion
     /// is structural rather than a comment: `NightReading.shortfall(need:)`
     /// returns `nil` for an unobserved night and `compactMap` drops it, so there
@@ -161,7 +161,7 @@ public enum SleepSummary {
     ///   - expectedNights: the denominator for coverage. Defaults to the number
     ///     of readings supplied, which is right when the adapter emits a slot per
     ///     night. Pass it explicitly when the caller knows the window was longer
-    ///     than the readings it managed to build — `DayCoverage` describes
+    ///     than the readings it managed to build - `DayCoverage` describes
     ///     `expectedCount` as coming from this user's learned pattern, and this is
     ///     where that would enter.
     public static func debt(over readings: [NightReading],
@@ -197,17 +197,17 @@ public enum SleepSummary {
     /// This is the weaker of two independent limits, in the same shape as
     /// `EnergySummary.permittedForm(for:expectedMeals:)`:
     ///
-    /// 1. **Coverage** — what fraction of the window was visible. That ladder is
+    /// 1. **Coverage** - what fraction of the window was visible. That ladder is
     ///    already written, in `DayCoverage.permittedForm(for:)`, and is not
     ///    restated here: at the default 0.6 floor, five of seven nights is a
     ///    qualified claim and four of seven is only a range. Duplicating the
     ///    ladder would give the project two floors to retune.
-    /// 2. **Absolute nights observed** — how many nights there are, regardless of
+    /// 2. **Absolute nights observed** - how many nights there are, regardless of
     ///    the fraction. See `windowForm(observedNights:)`.
     ///
     /// The second limit exists because coverage alone can be fooled by a short
     /// window. Two nights out of two is a coverage fraction of 1.0, which the
-    /// ladder would happily call a bare assertion — but two nights is not a week,
+    /// ladder would happily call a bare assertion - but two nights is not a week,
     /// and "your sleep debt is 3 hours" said of a Monday and a Tuesday is a
     /// weekly claim built from a long weekend of ignorance.
     ///
@@ -231,17 +231,17 @@ public enum SleepSummary {
     /// with. A debt is an *accumulation*: unlike a day's kilojoule total, a
     /// single reading is not a small version of it, it is a different quantity.
     /// And because unobserved nights are excluded rather than zero-filled, the
-    /// sum is a lower bound whose looseness grows with every missing night — so
+    /// sum is a lower bound whose looseness grows with every missing night - so
     /// the ladder is really asking "how badly could this understate the week?"
     ///
     /// * `>= 6` → `.assertion`. Six or seven nights is enough of a week that this
     ///   limit stops objecting: the figure understates the week by at most one
     ///   night's shortfall. Note that six of seven still comes out `.qualified`
     ///   overall, because the coverage ladder reserves a bare number for a
-    ///   complete window — this limit yielding does not mean the gate opened.
+    ///   complete window - this limit yielding does not mean the gate opened.
     /// * `4...5` → `.qualified`. A majority of the week, but enough missing that
     ///   the number has to carry the caveat naming how many nights it is built
-    ///   from — "on the nights I could see". Four is the floor here because it is
+    ///   from - "on the nights I could see". Four is the floor here because it is
     ///   the first count that is more than half of a seven-night week.
     /// * `2...3` → `.range`. Two or three nights can establish that *some* debt
     ///   exists and roughly how large a typical night's shortfall is, but the
@@ -271,7 +271,7 @@ public enum SleepSummary {
     /// does the most work. Both fields stay `nil` where there is no reading:
     ///
     /// * `sleepHoursLastNight` is the *most recent night in the window*, and it
-    ///   is `nil` when that night is a hole — even if earlier nights were seen.
+    ///   is `nil` when that night is a hole - even if earlier nights were seen.
     ///   Reporting the last night Kairo happened to observe as "last night" is
     ///   exactly the interpolation the trust note promises not to do.
     /// * `sleepDebtHours` is `nil` when no night was observed, so a week Kairo

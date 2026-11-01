@@ -2,15 +2,15 @@ import Foundation
 import Testing
 @testable import KairoKit
 
-/// The fixture these replace raised three bids unconditionally — including a
+/// The fixture these replace raised three bids unconditionally - including a
 /// sitting run of 82 minutes on a phone that had measured nothing. The property
 /// worth pinning is the opposite one: no reading, no bid.
-@Suite("LocalBidSource — bids follow readings")
+@Suite("LocalBidSource - bids follow readings")
 struct LocalBidSourceTests {
     private let now = DateHelp.at(2026, 9, 10, 15, 40)
 
     /// Every call passes `DateHelp.calendar` because every fixture date is built
-    /// in it. The production default is `.current` and should stay that way —
+    /// in it. The production default is `.current` and should stay that way -
     /// the evening window belongs to the user's own day. But a Sydney fixture
     /// read in UTC puts 23:30 at 13:30, which is *before* a 21:30 window rather
     /// than past it, so `tooLateToWindDown` passed in Sydney and failed on the
@@ -72,7 +72,7 @@ struct LocalBidSourceTests {
     func bedtimeWindowFollowsTheDay() throws {
         // The bid this replaces had windowOpens pinned to 25 August 2026, so on
         // every other day it was raised and immediately suppressed as
-        // windowNotOpen — restraint the arbiter never actually exercised.
+        // windowNotOpen - restraint the arbiter never actually exercised.
         let obs = Observations(sleepHoursLastNight: 6.2)
         let bid = try #require(LocalBidSource.bids(at: now, observations: obs, calendar: DateHelp.calendar)
             .first { $0.nudgeClass == "bedtimePrep" })

@@ -4,7 +4,7 @@ import KairoKit
 /// What the demo's wrist is reporting right now, and who reported it.
 ///
 /// Demo mode only. Filled by the watch's Demo page when it streams, and by the
-/// phone's own `SimulatedWrist` when it does not — the phone stands down while
+/// phone's own `SimulatedWrist` when it does not - the phone stands down while
 /// the watch is talking, because the wrist is the better-placed source.
 struct LiveSignals: Equatable {
     enum Source: String, Equatable {

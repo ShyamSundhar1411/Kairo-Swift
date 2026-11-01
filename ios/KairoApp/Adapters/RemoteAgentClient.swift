@@ -4,7 +4,7 @@ import KairoKit
 /// Talks to the Kairo agent backend (../../backend, Python on LangGraph).
 ///
 /// The app works without it. When no server is configured, or the one configured
-/// cannot be reached, `AppModel` falls back to the on-device arbiter — which is
+/// cannot be reached, `AppModel` falls back to the on-device arbiter - which is
 /// what NFR9 asks for and what the cross-language conformance test keeps honest.
 ///
 /// The fallback is deliberately *visible*: `ConnectionState` is surfaced in the
@@ -58,7 +58,7 @@ public struct RemoteAgentClient: Sendable {
             public let tier: String
             public let id: String
             /// nil when the backend was never able to ask. `false` is the one
-            /// that predicts a failure — a model id that does not exist.
+            /// that predicts a failure - a model id that does not exist.
             public let validated: Bool?
         }
         public struct Skipped: Sendable, Identifiable {
@@ -78,7 +78,7 @@ public struct RemoteAgentClient: Sendable {
         public let considered: [Skipped]
 
         public var isShadowCosted: Bool { costing == "shadow" }
-        /// CF1 — the one provider fact that predicts a failure the user is about
+        /// CF1 - the one provider fact that predicts a failure the user is about
         /// to walk into, so the meal capture prompt can say so before the photo.
         public var visionIsUnavailable: Bool {
             models.first { $0.tier == "vision" }?.validated == false
@@ -100,7 +100,7 @@ public struct RemoteAgentClient: Sendable {
     /// sentence. Thrown rather than returned so the one caller that can show it
     /// cannot forget to.
     public struct Refusal: Error, LocalizedError, Sendable {
-        /// `diagnosis` when the payload carries one — nothing was bound at all —
+        /// `diagnosis` when the payload carries one - nothing was bound at all -
         /// and the backend's own `mode` line when a named provider was bound and
         /// answered nothing at bind time, which is the other way to get a 503.
         public let diagnosis: String
@@ -123,7 +123,7 @@ public struct RemoteAgentClient: Sendable {
     }
 
     /// The sentence to print. `diagnosis` is only present on the payload the
-    /// refusing app serves — the one that comes up when no provider could be
+    /// refusing app serves - the one that comes up when no provider could be
     /// bound at all. A backend that bound a named provider which then answered
     /// nothing also returns 503, and puts the same kind of sentence in `mode`.
     /// Printing whichever one exists is what makes the Today chip's "agents
@@ -212,7 +212,7 @@ public struct RemoteAgentClient: Sendable {
     ///
     /// A read, not a proposal. The app has no calendar, no thermometer and no
     /// time-zone watcher, so it has no disruption signal to offer
-    /// `/v1/contract/evaluate` that it would not have had to invent — and a
+    /// `/v1/contract/evaluate` that it would not have had to invent - and a
     /// fabricated signal is the one thing CF9's corroboration rule exists to
     /// refuse. What it can honestly do is ask what the roles concluded from the
     /// evidence they have, and put a `proposed` contract in front of the user.
@@ -234,7 +234,7 @@ public struct RemoteAgentClient: Sendable {
         return Self.contract(json["contract"] as? [String: Any])
     }
 
-    /// CF9 — consent, recorded where the agents can see it. Without this the
+    /// CF9 - consent, recorded where the agents can see it. Without this the
     /// accept button moved a copy of the contract on the phone and the backend
     /// kept proposing the same one on the next pass.
     public func respondToContract(userID: String, accept: Bool) async throws -> RemoteContract? {
@@ -269,7 +269,7 @@ public struct RemoteAgentClient: Sendable {
         public let recordID: String
         /// What each role actually said, not merely that it spoke.
         ///
-        /// This used to be `[String]` — `fragments.map { $0["agent"] }` — and the
+        /// This used to be `[String]` - `fragments.map { $0["agent"] }` - and the
         /// claim, the prompt version and the confidence on the same object were
         /// dropped on the floor. `WhyView`'s role timeline, which is the best
         /// thing in the app, then drew five rows of empty text at 100% confident
@@ -279,7 +279,7 @@ public struct RemoteAgentClient: Sendable {
         public let citedMemories: [(id: String, confidence: Double)]
         public let serviceTier: String
         public let safetyVerdict: String?
-        /// S7 — which backend produced *this* record, read off the sealed
+        /// S7 - which backend produced *this* record, read off the sealed
         /// artefact rather than off whatever is bound right now.
         public let provider: String?
         /// Caveat worth keeping in the type's name rather than in a comment on
@@ -317,7 +317,7 @@ public struct RemoteAgentClient: Sendable {
 
     /// `now` is the device's clock, not the server's. Receptivity depends on the
     /// hour, so judging it against whatever time the backend happens to be in
-    /// makes the score depend on a clock the user never sees — and makes a
+    /// makes the score depend on a clock the user never sees - and makes a
     /// recorded demo unreplayable, which is the whole reason the domain takes
     /// time through a port instead of reading it.
     public func arbitrate(userID: String, now: Date, schedule: NudgeSchedule,
@@ -411,7 +411,7 @@ public struct RemoteAgentClient: Sendable {
         public let failure: String?
         public let clarifyingQuestion: String?
         public let items: [FoodItem]
-        /// FR8.2 — drinks the analyst could actually see in the photograph.
+        /// FR8.2 - drinks the analyst could actually see in the photograph.
         /// Empty is the common and correct answer.
         public let drinks: [InferredDrink]
         public var totalKilojoules: Double {
@@ -420,7 +420,7 @@ public struct RemoteAgentClient: Sendable {
         }
         /// What a photograph suggests was drunk. **Offered, never logged.** The
         /// hydration number is the one the user taps to correct, and a volume
-        /// read off a picture is weaker evidence than a tap — writing it in
+        /// read off a picture is weaker evidence than a tap - writing it in
         /// without asking would put a guess somewhere the user believes they
         /// measured.
         public var inferredMillilitres: Int {
@@ -456,7 +456,7 @@ public struct RemoteAgentClient: Sendable {
                 confidence: raw["confidence"] as? Double ?? 0.5)
         }
         // FR8.2. The server has already dropped anything not visible or with no
-        // volume, so everything that arrives here is offerable — but a drink
+        // volume, so everything that arrives here is offerable - but a drink
         // with no name is not something to show somebody, so it is skipped.
         let drinks = (json["drinks"] as? [[String: Any]] ?? []).compactMap { raw -> InferredDrink? in
             guard let name = raw["name"] as? String,
@@ -521,7 +521,7 @@ public struct RemoteAgentClient: Sendable {
     }
 
     /// FR10.1. Material goes to the curator, which decides what is a fact. The
-    /// phone never writes a memory directly — that is the point of a curator.
+    /// phone never writes a memory directly - that is the point of a curator.
     public func extractMemories(userID: String, material: String,
                                 coverage: DayCoverage) async throws -> Extraction {
         let json = try await send(request(for: "v1/memories/extract", body: [
@@ -536,7 +536,66 @@ public struct RemoteAgentClient: Sendable {
             contradictions: (json["contradictions"] as? [Any])?.count ?? 0)
     }
 
-    // MARK: - SCRUM-21 — the primary user's profile
+    // MARK: - CF3 / UC2, the second opinion
+
+    /// One role's position in a disagreement.
+    public struct Position: Sendable, Identifiable {
+        public let agent: String
+        /// safety, accuracy or adherence. The objective is why the roles
+        /// disagree at all, so it is shown rather than inferred from the role.
+        public let objective: String
+        public let claim: String
+        public let evidence: [String]
+        public let confidence: Double
+        public let costIfWrong: Double
+        public var id: String { agent }
+    }
+
+    /// What the disagreement resolved to.
+    public struct SecondOpinion: Sendable {
+        /// converged, ruled, or referredToFounder.
+        public let outcome: String
+        public let positions: [Position]
+        public let winner: Position?
+        /// The written precedence policy, present when the Steward ruled.
+        public let policy: String?
+        public let reason: String?
+
+        public var wentToAHuman: Bool { outcome == "referredToFounder" }
+        public var wasRuled: Bool { outcome == "ruled" }
+    }
+
+    /// Ask two or more roles for a position on one topic, and resolve it.
+    ///
+    /// At least two roles, because a disagreement needs two sides; the backend
+    /// returns 400 otherwise and this does not paper over that.
+    public func dissent(userID: String, topic: String, roles: [String],
+                        coverage: DayCoverage) async throws -> SecondOpinion {
+        let body: [String: Any] = [
+            "userID": userID, "topic": topic, "roles": roles,
+            "coverage": Self.coveragePayload(coverage),
+        ]
+        let json = try await send(request(for: "v1/dissent", body: body))
+        func parse(_ raw: [String: Any]) -> Position? {
+            guard let agent = raw["agent"] as? String,
+                  let claim = raw["claim"] as? String else { return nil }
+            return Position(
+                agent: agent,
+                objective: raw["objective"] as? String ?? "",
+                claim: claim,
+                evidence: raw["evidence"] as? [String] ?? [],
+                confidence: raw["confidence"] as? Double ?? 0,
+                costIfWrong: raw["costIfWrong"] as? Double ?? 0)
+        }
+        return SecondOpinion(
+            outcome: json["outcome"] as? String ?? "unknown",
+            positions: (json["positions"] as? [[String: Any]] ?? []).compactMap(parse),
+            winner: (json["winner"] as? [String: Any]).flatMap(parse),
+            policy: json["policy"] as? String,
+            reason: json["reason"] as? String)
+    }
+
+    // MARK: - SCRUM-21 - the primary user's profile
 
     /// AS-3 puts one adult primary user behind a deployment, so this is one
     /// record and there is no account to pick.
@@ -573,7 +632,7 @@ public struct RemoteAgentClient: Sendable {
                 quietHoursEnd: json["quietHoursEnd"] as? Int ?? 7)
         }
 
-        /// Whether `at` falls inside the quiet window, which may wrap midnight —
+        /// Whether `at` falls inside the quiet window, which may wrap midnight -
         /// and usually does, because 22:00 to 07:00 is the normal answer. A
         /// comparison that assumed start < end would leave the whole night loud.
         public func isQuiet(at date: Date, calendar: Calendar = .current) -> Bool {
@@ -619,7 +678,7 @@ public struct RemoteAgentClient: Sendable {
             limits: json["limits"] as? String)
     }
 
-    /// CF7 — report what the user did with an interruption this service allocated.
+    /// CF7 - report what the user did with an interruption this service allocated.
     ///
     /// Sent as well as stored locally, not instead: the phone's log is what the
     /// on-device arbiter learns from when this service is unreachable, and the
@@ -657,8 +716,33 @@ public struct RemoteAgentClient: Sendable {
 
     /// CF10: forgetting has to happen where the agents read from, or the fact
     /// stays in every answer they give while the screen says it is gone.
-    public func forget(memoryID: String) async throws {
-        _ = try await send(request(for: "v1/memories/\(memoryID)", method: "DELETE"))
+    /// FR10.6. `neverAgain` is the difference between removing a fact and
+    /// deciding about it: without it the Curator re-extracts the same sentence
+    /// from the same material and the user deletes it again next week.
+    public func forget(memoryID: String, neverAgain: Bool = false) async throws {
+        _ = try await send(request(for: "v1/memories/\(memoryID)",
+                                   query: neverAgain ? ["neverAgain": "true"] : [:],
+                                   method: "DELETE"))
+    }
+
+    /// FR10.6. Everything the book shows, in one portable object.
+    public func exportMemories() async throws -> Data {
+        let json = try await send(request(for: "v1/memories/export"))
+        return try JSONSerialization.data(withJSONObject: json,
+                                          options: [.prettyPrinted, .sortedKeys])
+    }
+
+    /// The facts the user has asked never to be remembered.
+    public func neverRemembered() async throws -> [String] {
+        let json = try await send(request(for: "v1/memories/never-remember"))
+        return json["neverRemember"] as? [String] ?? []
+    }
+
+    /// Lift a suppression, so a fact the user changed their mind about can be
+    /// learned again.
+    public func allowAgain(text: String) async throws {
+        _ = try await send(request(for: "v1/memories/never-remember",
+                                   body: ["text": text, "allowAgain": true]))
     }
 
     static func memory(_ raw: [String: Any], at now: Date) -> MemoryItem? {
@@ -712,7 +796,7 @@ public struct RemoteAgentClient: Sendable {
 
     /// Emits the offset, not "Z".
     ///
-    /// Receptivity is judged on the hour of the user's day — a memory here says
+    /// Receptivity is judged on the hour of the user's day - a memory here says
     /// "ignores nudges before 9am". Sending 15:40 Sydney as 05:40Z hands the
     /// backend an hour of 5, and the roles correctly decline to bid at what they
     /// are told is dawn. The offset is the part that carries the meaning.
@@ -771,7 +855,7 @@ public struct RemoteAgentClient: Sendable {
 }
 
 private extension Observations {
-    /// Only derived readings cross the boundary — never a raw HealthKit sample.
+    /// Only derived readings cross the boundary - never a raw HealthKit sample.
     var payload: [String: Any] {
         var out: [String: Any] = [:]
         if let v = sedentaryMinutes { out["sedentaryMinutes"] = v }

@@ -1,4 +1,4 @@
-# XcodeGen spec — generates Kairo.xcodeproj with the iOS and watchOS targets,
+# XcodeGen spec - generates Kairo.xcodeproj with the iOS and watchOS targets,
 # both linking the local KairoKit package.
 #
 #   brew install xcodegen
@@ -9,8 +9,8 @@
 # into the project literally.
 #
 # Info.plist and the entitlements file are GENERATED from this spec, so every
-# key lives here. Editing ios/KairoApp/Resources/Info.plist by hand — or letting
-# Xcode edit it through the capabilities editor — is overwritten on the next
+# key lives here. Editing ios/KairoApp/Resources/Info.plist by hand - or letting
+# Xcode edit it through the capabilities editor - is overwritten on the next
 # `xcodegen generate`. That is how the HealthKit and camera usage strings were
 # lost once already.
 name: Kairo
@@ -40,7 +40,7 @@ targets:
       - target: KairoWatch
     # The UI tests run inside this scheme, so `xcodebuild test -scheme KairoApp`
     # exercises the screens. They exist because this machine has no Simulator.app
-    # — there is no window to click — and the screens that matter most here are
+    # - there is no window to click - and the screens that matter most here are
     # two taps deep.
     scheme:
       testTargets:
@@ -53,7 +53,7 @@ targets:
         CFBundleVersion: "1"
         # Where a fresh install looks for the backend, before anybody has typed
         # anything. Loopback by default, which is right in the simulator and
-        # wrong on a phone — set KAIRO_BACKEND_URL in mobile/signing.env to your
+        # wrong on a phone - set KAIRO_BACKEND_URL in mobile/signing.env to your
         # Mac's LAN address and regenerate, and a device build points at it with
         # nothing entered on the device. A stored address still wins, so this
         # only ever supplies the first value.
@@ -81,7 +81,7 @@ targets:
         # the data is used for, in the user's words, not the system's.
         NSHealthShareUsageDescription: >-
           Kairo reads your sleep, movement and heart data so it can tell you when you
-          are actually short on rest — and stay quiet when it cannot see enough to say
+          are actually short on rest - and stay quiet when it cannot see enough to say
           anything useful. This data stays on your iPhone.
         NSHealthUpdateUsageDescription: >-
           Kairo writes the water and mindful minutes you log here back to Health so
@@ -106,8 +106,8 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         # com.apple.developer.healthkit.access is deliberately absent. That key is
-        # HealthKit Access (Verifiable Health Records) — clinical records over
-        # FHIR — which a personal Apple ID cannot be granted, so requesting it
+        # HealthKit Access (Verifiable Health Records) - clinical records over
+        # FHIR - which a personal Apple ID cannot be granted, so requesting it
         # fails every device build with a provisioning error. Kairo does not read
         # clinical records: the requirement document rules them out, because they
         # need the user's provider to be a supported institution and in Australia
@@ -128,8 +128,8 @@ targets:
     type: application
     platform: watchOS
     # XcodeGen only emits a scheme for a target that asks for one. Without this
-    # the watch app built and embedded correctly — it is in
-    # KairoApp.app/Watch/KairoWatch.app — and was still impossible to select,
+    # the watch app built and embedded correctly - it is in
+    # KairoApp.app/Watch/KairoWatch.app - and was still impossible to select,
     # run or debug on its own, because Xcode's scheme list had no entry for it.
     # "It is in the bundle" and "you can run it" are different claims.
     scheme: {}
@@ -157,7 +157,7 @@ targets:
         # stand data are recorded on this device; reading them here is what lets
         # the sitting page show a real number instead of a zero.
         #
-        # As on the phone, no healthkit.access key — see the note above.
+        # As on the phone, no healthkit.access key - see the note above.
         com.apple.developer.healthkit: true
     settings:
       base:

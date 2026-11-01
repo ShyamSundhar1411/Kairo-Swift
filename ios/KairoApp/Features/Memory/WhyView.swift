@@ -1,9 +1,9 @@
 import SwiftUI
 import KairoKit
 
-/// Member D — CF12. The direct answer to "are your five roles just five prompts?".
+/// Member D - CF12. The direct answer to "are your five roles just five prompts?".
 ///
-/// The record is append-only, so this screen never edits it — it lays out what
+/// The record is append-only, so this screen never edits it - it lays out what
 /// each role actually contributed, what Kairo believed about the user at the
 /// moment it decided, and what it chose not to say. Five roles are drawn as five
 /// visibly different sources, because that is the claim being audited.
@@ -25,7 +25,7 @@ struct WhyView: View {
                 if !record.annotations.isEmpty { corrections }
                 if isBare { bareNote }
 
-                TrustNote(text: "This record cannot be edited — corrections are appended. "
+                TrustNote(text: "This record cannot be edited - corrections are appended. "
                           + "Generation is not deterministic, so this explains the inputs "
                           + "and the routing, not a replay.",
                           icon: "doc.text.magnifyingglass")
@@ -51,7 +51,7 @@ struct WhyView: View {
     // MARK: - Summary
 
     /// The subject of this screen is what was decided. It used to be `record.id`
-    /// at 22pt monospace — a database key as the headline of the one screen
+    /// at 22pt monospace - a database key as the headline of the one screen
     /// whose entire job is to be readable by the person it is about.
     private var summary: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -78,7 +78,7 @@ struct WhyView: View {
 
             PillWrap {
                 if record.isSealed {
-                    Pill(text: "sealed — cannot be edited", icon: "lock.fill", tint: Kairo.violet)
+                    Pill(text: "sealed - cannot be edited", icon: "lock.fill", tint: Kairo.violet)
                 } else {
                     Pill(text: "still being assembled", icon: "pencil", tint: Kairo.amber)
                 }
@@ -90,7 +90,7 @@ struct WhyView: View {
 
             if let tier = record.serviceTier {
                 // The tier was drawn as `tier healthy` with a cpu glyph and no
-                // explanation — a rung on the cost ladder, printed at a user
+                // explanation - a rung on the cost ladder, printed at a user
                 // who has never been told there is a ladder. Either it is
                 // explained or it goes; this explains it in one line.
                 Text(tierExplanation(tier))
@@ -119,7 +119,7 @@ struct WhyView: View {
 
     /// The six-member safety enum, in words. `nothingToScreen` and `unscreened`
     /// are not passes: one means no message existed to judge, the other that no
-    /// Steward was bound — and showing either as a green tick would be the app
+    /// Steward was bound - and showing either as a green tick would be the app
     /// claiming a safety result nobody produced.
     private func safetyWords(_ verdict: String) -> String {
         switch verdict {
@@ -156,7 +156,7 @@ struct WhyView: View {
     }
 
     private func tierExplanation(_ tier: String) -> String {
-        "Decided at the \(tier) rung of the cost ladder — how much reasoning Kairo "
+        "Decided at the \(tier) rung of the cost ladder - how much reasoning Kairo "
         + "is allowed to spend this month, which drops as the ceiling is approached. "
         + "Safety screening and your memory never degrade."
     }
@@ -168,7 +168,7 @@ struct WhyView: View {
                 .foregroundStyle(Kairo.inkSoft)
                 .frame(width: 38, height: 38)
                 .background(Circle().fill(Kairo.hairline.opacity(0.06)))
-            Text("Nothing was recorded against this decision — no role contributed, "
+            Text("Nothing was recorded against this decision - no role contributed, "
                  + "nothing was cited, and no bid was turned down.")
                 .font(.subheadline)
                 .foregroundStyle(Kairo.inkSoft)
@@ -356,7 +356,7 @@ private struct CitationRow: View {
 
 /// Reads the same sentence the Today ledger reads, because it is the same
 /// decision. Both go through `SuppressionCopy`, which is the only place in the
-/// app that turns a `SuppressionReason` into English — there used to be two
+/// app that turns a `SuppressionReason` into English - there used to be two
 /// copies of that switch and they had already drifted.
 private struct RejectedRow: View {
     let alternative: RejectedAlternative

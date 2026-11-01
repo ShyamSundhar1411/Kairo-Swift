@@ -103,8 +103,8 @@ public extension Lifecycle {
     /// Rebuilds an object that is already in `target` by walking the declared
     /// edges to it, shortest route first.
     ///
-    /// Needed wherever a state arrives from outside — the backend's memory book,
-    /// a decoded record — because the alternative is an initialiser that simply
+    /// Needed wherever a state arrives from outside - the backend's memory book,
+    /// a decoded record - because the alternative is an initialiser that simply
     /// assigns the state, and that is a hole straight through the machine: a
     /// field the API can set to anything is not a lifecycle. Going through
     /// `transition(on:to:at:)` means a state the diagram cannot reach is
@@ -112,7 +112,7 @@ public extension Lifecycle {
     ///
     /// The history this produces is synthetic and says so: the events are the
     /// ones the machine declares, not ones this device witnessed. That is the
-    /// honest reading — the device did not witness them, the server did.
+    /// honest reading - the device did not witness them, the server did.
     ///
     /// Returns nil when `target` is unreachable from `S.initial`.
     static func replaying(to target: S, at now: Date) -> Lifecycle<S>? {

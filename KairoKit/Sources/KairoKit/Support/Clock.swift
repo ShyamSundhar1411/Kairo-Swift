@@ -33,7 +33,7 @@ public enum DateHelp {
     /// on the first CI run, in UTC, because `DateHelp.at(…, 23, 30)` is 13:30 to
     /// a runner and 13:30 is inside an evening window that 23:30 is past.
     ///
-    /// The production default stays `.current` — the evening window belongs to
+    /// The production default stays `.current` - the evening window belongs to
     /// the user's own day, not to ours. It is the *tests* that have to say which
     /// day they mean, so they pass this wherever they pass a `DateHelp` date.
     public static let calendar: Calendar = {
@@ -42,7 +42,7 @@ public enum DateHelp {
         return cal
     }()
 
-    /// `DateHelp.at(2026, 8, 25, 15, 40)` — used to pin the object-diagram scenario.
+    /// `DateHelp.at(2026, 8, 25, 15, 40)` - used to pin the object-diagram scenario.
     public static func at(_ y: Int, _ mo: Int, _ d: Int, _ h: Int = 0, _ mi: Int = 0) -> Date {
         var c = DateComponents()
         c.year = y; c.month = mo; c.day = d; c.hour = h; c.minute = mi

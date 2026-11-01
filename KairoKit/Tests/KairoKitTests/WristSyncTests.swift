@@ -7,7 +7,7 @@ import Foundation
 /// receiver at all, and a glass of water logged on the wrist silently went
 /// nowhere. Now there is one envelope, and it is worth proving both directions of
 /// it survive the trip.
-@Suite("Wrist sync — the wire format")
+@Suite("Wrist sync - the wire format")
 struct WristSyncEnvelopeTests {
     /// ISO-8601 keeps whole seconds, not sub-second precision, so a date that
     /// survives the round trip lands within a second of where it started rather
@@ -116,7 +116,7 @@ struct WristSyncEnvelopeTests {
         #expect(throws: WristSync.SyncError.wrongVersion(nil)) {
             try WristSync.unwrap(WristEvent.self, from: message)
         }
-        // Not ours at all — WatchConnectivity delivers whatever was sent.
+        // Not ours at all - WatchConnectivity delivers whatever was sent.
         #expect(throws: WristSync.SyncError.wrongVersion(nil)) {
             try WristSync.unwrap(WristEvent.self, from: ["something": "else"])
         }
@@ -133,10 +133,10 @@ struct WristSyncEnvelopeTests {
     }
 }
 
-/// CF8 — hydration as a log of taps rather than a running integer. The reason it
+/// CF8 - hydration as a log of taps rather than a running integer. The reason it
 /// is a log is that WatchConnectivity re-delivers queued messages, so the total
 /// has to be able to recognise a glass it has already counted.
-@Suite("Wrist sync — the day's water")
+@Suite("Wrist sync - the day's water")
 struct HydrationLogTests {
     let dayStart = DateHelp.at(2026, 9, 7, 0, 0)
 
@@ -154,7 +154,7 @@ struct HydrationLogTests {
         #expect(first)
         #expect(log.totalMillilitres == 350)
 
-        // The same tap arriving a second time — the watch re-sends its outbox on
+        // The same tap arriving a second time - the watch re-sends its outbox on
         // reconnect, deliberately, because a lost sip is worse than a repeat one.
         let again = log.record(sip("sip-1", 350))
         #expect(again == false)
@@ -233,11 +233,11 @@ struct HydrationLogTests {
 
 /// The consolidated digest the wrist reads.
 ///
-/// The whole point of `DayLog` is that the phone composes every line — it is the
+/// The whole point of `DayLog` is that the phone composes every line - it is the
 /// only side that knows where a figure came from and what the evidence gate lets
 /// it be called. So these tests are about two things: what survives the trip
 /// verbatim, and what the initialiser is allowed to throw away.
-@Suite("Wrist sync — the day's log")
+@Suite("Wrist sync - the day's log")
 struct DayLogTests {
     /// ISO-8601 keeps whole seconds, so a date lands within a second of where it
     /// started rather than exactly on it.
@@ -301,7 +301,7 @@ struct DayLogTests {
     func logKeepsNilOptionalsDistinctFromZero() throws {
         // This is what the phone genuinely sends today: it holds no meal ledger,
         // so both energy figures are absent. Nothing on the wire may turn that
-        // into a confident 0 — a day nobody logged is not a day without food.
+        // into a confident 0 - a day nobody logged is not a day without food.
         let unmeasured = DayLog(generatedAt: t,
                                 entries: [entry("sip-1", minutesAgo: 5)],
                                 waterMillilitres: 350, waterTargetMillilitres: 2_000,
@@ -340,7 +340,7 @@ struct DayLogTests {
         let log = DayLog(generatedAt: t, entries: entries.shuffled())
 
         #expect(log.entries.count == DayLog.entryLimit)
-        // The newest survived, and it is first — the cap must never be a plain
+        // The newest survived, and it is first - the cap must never be a plain
         // prefix of whatever order the caller happened to build.
         #expect(log.entries.first?.id == "sip-0")
         // What was dropped is the oldest end, not an arbitrary slice.
@@ -354,7 +354,7 @@ struct DayLogTests {
     @Test("an empty digest is a real answer about the day, not a missing one")
     func isEmptyReflectsEntriesOnly() {
         // The watch draws two different screens for these, and the distinction it
-        // needs is "the phone sent nothing" — a nil `DayLog` — versus "the phone
+        // needs is "the phone sent nothing" - a nil `DayLog` - versus "the phone
         // sent a day with nothing in it", which is this.
         #expect(DayLog(generatedAt: t).isEmpty)
 

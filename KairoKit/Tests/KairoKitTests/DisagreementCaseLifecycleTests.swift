@@ -2,14 +2,14 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// Figure 34 (UC2) — the states that existed only as a diagram.
+/// Figure 34 (UC2) - the states that existed only as a diagram.
 ///
 /// `resolve()` used to answer identically whether it was called on a case that
 /// had been through the procedure or one created a line earlier, so the
 /// rebuttal round the diagram counts was a number nobody could be stopped from
 /// skipping. The backend's `test_the_case_walks_the_drawn_path_rather_than_short_circuiting`
 /// pins the same walk.
-@Suite("Member A — disagreement case lifecycle")
+@Suite("Member A - disagreement case lifecycle")
 struct DisagreementCaseLifecycleTests {
 
     private func position(_ agent: AgentID, _ objective: Objective) -> Position {
@@ -41,7 +41,7 @@ struct DisagreementCaseLifecycleTests {
 
     @Test("an operator ruling is only reachable after escalation")
     func operatorRulingNeedsEscalation() throws {
-        // AG-5 — the human's answer outranks every AI position. Nothing may
+        // AG-5 - the human's answer outranks every AI position. Nothing may
         // record one on a case no human was ever shown.
         let p = position(.coach, .adherence)
         var neverEscalated = DisagreementCase(id: "d3", topic: "portion size",

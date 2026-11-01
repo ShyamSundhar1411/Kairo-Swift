@@ -8,7 +8,7 @@ import Foundation
 // WHY THIS SCRIPT EXISTS
 //
 // The offline demo needs numbers, and the one thing this app must never do is
-// present an unverified figure as a measurement — that is the failure the whole
+// present an unverified figure as a measurement - that is the failure the whole
 // evidence gate is built to refuse. So nobody hand-types kilojoules from memory
 // into this repository. Every row in the seed file is fetched from a published
 // source and carries the barcode it came from, so any number on screen can be
@@ -28,7 +28,7 @@ import Foundation
 //
 // This duplicates a little of OpenFoodFactsRepository's parsing. That is
 // deliberate: this is a build-time tool that cannot import the app target, and
-// the alternative — putting URLSession into KairoKit to share the code — would
+// the alternative - putting URLSession into KairoKit to share the code - would
 // put the network into the domain layer.
 
 // MARK: - Candidates
@@ -61,7 +61,7 @@ let candidates: [String] = [
     "5000159461122", // Snickers
     "0038000138416", // Pringles Original
     "9319133333574", // Carman's Super Berry muesli bar
-    "8000500037560", // Kinder Bueno — carries no energy figure; kept on the list
+    "8000500037560", // Kinder Bueno - carries no energy figure; kept on the list
                      // on purpose so the skip path is exercised on every run.
 
     // Drinks
@@ -142,7 +142,7 @@ func number(_ any: Any?) -> Double? {
     }
 }
 
-/// Grams out of a free-text serving declaration — and only when it is
+/// Grams out of a free-text serving declaration - and only when it is
 /// unambiguously grams. "30ml" is not converted, because millilitres become
 /// grams only if you know the density, and we do not.
 func servingGrams(_ text: String?) -> Double? {
@@ -154,8 +154,8 @@ func servingGrams(_ text: String?) -> Double? {
     for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
         let value = Double(ns.substring(with: m.range(at: 1)).replacingOccurrences(of: ",", with: "."))
         let unit = ns.substring(with: m.range(at: 2)).lowercased()
-        // Only masses. Every other unit is either a volume — "1 portion
-        // (330 ml)" — or something we would have to guess a density for.
+        // Only masses. Every other unit is either a volume - "1 portion
+        // (330 ml)" - or something we would have to guess a density for.
         if ["g", "gram", "grams", "gramme", "grammes"].contains(unit), let value {
             grams.append(value)
         }
@@ -179,7 +179,7 @@ func fetch(_ barcode: String) async -> Result<Row, Skip> {
     var data = Data()
     // Open Food Facts throttles the product API (their guidance is well under
     // 100 calls a minute) and answers 429 once you cross it. A 429 says "later",
-    // not "no such product", so it is retried rather than counted as a miss —
+    // not "no such product", so it is retried rather than counted as a miss -
     // otherwise a rate limit would silently shrink the seed file.
     var attempt = 0
     while true {
@@ -290,8 +290,8 @@ guard !rows.isEmpty else {
 rows.sort { $0.barcode < $1.barcode }
 
 // The file is written by hand rather than through JSONSerialization because
-// JSONSerialization prints a Double at full binary precision — a published 78.57
-// comes out as 78.569999999999993 — and a seed file that a marker is expected to
+// JSONSerialization prints a Double at full binary precision - a published 78.57
+// comes out as 78.569999999999993 - and a seed file that a marker is expected to
 // read against a label should show the figure the label shows. Two decimals is
 // already more precision than any nutrition panel carries.
 func jsonString(_ s: String) -> String {
@@ -353,7 +353,7 @@ try Data(text.utf8).write(to: outputURL)
 // an empty larder and nobody will know why until the demo.
 guard let reread = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
       (reread["foods"] as? [[String: Any]])?.count == rows.count else {
-    FileHandle.standardError.write(Data("\nwrote invalid JSON — refusing to claim success\n".utf8))
+    FileHandle.standardError.write(Data("\nwrote invalid JSON - refusing to claim success\n".utf8))
     exit(1)
 }
 
@@ -368,5 +368,5 @@ wrote \(outputURL.path)
 """)
 if !skipped.isEmpty {
     print("\nskipped:")
-    for (barcode, skip) in skipped { print("  \(barcode) — \(skip.reason)") }
+    for (barcode, skip) in skipped { print("  \(barcode) - \(skip.reason)") }
 }

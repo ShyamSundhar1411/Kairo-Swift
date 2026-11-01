@@ -1,6 +1,6 @@
 import Foundation
 
-/// NFR10 / SCRUM-19 — making the 3% daily battery budget something that can be
+/// NFR10 / SCRUM-19 - making the 3% daily battery budget something that can be
 /// checked rather than asserted.
 ///
 /// **This does not measure battery, and nothing in this repository can.**
@@ -13,11 +13,11 @@ import Foundation
 ///
 /// The three counted events are the ones the companion actually initiates:
 ///
-/// - **wakes** — foreground sessions and background refreshes. The dominant
+/// - **wakes** - foreground sessions and background refreshes. The dominant
 ///   cost on a watch, because each one spins up the display and the radio.
-/// - **transmissions** — WatchConnectivity sends. The outbox re-sends on
+/// - **transmissions** - WatchConnectivity sends. The outbox re-sends on
 ///   reconnect, so this is the number that grows when the link is flapping.
-/// - **haptics** — cheap individually and worth counting because FR8.5 added
+/// - **haptics** - cheap individually and worth counting because FR8.5 added
 ///   some, and "we added milestone haptics" is exactly the kind of change that
 ///   should have to show its cost.
 ///
@@ -89,7 +89,7 @@ public struct WatchEnergyBudget: Sendable, Equatable, Codable {
         let state = withinBudget
             ? "within the assumed daily budget"
             : "over budget on " + exceeded.map(\.rawValue).joined(separator: ", ")
-        return "\(wakes) wakes, \(transmissions) sends, \(haptics) haptics — \(state). "
+        return "\(wakes) wakes, \(transmissions) sends, \(haptics) haptics - \(state). "
              + "Activity counts, not a battery measurement (NFR10 needs Instruments)."
     }
 }

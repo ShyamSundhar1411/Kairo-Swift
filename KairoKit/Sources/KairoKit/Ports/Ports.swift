@@ -18,7 +18,7 @@ public enum AgentID: String, Sendable, CaseIterable {
 /// What is actually happening right now.
 ///
 /// Without this an agent is asked to bid for the user's attention while being
-/// told only the date and the data coverage, and correctly answers "nothing" —
+/// told only the date and the data coverage, and correctly answers "nothing" -
 /// which looks like the arbiter is broken when it is the prompt that is empty.
 public struct Observations: Sendable {
     public var sedentaryMinutes: Int?
@@ -73,14 +73,14 @@ public struct Observations: Sendable {
         if let debt = sleepDebtHours { out.append(String(format: "sleep debt: %.1f hours", debt)) }
         // Stated as absent, like sitting and water above, rather than omitted.
         // Omitted, the Nutrition role saw no line about food at all and filled the
-        // silence — "No meals logged today" is a claim about somebody's day that
+        // silence - "No meals logged today" is a claim about somebody's day that
         // nothing here measured. Absent and zero have to stay distinguishable in
         // every domain, not just the three that happened to be written that way.
         if let kj = kilojoulesLogged {
             let target = kilojoulesTarget.map { " against a \(Int($0)) kJ target" } ?? ""
             out.append("energy logged: \(Int(kj)) kJ\(target)")
         } else {
-            out.append("energy logged: not measured — this service cannot see the meal log")
+            out.append("energy logged: not measured - this service cannot see the meal log")
         }
         if let mins = minutesSinceLastNudge { out.append("last interrupted: \(mins) minutes ago") }
         if let meeting = inMeeting, meeting { out.append("currently in a calendar event") }

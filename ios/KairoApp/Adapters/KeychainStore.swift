@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// NFR6, the at-rest half — for the one value in this app that is a credential.
+/// NFR6, the at-rest half - for the one value in this app that is a credential.
 ///
 /// The backend token was in `UserDefaults`, which is a plist in the app
 /// container: readable from a filesystem dump, included in an unencrypted
@@ -22,12 +22,12 @@ import Security
 ///   carries a credential somewhere nobody meant it to go.
 ///
 /// Deliberately not generic. A "KeychainWrapper" that stores `Codable` anything
-/// invites the Memory Book into the keychain, which is the wrong store for it —
+/// invites the Memory Book into the keychain, which is the wrong store for it -
 /// that belongs in a protected file, which is what `FileProtection` is for.
 enum KeychainStore {
 
-    /// Namespaced to the bundle so a second build of Kairo on the same phone —
-    /// which `KAIRO_BUNDLE_SUFFIX` exists to allow — does not read the first
+    /// Namespaced to the bundle so a second build of Kairo on the same phone -
+    /// which `KAIRO_BUNDLE_SUFFIX` exists to allow - does not read the first
     /// one's token.
     private static var service: String {
         (Bundle.main.bundleIdentifier ?? "au.edu.sydney.elec5620.kairo") + ".credentials"
@@ -80,7 +80,7 @@ enum KeychainStore {
     }
 }
 
-/// SCRUM-21 — the profile, kept on the device as well as on the server.
+/// SCRUM-21 - the profile, kept on the device as well as on the server.
 ///
 /// `UserDefaults` rather than the Keychain, deliberately: an interruption
 /// ceiling and a quiet window are preferences, not credentials, and putting
@@ -89,7 +89,7 @@ enum KeychainStore {
 ///
 /// It exists at all because AG-1's ceiling is a grant the user made, NFR9 says
 /// the app keeps working with no network, and a preference that lives only on a
-/// backend vanishes the moment the backend does — which is precisely when a
+/// backend vanishes the moment the backend does - which is precisely when a
 /// ceiling most needs to be respected.
 enum ProfileStore {
     private static let key = "kairo.profile"

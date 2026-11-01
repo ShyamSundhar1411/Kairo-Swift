@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Both apps link `KairoKit`, so this is the only place the message shape
 /// exists. It previously lived as bare string literals on the watch side with
-/// no counterpart on the phone at all — no `WCSession`, no receiver — which is
+/// no counterpart on the phone at all - no `WCSession`, no receiver - which is
 /// why a glass of water logged on the wrist went nowhere and the watch could
 /// never be shown a nudge the arbiter had actually allocated.
 ///
@@ -14,11 +14,11 @@ import Foundation
 // MARK: - Watch to phone
 
 public enum WristEvent: Codable, Sendable, Equatable {
-    /// CF8 — one tap on the wrist. The phone owns the day's tally; this is a
+    /// CF8 - one tap on the wrist. The phone owns the day's tally; this is a
     /// delta, not a total, so a message arriving late or twice can be reasoned
     /// about rather than silently overwriting the day.
     case waterLogged(millilitres: Int, at: Date, id: String)
-    /// CF7 — what the user did with an interruption. The receptivity model
+    /// CF7 - what the user did with an interruption. The receptivity model
     /// learns from these, so losing one is worse than delivering it late.
     case nudgeOutcome(bidID: String, outcome: String, at: Date)
     /// Demo mode only: readings a *simulated* wrist produced, not a sensor.
@@ -82,7 +82,7 @@ public struct DayLog: Codable, Sendable, Equatable {
         public let kind: Kind
         public let at: Date
         public let headline: String
-        /// The figure, already formatted with its unit — "350 ml", "1,180 kJ".
+        /// The figure, already formatted with its unit - "350 ml", "1,180 kJ".
         /// nil when the entry has no number, which is not the same as zero.
         public let detail: String?
         /// What that figure is worth, 0...1. Travels so the wrist can show a
@@ -101,7 +101,7 @@ public struct DayLog: Codable, Sendable, Equatable {
     }
 
     public var generatedAt: Date
-    /// Newest first, and deliberately capped — this crosses a constrained
+    /// Newest first, and deliberately capped - this crosses a constrained
     /// transport to a screen that can only show a handful.
     public var entries: [Entry]
     public var waterMillilitres: Int
@@ -198,7 +198,7 @@ public enum WristSync {
 
 // MARK: - The day's water
 
-/// CF8 — hydration as a log of what was actually tapped, not a running integer.
+/// CF8 - hydration as a log of what was actually tapped, not a running integer.
 ///
 /// Kept as entries so a duplicate delivery can be discarded by id: WatchConnectivity
 /// will re-deliver a queued message, and a total that double-counts is worse than
@@ -207,7 +207,7 @@ public struct HydrationLog: Sendable, Equatable {
     /// Where a sip's number came from (FR8.1, FR8.2).
     ///
     /// A tap is the user stating a fact. A volume read off a photograph is the
-    /// system's estimate that the user then accepted — weaker evidence, and the
+    /// system's estimate that the user then accepted - weaker evidence, and the
     /// log has to be able to say which is which. Without this the two are one
     /// number and "where did 250 ml come from?" has no answer.
     public enum Source: String, Codable, Sendable, CaseIterable {
@@ -223,8 +223,8 @@ public struct HydrationLog: Sendable, Equatable {
         public let id: String
         public let at: Date
         public let millilitres: Int
-        /// Defaulted so a sip decoded from a log written before this existed —
-        /// or arriving from a watch that has not been updated — reads as the
+        /// Defaulted so a sip decoded from a log written before this existed -
+        /// or arriving from a watch that has not been updated - reads as the
         /// tap it was, rather than failing to decode.
         public var source: Source = .tap
 
@@ -276,7 +276,7 @@ public struct HydrationLog: Sendable, Equatable {
 
     /// What the evidence gate is allowed to see. `observedCount` is the number of
     /// times the user actually logged something, because coverage is about how
-    /// much of the day Kairo could see — not how big the number got.
+    /// much of the day Kairo could see - not how big the number got.
     public func coverageMetric(expectedSips: Int = 5) -> CoverageMetric {
         CoverageMetric(domain: .hydration,
                        observedCount: sips.count,
@@ -292,7 +292,7 @@ public struct HydrationLog: Sendable, Equatable {
 /// Collapsing them is how a setup screen tells somebody to go and buy a device
 /// they are already wearing.
 public enum WristLink: String, Sendable, CaseIterable {
-    /// No WatchConnectivity on this device at all — an iPad, or a simulator
+    /// No WatchConnectivity on this device at all - an iPad, or a simulator
     /// with no paired watch runtime.
     case unsupported
     /// The session has not finished activating. Transient, and not a failure.
@@ -301,7 +301,7 @@ public enum WristLink: String, Sendable, CaseIterable {
     case noWatch
     /// A watch is paired, and Kairo is not installed on it.
     case appNotInstalled
-    /// Installed, but not reachable this second — out of range, or asleep.
+    /// Installed, but not reachable this second - out of range, or asleep.
     /// Taps made on it still arrive later; the outbox holds them.
     case outOfReach
     /// Reachable now.

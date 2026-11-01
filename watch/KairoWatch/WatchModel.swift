@@ -9,7 +9,7 @@ import WatchKit
 ///
 /// Arbitration happens on the phone and so does counting: the wrist is a remote
 /// control with an opinion about the last few seconds, not a second source of
-/// truth. So the model keeps two things — the phone's last `DayState`, which is
+/// truth. So the model keeps two things - the phone's last `DayState`, which is
 /// the truth, and the taps the phone has not accounted for yet, which are added
 /// on top so a tap still lands instantly (CF8).
 @Observable
@@ -36,7 +36,7 @@ final class WatchModel {
 
     /// NFR10 / SCRUM-19. Counts what this companion does that costs energy, so
     /// a regression is visible the day it lands rather than the day somebody
-    /// runs Instruments. **Not a battery measurement** — watchOS gives an app
+    /// runs Instruments. **Not a battery measurement** - watchOS gives an app
     /// its own `batteryLevel`, never its own share of the drain, so any number
     /// computed here would be the whole watch's consumption wearing this app's
     /// name. `docs/NFR10-BATTERY.md` has the procedure for the real one.
@@ -68,7 +68,7 @@ final class WatchModel {
 
     // MARK: - What the screens read
 
-    /// CF8 — the phone's total plus the taps it has not confirmed. Before the
+    /// CF8 - the phone's total plus the taps it has not confirmed. Before the
     /// first `DayState` this is simply what has been tapped here, which is the
     /// only number the watch legitimately has.
     var waterMillilitres: Int {
@@ -80,7 +80,7 @@ final class WatchModel {
     }
 
     /// nil when the phone has not measured sitting, which is different from zero
-    /// minutes of it — the sitting page says two different things for the two.
+    /// minutes of it - the sitting page says two different things for the two.
     var sedentaryMinutes: Int? { day?.sedentaryMinutes }
 
     /// True while a tap is still ahead of the phone. Worth stating quietly; not
@@ -92,7 +92,7 @@ final class WatchModel {
         let text: String
         let nudgeClass: String
         /// Substituted text when the original required a capability the user
-        /// does not have (NFR11) — shown so the substitution is never silent.
+        /// does not have (NFR11) - shown so the substitution is never silent.
         let rewrittenFrom: String?
     }
 
@@ -150,7 +150,7 @@ final class WatchModel {
         case let .log(digest):
             // Nothing to reconcile here, unlike `dayState`. The digest is
             // read-only and the phone is its only author, so the newest one
-            // simply replaces the last — there is no local overlay that could
+            // simply replaces the last - there is no local overlay that could
             // disagree with it, and no tally for a repeat delivery to inflate.
             log = digest
         }
@@ -174,7 +174,7 @@ final class WatchModel {
     /// A lower total than the one we hold is taken as the phone having started a
     /// new day, so it re-bases rather than being discarded. `DayState` carries no
     /// timestamp, so that is indistinguishable from two states arriving out of
-    /// order — the phone sends them over an ordered session and its queued
+    /// order - the phone sends them over an ordered session and its queued
     /// fallback is last-write-wins, which is what makes the assumption safe.
     private func adopt(_ state: DayState) {
         let previous = day?.waterMillilitres ?? 0
@@ -201,7 +201,7 @@ final class WatchModel {
     private(set) var demo = SimulatedWrist()
     private(set) var demoStreaming = false
     /// False when the last reading could not be sent because the phone was out
-    /// of reach — said on the page rather than looking like it worked.
+    /// of reach - said on the page rather than looking like it worked.
     private(set) var demoDelivered = true
     private var demoTask: Task<Void, Never>?
 
@@ -245,14 +245,14 @@ final class WatchModel {
         report("userDismissed")
     }
 
-    /// CF8 — one tap, no keyboard, no confirmation screen. The number moves now;
+    /// CF8 - one tap, no keyboard, no confirmation screen. The number moves now;
     /// the phone confirms it when it can.
     func logWater(_ ml: Int) {
         // A stable id per tap, minted once and kept: WatchConnectivity re-delivers
         // queued messages, and the phone de-duplicates on this id rather than
         // counting the same glass twice.
         // FR8.5. Captured before the append, because the milestone is a
-        // property of the *change* — testing the new total instead would buzz
+        // property of the *change* - testing the new total instead would buzz
         // again on every later sip inside the same quarter.
         let before = waterMillilitres
         let sip = HydrationLog.Sip(id: UUID().uuidString, at: Date(), millilitres: ml)
@@ -262,7 +262,7 @@ final class WatchModel {
 
         send(.waterLogged(millilitres: sip.millilitres, at: sip.at, id: sip.id))
 
-        // FR8.5 — the non-visual channel that works with the screen off and the
+        // FR8.5 - the non-visual channel that works with the screen off and the
         // phone in another room, which is the situation one-tap logging exists
         // for. `.click` confirms the tap; a milestone gets something the user
         // can tell apart from it without looking.
@@ -294,7 +294,7 @@ final class WatchModel {
     #if canImport(WatchKit)
     /// One door out, so NFR10's transmission count cannot miss a caller. The
     /// outbox re-sends on reconnect, so this is the number that grows when the
-    /// link is flapping — which is exactly the case worth noticing.
+    /// link is flapping - which is exactly the case worth noticing.
     private func send(_ payload: WristEvent) {
         energy.record(.transmission, at: Date())
         bridge.send(payload)

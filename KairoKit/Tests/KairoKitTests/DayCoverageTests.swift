@@ -4,7 +4,7 @@ import Foundation
 
 // MARK: - FR6.4
 
-@Suite("CF6 — low coverage competes for attention rather than interrupting")
+@Suite("CF6 - low coverage competes for attention rather than interrupting")
 struct CoverageBidTests {
     private func coverage(meals: (Int, Int) = (3, 3), sleep: (Int, Int) = (1, 1),
                           movement: (Int, Int) = (24, 24),
@@ -76,7 +76,7 @@ struct CoverageBidTests {
     }
 }
 
-@Suite("FR6.4 — the phone raises it too, which is the point of it being model-free")
+@Suite("FR6.4 - the phone raises it too, which is the point of it being model-free")
 struct LocalCoverageBidTests {
     private var blind: DayCoverage {
         var c = DayCoverage(dayStart: DateHelp.at(2026, 8, 25))

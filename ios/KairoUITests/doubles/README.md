@@ -2,7 +2,7 @@
 
 Ten tests in `ScreenTour.swift` drive the app against three backend addresses.
 Until now this repository shipped nothing to answer them, so none of them could
-run — including `testAccessibilityAudit`, which is the only automated check on
+run - including `testAccessibilityAudit`, which is the only automated check on
 NFR11.
 
 ```bash

@@ -21,7 +21,7 @@ export KAIRO_BUNDLE_SUFFIX="${KAIRO_BUNDLE_SUFFIX:-}"
 export KAIRO_BACKEND_URL="${KAIRO_BACKEND_URL:-http://127.0.0.1:9080}"
 
 if [ -z "$KAIRO_DEV_TEAM" ]; then
-  echo "note: no KAIRO_DEV_TEAM — simulator builds work, a device build will not."
+  echo "note: no KAIRO_DEV_TEAM - simulator builds work, a device build will not."
   echo "      Set one in mobile/signing.env."
 fi
 

@@ -5,7 +5,7 @@ import KairoKit
 ///
 /// `NutritionRepository` is the boundary; this is the implementation of it, over
 /// URLSession. A bundled offline table used to sit behind the same port so the
-/// demo could run with the network switched off — it is gone, along with the
+/// demo could run with the network switched off - it is gone, along with the
 /// rest of the fixtures. A lookup that cannot reach Open Food Facts now reports
 /// that it could not, which is worse to demo and true.
 ///
@@ -17,7 +17,7 @@ import KairoKit
 ///   * a product with no energy figure throws `.noEnergyPublished` rather than
 ///     storing a zero, because energy is the one number the app reports and a
 ///     zero would read as a measurement;
-///   * `serving_size` is only believed when it is unambiguously a mass — "30 ml"
+///   * `serving_size` is only believed when it is unambiguously a mass - "30 ml"
 ///     is not converted to grams, because that needs a density we do not have;
 ///   * a failed search returns an error, never a nearest guess.
 ///
@@ -33,8 +33,8 @@ public struct OpenFoodFactsRepository: NutritionRepository {
     /// The search endpoint, which lives on a different host to the product API.
     ///
     /// This is `search.openfoodfacts.org` on purpose. The documented search
-    /// endpoints on `world.openfoodfacts.org` — both `/api/v2/search` and the
-    /// legacy `/cgi/search.pl` — were answering with an HTML "Page temporarily
+    /// endpoints on `world.openfoodfacts.org` - both `/api/v2/search` and the
+    /// legacy `/cgi/search.pl` - were answering with an HTML "Page temporarily
     /// unavailable" page instead of JSON when this was written, and were still
     /// flapping in and out of that state hours later. The search host stayed up
     /// throughout, so it is the one we ask; `json(at:)` still verifies that the
@@ -67,7 +67,7 @@ public struct OpenFoodFactsRepository: NutritionRepository {
 
     public enum RepositoryError: Error, CustomStringConvertible {
         case http(Int)
-        /// The endpoint answered with something that is not JSON — in practice an
+        /// The endpoint answered with something that is not JSON - in practice an
         /// HTML error page from a service that is temporarily down.
         case notJSON(String)
         case malformed(String)
@@ -95,7 +95,7 @@ public struct OpenFoodFactsRepository: NutritionRepository {
         components.queryItems = [URLQueryItem(name: "fields", value: productFields)]
 
         // A miss is HTTP 404 carrying `{"status":0}`, so 404 is not a transport
-        // failure here — the body is the answer.
+        // failure here - the body is the answer.
         let object = try await json(at: components.url!, timeout: 20, tolerating: [404])
         guard Self.number(object["status"]) == 1,
               let product = object["product"] as? [String: Any] else {
@@ -173,7 +173,7 @@ public struct OpenFoodFactsRepository: NutritionRepository {
         let brand = Self.brandText(product["brands"])
         let name = Self.text(product["product_name"]) ?? brand
         // A row with neither a name nor a brand cannot be shown to the user
-        // honestly — they would be asked to confirm a nameless number.
+        // honestly - they would be asked to confirm a nameless number.
         guard let name, !name.isEmpty else { throw NutritionLookupError.notFound(barcode) }
 
         return FoodReference(
@@ -231,7 +231,7 @@ public struct OpenFoodFactsRepository: NutritionRepository {
         return text(any)
     }
 
-    /// Grams out of a free-text serving declaration — and only when it is
+    /// Grams out of a free-text serving declaration - and only when it is
     /// unambiguously a mass.
     ///
     /// The field is whatever the contributor typed: "15 g", "30ml", "1 serving
@@ -255,7 +255,7 @@ public struct OpenFoodFactsRepository: NutritionRepository {
             grams.append(value)
         }
         guard let first = grams.first else { return nil }
-        // A declaration that repeats one figure — "3/4 cup (28 g) (28 g)" — is
+        // A declaration that repeats one figure - "3/4 cup (28 g) (28 g)" - is
         // fine. Two different figures mean it is ambiguous, so we take neither.
         guard grams.allSatisfy({ abs($0 - first) < 0.05 }) else { return nil }
         // Sanity bounds: a serving is not zero and not two kilograms.
@@ -297,7 +297,7 @@ public struct OpenFoodFactsRepository: NutritionRepository {
         let firstByte = data.first(where: { !" \n\r\t".utf8.contains($0) })
         if contentType.contains("html") || firstByte == UInt8(ascii: "<") {
             throw RepositoryError.notJSON(
-                "an HTML page (HTTP \(http.statusCode)) — the service is probably down")
+                "an HTML page (HTTP \(http.statusCode)) - the service is probably down")
         }
         guard (200..<300).contains(http.statusCode) || tolerated.contains(http.statusCode) else {
             throw RepositoryError.http(http.statusCode)

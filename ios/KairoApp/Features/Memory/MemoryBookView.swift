@@ -1,11 +1,11 @@
 import SwiftUI
 import KairoKit
 
-/// Member D — CF10. Every remembered fact in plain language, with the controls
+/// Member D - CF10. Every remembered fact in plain language, with the controls
 /// that make the memory an artefact the user owns rather than a hidden profile.
 ///
-/// Two tabs, because facts and decisions answer different questions — "what
-/// does Kairo think it knows about me?" and "what did it decide, and why?" —
+/// Two tabs, because facts and decisions answer different questions - "what
+/// does Kairo think it knows about me?" and "what did it decide, and why?" -
 /// and stacking them on one scrolling page buried both. Facts are grouped by
 /// whether Kairo is acting on them, each row says one thing, and the full
 /// detail (state, sensitivity, decay, provenance, id) is one tap away rather
@@ -19,6 +19,8 @@ struct MemoryBookView: View {
     @State private var openMemoryID: String?
     @State private var composing = false
     @State private var showUnused = false
+    /// FR10.6's export, held until the share sheet has it.
+    @State private var exported: Data?
     @Environment(\.dynamicTypeSize) private var typeSize
 
     enum Tab: String, CaseIterable { case facts = "Facts", decisions = "Decisions" }
@@ -46,9 +48,18 @@ struct MemoryBookView: View {
             .background(KairoCanvas())
             .toolbar(.hidden, for: .navigationBar)
             // The book was read once, at launch, so a fact the curator stored
-            // afterwards — from a meal, say — never appeared until a relaunch.
-            .task { await model.reloadMemories() }
+            // afterwards - from a meal, say - never appeared until a relaunch.
+            .task {
+                await model.reloadMemories()
+                await model.reloadSuppressed()
+            }
             .refreshable { await model.reloadMemories() }
+            .sheet(item: Binding(
+                get: { exported.map { MemoryExport(data: $0) } },
+                set: { if $0 == nil { exported = nil } })) { export in
+                ShareLink(item: export.file, preview: SharePreview("Kairo memories"))
+                    .presentationDetents([.medium])
+            }
             .navigationDestination(item: $openRecordID) { id in
                 if let record = model.records.first(where: { $0.id == id }) {
                     WhyView(record: record)
@@ -117,10 +128,13 @@ struct MemoryBookView: View {
             }
         }
         TrustNote(text: "Facts marked on-device never leave this phone. Anything you forget "
-                  + "is gone from every agent's next answer. Swipe a fact to forget it.",
+                  + "is gone from every agent's next answer. Swipe a fact to forget it, "
+                  + "or to tell Kairo never to remember it again.",
                   icon: "iphone.and.arrow.forward")
             .padding(.top, 4)
             .kairoListRow()
+
+        dataRightsSection
     }
 
     /// Three numbers that say the state of the book at a glance.
@@ -158,6 +172,14 @@ struct MemoryBookView: View {
             .buttonStyle(.kairoPress)
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) { forget(m) } label: { Label("Forget", systemImage: "trash") }
+                // FR10.6. Forgetting removes the fact; this decides about it.
+                // Without the second one the Curator re-extracts the same
+                // sentence from the same material and the user deletes it
+                // again next week, which is not a right over their own data.
+                Button { neverRemember(m) } label: {
+                    Label("Never remember", systemImage: "hand.raised.slash")
+                }
+                .tint(Kairo.coral)
             }
             .kairoListRow()
     }
@@ -200,7 +222,53 @@ struct MemoryBookView: View {
 
     // MARK: - Decisions
 
+    /// FR10.6. The export, and the list of things the user has ruled out.
+    ///
+    /// The suppressions are shown rather than hidden: a rule the user set and
+    /// cannot see is one they cannot change their mind about, and "never
+    /// remember this" is only a right if it is reversible.
+    @ViewBuilder private var dataRightsSection: some View {
+        SectionHeader(title: "Your data", icon: "lock.shield", trailing: nil,
+                      tint: Kairo.teal)
+            .kairoListRow()
+
+        Button {
+            Task { exported = await model.exportMemories() }
+        } label: {
+            Label("Export everything Kairo remembers", systemImage: "square.and.arrow.up")
+        }
+        .kairoListRow()
+
+        if !model.neverRemembered.isEmpty {
+            ForEach(model.neverRemembered, id: \.self) { text in
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "hand.raised.slash")
+                        .font(.kairoGlyph(13, weight: .semibold))
+                        .foregroundStyle(Kairo.coral)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(text).font(.kairoBody)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("never remembered")
+                            .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                    }
+                    Spacer(minLength: 0)
+                    Button("Allow") { Task { await model.allowAgain(text) } }
+                        .font(.kairoCaption)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Kairo.teal)
+                }
+                .kairoListRow()
+            }
+        }
+    }
+
     @ViewBuilder private var decisionsTab: some View {
+        // CF3 / UC2. The roles disagreeing is a decision like any other, so it
+        // reads here beside the records rather than on a screen of its own.
+        SecondOpinionCard(app: model)
+            .padding(.horizontal, 4)
+            .kairoListRow()
+
         if model.records.isEmpty {
             Text("Nothing has been decided yet this session.")
                 .font(.caption)
@@ -228,9 +296,30 @@ struct MemoryBookView: View {
     // MARK: - Actions
 
     /// CF10: the delete is real. It leaves the store, so it is gone from the
-    /// next answer every agent gives — there is no shadow copy behind it.
+    /// next answer every agent gives - there is no shadow copy behind it.
     private func forget(_ memory: MemoryItem) {
         Task { await model.forget(memory) }
+    }
+
+    private func neverRemember(_ memory: MemoryItem) {
+        Task { await model.forget(memory, neverAgain: true) }
+    }
+}
+
+/// FR10.6's export, as something `ShareLink` can hand to another app.
+///
+/// Written to a temp file rather than shared as raw `Data` so it arrives
+/// somewhere as a named `.json` the user can open, rather than as an untitled
+/// blob. An export nobody can read is not an export.
+private struct MemoryExport: Identifiable {
+    let id = UUID()
+    let file: URL
+
+    init(data: Data) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairo-memories.json")
+        try? data.write(to: url, options: .atomic)
+        self.file = url
     }
 }
 
@@ -498,7 +587,7 @@ struct MemoryRow: View {
             return Kairo.amber
         case .superseded, .expired, .deleted:
             return Kairo.inkFaint
-        // FR10.2 / UC7 A3. Not facts — the record of a decision about one, so
+        // FR10.2 / UC7 A3. Not facts - the record of a decision about one, so
         // they are greyed like the other states Kairo is not acting on.
         case .merged, .rejected:
             return Kairo.inkFaint
@@ -534,7 +623,7 @@ struct MemoryRow: View {
         case .active, .verified:
             return nil
         case .candidate:
-            return "Not confirmed yet — no agent is using this."
+            return "Not confirmed yet - no agent is using this."
         case .contradicted:
             return "This clashes with something newer. Forget it if it is wrong."
         case .unconfirmed:
@@ -545,7 +634,7 @@ struct MemoryRow: View {
             // The user said something Kairo already knew. Saying so is the
             // point of FR10.2 having a state: without it the repeat looked
             // like it was ignored.
-            return "Already known — this confirmed a fact Kairo had."
+            return "Already known - this confirmed a fact Kairo had."
         case .rejected:
             return "Not kept. Kairo was not confident enough this was durable."
         case .superseded:
@@ -653,8 +742,8 @@ func spacedStateName(_ name: String) -> String {
 /// carry four or five badges at once and the labels grow with Dynamic Type.
 ///
 /// Every width is clamped to the proposal before it is used. Without that clamp
-/// a single pill whose label is wider than the screen — "target reached — no
-/// more water nudges today" at accessibility XXXL is about 900 points — reported
+/// a single pill whose label is wider than the screen - "target reached - no
+/// more water nudges today" at accessibility XXXL is about 900 points - reported
 /// its full intrinsic width as the layout's width, which widened the scroll
 /// view's content past the device and pushed every other card on the screen off
 /// both edges at once. The pill is given the clamped width instead, so its own

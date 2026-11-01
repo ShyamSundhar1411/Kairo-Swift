@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// Member C — OF3. The half of CF7 the user can edit, plus the app reporting on
+/// Member C - OF3. The half of CF7 the user can edit, plus the app reporting on
 /// its own restraint. No health app publishes its notification policy as a
 /// negotiable artefact, and none reports on staying quiet.
 ///
@@ -61,7 +61,7 @@ struct AttentionReceiptView: View {
         .onAppear {
             // SCRUM-21. Both controls read the stored profile now. They used to
             // read `schedule` and a `@State` default, so the ceiling reset to 6
-            // and the quiet window to 21:00 on every launch — a grant the user
+            // and the quiet window to 21:00 on every launch - a grant the user
             // made that the app forgot overnight.
             ceiling = model.userProfile.dailyInterruptionCeiling
             quietStart = model.userProfile.quietHoursStart
@@ -72,7 +72,7 @@ struct AttentionReceiptView: View {
     //
     // A stepper hides the shape of the decision. Thirteen dots show it: how many
     // interruptions the day is allowed to contain, how many are already gone, and
-    // what is left. Warm is spent, cool is still available — the same language as
+    // what is left. Warm is spent, cool is still available - the same language as
     // the dial on Today.
 
     private var ceilingCard: some View {

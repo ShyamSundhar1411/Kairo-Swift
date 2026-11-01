@@ -2,8 +2,8 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// NFR6 in transit — what may carry a day of health summaries off this phone.
-@Suite("NFR6 — transport")
+/// NFR6 in transit - what may carry a day of health summaries off this phone.
+@Suite("NFR6 - transport")
 struct TransportPolicyTests {
 
     @Test("https to anywhere is fine", arguments: [

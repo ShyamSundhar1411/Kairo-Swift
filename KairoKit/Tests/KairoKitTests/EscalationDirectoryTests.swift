@@ -2,12 +2,12 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// FR11.7 — that a blocked message names somewhere to go, and the right one.
+/// FR11.7 - that a blocked message names somewhere to go, and the right one.
 ///
 /// The assertion that matters is not "a referral was produced". NFR14 calls
 /// misrouting an eating-disorder flag a harm rather than a defect, so the one
 /// worth writing down is that it routed to Butterfly and *not* to Lifeline.
-@Suite("Member D — escalation routing")
+@Suite("Member D - escalation routing")
 struct EscalationDirectoryTests {
 
     // MARK: - The one NFR14 is about

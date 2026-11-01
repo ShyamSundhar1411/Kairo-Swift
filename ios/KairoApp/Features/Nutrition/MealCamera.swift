@@ -3,7 +3,7 @@ import AVFoundation
 import CoreImage
 import UIKit
 
-/// Member A — CF1. The camera half of photo meal logging.
+/// Member A - CF1. The camera half of photo meal logging.
 ///
 /// Live capture only. There is deliberately no "choose from library" path: the
 /// feature being built is *photograph your meal*, and a file picker is a
@@ -16,8 +16,8 @@ import UIKit
 ///
 /// It also owns barcode scanning, as a second mode of the same screen rather
 /// than a screen of its own. That is deliberate: a barcode is the one path in
-/// this app that ends in a *measured* figure — the manufacturer's declared
-/// numbers, read out of a published row (CF1) — while a photograph can only
+/// this app that ends in a *measured* figure - the manufacturer's declared
+/// numbers, read out of a published row (CF1) - while a photograph can only
 /// ever end in an estimate. Putting the trustworthy path one tap from the
 /// untrustworthy one is how the difference between them stays visible.
 
@@ -30,7 +30,7 @@ final class MealCameraModel: NSObject {
         case ready
         /// The user said no. Only Settings can undo it, so we say that.
         case denied
-        /// Nothing to talk to — a simulator, or hardware without a rear camera.
+        /// Nothing to talk to - a simulator, or hardware without a rear camera.
         case unavailable(String)
     }
 
@@ -51,7 +51,7 @@ final class MealCameraModel: NSObject {
 
     let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
-    /// The barcode half. One output on the *existing* session — a second session
+    /// The barcode half. One output on the *existing* session - a second session
     /// would fight the first one for the camera and there is nothing it could do
     /// that this cannot.
     private let metadataOutput = AVCaptureMetadataOutput()
@@ -72,7 +72,7 @@ final class MealCameraModel: NSObject {
         [.ean13, .ean8, .upce, .code128]
 
     // Debounce state. Touched only on `queue`, which is also the delegate's
-    // queue, so a serial queue is the whole of the synchronisation — and it is
+    // queue, so a serial queue is the whole of the synchronisation - and it is
     // kept out of observation, because a property the main thread might be
     // observing is a property that cannot safely be written from a capture
     // callback. Nothing here is UI state; `isScanning` and `acceptedCode` are.
@@ -84,8 +84,8 @@ final class MealCameraModel: NSObject {
 
     /// A read is accepted after this many consecutive frames carry the same
     /// payload *and* this much time has been spent on it. `didOutput` fires once
-    /// per frame for as long as the symbol is in view — dozens of times a second
-    /// on one barcode — so a single callback is a sighting, not a decision, and
+    /// per frame for as long as the symbol is in view - dozens of times a second
+    /// on one barcode - so a single callback is a sighting, not a decision, and
     /// the first frame of a half-focused symbol is exactly the one to distrust.
     private static let requiredFrames = 3
     private static let settleSeconds: TimeInterval = 0.25
@@ -175,7 +175,7 @@ final class MealCameraModel: NSObject {
 
     // MARK: Barcode scanning
 
-    /// Start looking for a symbol. Nothing happens on a device with no camera —
+    /// Start looking for a symbol. Nothing happens on a device with no camera -
     /// there the sheet takes the simulated path instead, which never calls this.
     func beginScanning() {
         guard configured else { return }
@@ -355,7 +355,7 @@ struct CameraPreview: UIViewRepresentable {
 /// What the simulated viewfinder points at when there is no camera. One dish per
 /// branch of the `MealEntry` machine, so every path has something to shoot.
 ///
-/// Drawn by scripts/make-sample-meals.swift — illustrations, not photographs,
+/// Drawn by scripts/make-sample-meals.swift - illustrations, not photographs,
 /// and labelled as such on screen.
 struct SampleDish: Identifiable, Equatable {
     let id: String
@@ -382,10 +382,10 @@ struct SampleDish: Identifiable, Equatable {
 ///
 /// The codes are real, because a made-up barcode resolves to nothing and would
 /// teach the demo the wrong lesson. Each one is described by exactly what is
-/// known about it and no more — one has been checked against Open Food Facts,
+/// known about it and no more - one has been checked against Open Food Facts,
 /// one has not, and one is arithmetically broken on purpose.
 struct SampleBarcode: Identifiable, Equatable {
-    /// The digits, which are also the identity — there is no second code with
+    /// The digits, which are also the identity - there is no second code with
     /// the same number.
     let id: String
     let name: String
@@ -415,7 +415,7 @@ struct SampleBarcode: Identifiable, Equatable {
               note: "checked: Open Food Facts has a row for this one"),
         .init(digits: "9300675024235",
               name: "An Australian-prefixed EAN-13",
-              note: "well formed, but Kairo has not looked it up — use it to see what "
+              note: "well formed, but Kairo has not looked it up - use it to see what "
                   + "happens when the table has no row"),
         .init(digits: "3017620422004",
               name: "The Nutella code with one digit wrong",
@@ -423,7 +423,7 @@ struct SampleBarcode: Identifiable, Equatable {
     ]
 
     /// Core Image's Code 128 generator, which encodes the digits properly rather
-    /// than drawing decorative stripes. Nil is a legitimate answer — the caller
+    /// than drawing decorative stripes. Nil is a legitimate answer - the caller
     /// falls back to the digits in text.
     private static func code128(_ digits: String) -> UIImage? {
         guard let message = digits.data(using: .ascii),
@@ -564,7 +564,7 @@ struct MealCameraSheet: View {
     }
 
     private var barcodeHint: some View {
-        Text("A barcode is the only path here that ends in a measured number — the "
+        Text("A barcode is the only path here that ends in a measured number - the "
              + "manufacturer's own declared figures, from a published row. Point at "
              + "the pack; Kairo takes the first read that holds still.")
             .font(.caption)
@@ -585,7 +585,7 @@ struct MealCameraSheet: View {
     // MARK: accepting a read
 
     /// The visible half of a successful read. The haptic fires at the same
-    /// moment; neither is enough alone — one is missed in a noisy supermarket,
+    /// moment; neither is enough alone - one is missed in a noisy supermarket,
     /// the other by anybody who has haptics turned off.
     private func readConfirmation(_ code: String) -> some View {
         VStack(spacing: 10) {
@@ -612,7 +612,7 @@ struct MealCameraSheet: View {
     }
 
     /// Accept a read: haptic, then the confirmation stays up for a beat before
-    /// the code is handed over. The delay is not decoration — without it the
+    /// the code is handed over. The delay is not decoration - without it the
     /// sheet vanishes and the user never learns which code was taken.
     private func settle(_ code: String) {
         guard confirmed == nil else { return }
@@ -639,7 +639,7 @@ struct MealCameraSheet: View {
     //
     // Barcode mode gets the same treatment for the same reason: the simulator
     // has no camera, and the barcode path is the one that matters most, so it
-    // has to be exercisable without hardware — labelled just as plainly.
+    // has to be exercisable without hardware - labelled just as plainly.
 
     @ViewBuilder private var simulatedViewfinder: some View {
         switch mode {
@@ -723,7 +723,7 @@ struct MealCameraSheet: View {
     }
 
     /// Nothing to point at, so the "viewfinder" shows the code that is about to
-    /// be handed over — genuinely encoded rather than drawn as decorative
+    /// be handed over - genuinely encoded rather than drawn as decorative
     /// stripes, which means a second phone can read it off this screen.
     ///
     /// It is a Code 128 rendering of those digits, not the EAN-13 that is
@@ -749,7 +749,7 @@ struct MealCameraSheet: View {
                         .font(.system(size: 22, weight: .semibold, design: .monospaced))
                         .foregroundStyle(.white)
                 }
-                Text("the digits below, encoded as Code 128 — not the EAN-13 printed "
+                Text("the digits below, encoded as Code 128 - not the EAN-13 printed "
                      + "on the pack")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.6))
@@ -827,7 +827,7 @@ struct MealCameraSheet: View {
         .animation(.easeOut(duration: 0.2), value: refused)
     }
 
-    /// The simulated read goes through the same acceptance as a real one — the
+    /// The simulated read goes through the same acceptance as a real one - the
     /// check digit, the haptic, the confirmation card, the same callback. The
     /// only thing missing is the camera, and the label above says as much.
     private func simulateScan() {
@@ -1040,7 +1040,7 @@ private struct CaptureModeSwitch: View {
 }
 
 /// Darkens the top and bottom only. Without it the controls and the framing
-/// brackets are illegible over anything bright — a white plate, a sunlit table —
+/// brackets are illegible over anything bright - a white plate, a sunlit table -
 /// and that is as true of the real camera as of the simulated one.
 private struct Scrim: View {
     var body: some View {
@@ -1093,7 +1093,7 @@ private struct FramingGuide: View {
 /// square guide would have people turning the phone.
 ///
 /// Unlike `FramingGuide` this one is a closed outline rather than corner
-/// brackets — here the user genuinely needs to know where to aim. What it is
+/// brackets - here the user genuinely needs to know where to aim. What it is
 /// *not* is a crop: the whole frame is scanned, and no `rectOfInterest` is
 /// pinned to this rectangle. A guide that claimed bounds the scanner did not
 /// honour would be worse than a guide that is honestly just advice.

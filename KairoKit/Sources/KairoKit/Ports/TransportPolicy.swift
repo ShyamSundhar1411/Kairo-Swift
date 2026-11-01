@@ -1,6 +1,6 @@
 import Foundation
 
-/// NFR6, the in-transit half — as a rule rather than as a condition inside a view.
+/// NFR6, the in-transit half - as a rule rather than as a condition inside a view.
 ///
 /// It lives in KairoKit for the same reason the arbiter does: it is a policy the
 /// product has, not a detail of one screen, and here it has tests. The app
@@ -8,13 +8,13 @@ import Foundation
 /// summaries may leave the phone in cleartext would otherwise be unverified
 /// code behind a `guard`.
 ///
-/// App Transport Security already refuses cleartext to a remote host —
+/// App Transport Security already refuses cleartext to a remote host -
 /// `NSAllowsLocalNetworking` is the only exception in the Info.plist and there
 /// is deliberately no `NSAllowsArbitraryLoads`. Stating the rule here anyway is
 /// not belt-and-braces for its own sake:
 ///
 /// - ATS fails at the moment of the request, as an opaque `URLError`, which the
-///   connection screen reports as "the backend did not answer" — the one
+///   connection screen reports as "the backend did not answer" - the one
 ///   diagnosis guaranteed to send somebody to debug a server that is fine.
 /// - A build that later gains an ATS exception for some unrelated reason should
 ///   not silently also gain the ability to post health summaries over HTTP.

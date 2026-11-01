@@ -32,5 +32,5 @@ emit(PlanContractState.self)    // Member C
 emit(NudgeState.self)           // Member C (second machine, used in the group diagrams)
 emit(DecisionRecordState.self)  // Member D
 emit(MemoryItemState.self)      // Member D (alternative)
-emit(DisagreementCaseState.self)   // Member A — Figure 34 (UC2)
-emit(AdviceScreeningState.self)    // Member D — Figure 40 (UC8)
+emit(DisagreementCaseState.self)   // Member A - Figure 34 (UC2)
+emit(AdviceScreeningState.self)    // Member D - Figure 40 (UC8)

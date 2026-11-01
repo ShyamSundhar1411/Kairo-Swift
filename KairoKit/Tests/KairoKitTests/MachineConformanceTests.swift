@@ -13,7 +13,7 @@ import Foundation
 /// Something says so now. The backend's `test_machine_conformance.py` reads
 /// the same `docs/state-machines.json`; this asserts the device's tables match
 /// it, minus the edges `deviceOmits` says the phone cannot make.
-@Suite("Both halves — lifecycle tables")
+@Suite("Both halves - lifecycle tables")
 struct MachineConformanceTests {
 
     /// One row of a table, flattened the way the shared file stores it.

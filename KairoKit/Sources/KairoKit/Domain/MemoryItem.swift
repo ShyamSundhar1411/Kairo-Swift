@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member D — CF10 habit memory.
+/// Member D - CF10 habit memory.
 public enum MemoryItemState: String, LifecycleState {
     case candidate, verified, active, contradicted, superseded
     case unconfirmed, decaying, expired, deleted
@@ -9,7 +9,7 @@ public enum MemoryItemState: String, LifecycleState {
     /// so the Memory Book can say "already known" instead of looking as though
     /// it ignored what the user said.
     case merged
-    /// Figure 39, and UC7's A3 — low confidence or temporary. Rejected, not
+    /// Figure 39, and UC7's A3 - low confidence or temporary. Rejected, not
     /// deleted: deletion is the user's verb (A5), and "Kairo chose not to keep
     /// this" is a different answer from "you removed it".
     case rejected
@@ -21,7 +21,7 @@ public enum MemoryItemState: String, LifecycleState {
             || self == .merged || self == .rejected
     }
 
-    /// Not remembered facts — the record of a decision *about* one. The Memory
+    /// Not remembered facts - the record of a decision *about* one. The Memory
     /// Book lists them apart from what Kairo actually knows.
     public var isACurationNote: Bool { self == .merged || self == .rejected }
 
@@ -56,7 +56,7 @@ public enum MemorySensitivity: String, Sendable, Comparable, CaseIterable {
 
 public struct MemoryItem: Sendable {
     public let id: String
-    /// FR10.7 — stored in the language the user expressed it in, never
+    /// FR10.7 - stored in the language the user expressed it in, never
     /// translated. A memory somebody cannot recognise as their own sentence is
     /// not theirs.
     public var text: String
@@ -65,7 +65,7 @@ public struct MemoryItem: Sendable {
     public let sensitivity: MemorySensitivity
     public let sourceRef: String
     /// FR10.7. BCP-47 tag of the language `text` is written in. Empty means
-    /// unknown, which is deliberately not the same as English — a memory
+    /// unknown, which is deliberately not the same as English - a memory
     /// assumed English because nobody recorded otherwise is how the original
     /// gets rewritten later.
     public var language: String = ""

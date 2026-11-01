@@ -8,7 +8,7 @@ import Foundation
 /// cares about, the wearer eventually stands and walks for a few minutes (heart
 /// rate up, steps up, sitting back to zero), and then it starts again.
 ///
-/// Deterministic — no random numbers — so a rehearsal and the real
+/// Deterministic - no random numbers - so a rehearsal and the real
 /// presentation produce the same sequence, and a test can pin it.
 public struct SimulatedWrist: Sendable, Equatable {
     public private(set) var minute = 0
@@ -76,7 +76,7 @@ public struct SimulatedWrist: Sendable, Equatable {
         return readings(at: now)
     }
 
-    /// The presenter's "heart rate spike" button, while still sitting — the
+    /// The presenter's "heart rate spike" button, while still sitting - the
     /// reading that should make a careful agent cautious rather than pushy.
     public mutating func spikeHeartRate(at now: Date) -> [SimulatedReading] {
         heartRateBPM = 128

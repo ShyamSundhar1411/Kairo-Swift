@@ -4,9 +4,9 @@ import KairoKit
 import WatchConnectivity
 #endif
 
-/// Member C — CF7 / CF8. The phone half of the phone <-> watch link.
+/// Member C - CF7 / CF8. The phone half of the phone <-> watch link.
 ///
-/// The watch has had a bridge since the first prototype; the phone had nothing —
+/// The watch has had a bridge since the first prototype; the phone had nothing -
 /// no `WCSession`, no delegate, no receiver. So a glass of water tapped on the
 /// wrist was encoded, sent, and dropped on the floor, and an interruption the
 /// arbiter had actually allocated could never reach the wrist. This file is the
@@ -32,12 +32,12 @@ final class PhoneConnectivityBridge: NSObject, @unchecked Sendable {
     /// Activation finished, or reachability changed. Main queue.
     var onReachabilityChange: ((Bool) -> Void)?
 
-    /// The link state changed in any way the pairing screen cares about —
+    /// The link state changed in any way the pairing screen cares about -
     /// including a watch being paired or the app being installed on it, which
     /// `onReachabilityChange` does not cover. Main queue.
     var onLinkChange: ((WristLink) -> Void)?
 
-    /// Something arrived that this build could not read — a version mismatch
+    /// Something arrived that this build could not read - a version mismatch
     /// between a phone and a watch on different builds, most likely. Surfaced
     /// rather than swallowed, because a silently ignored message is exactly the
     /// failure this whole file exists to fix. Main queue.
@@ -58,7 +58,7 @@ final class PhoneConnectivityBridge: NSObject, @unchecked Sendable {
     /// The link, in the four states a person can actually do something about.
     ///
     /// `isReachable` alone could not tell "you have no watch" from "your watch
-    /// is in the other room", and those are opposite instructions — one is
+    /// is in the other room", and those are opposite instructions - one is
     /// *this feature is not for you*, the other is *wait a moment*. The pairing
     /// screen needs them apart, so the bridge draws the distinction rather than
     /// the view guessing from a boolean.
@@ -86,8 +86,8 @@ final class PhoneConnectivityBridge: NSObject, @unchecked Sendable {
     /// which the system hands over the next time the watch wakes.
     ///
     /// Caveat worth stating plainly: the application context holds exactly one
-    /// payload, last write wins. That is right for `dayState` — it is a total, so
-    /// the newest one is the only one that matters — but it means a queued nudge
+    /// payload, last write wins. That is right for `dayState` - it is a total, so
+    /// the newest one is the only one that matters - but it means a queued nudge
     /// can be overwritten by the next day-state push. A nudge that arrives an
     /// hour late is not one we want anyway; the day state is the message that has
     /// to survive, and it does.
@@ -155,7 +155,7 @@ extension PhoneConnectivityBridge: WCSessionDelegate {
     /// The same message sent *with* a reply handler. iOS calls this variant
     /// instead of the one above when the sender supplied one, so both have to
     /// exist or half the messages land nowhere depending on how the watch sent
-    /// them. The reply is an empty acknowledgement — the watch is not waiting on
+    /// them. The reply is an empty acknowledgement - the watch is not waiting on
     /// a value, only on confirmation that someone was home.
     func session(_ session: WCSession, didReceiveMessage message: [String: Any],
                  replyHandler: @escaping ([String: Any]) -> Void) {
@@ -166,7 +166,7 @@ extension PhoneConnectivityBridge: WCSessionDelegate {
     /// The queued path, and the one whose absence loses data.
     ///
     /// The watch falls back to `updateApplicationContext` whenever the phone is
-    /// unreachable — screen off, app not running, out of range — so this is where
+    /// unreachable - screen off, app not running, out of range - so this is where
     /// every sip logged while the phone was away arrives. Ignoring it would lose
     /// exactly the messages the fallback was written to protect.
     ///
@@ -186,7 +186,7 @@ extension PhoneConnectivityBridge: WCSessionDelegate {
 
     // MARK: - Mandatory on iOS
 
-    // Both of these are required by `WCSessionDelegate` on iOS — the app traps at
+    // Both of these are required by `WCSessionDelegate` on iOS - the app traps at
     // launch without them. They exist because one phone can be re-paired to a
     // different watch while running: the session deactivates, and reactivating is
     // what re-attaches us to the new one.

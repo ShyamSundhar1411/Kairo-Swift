@@ -8,7 +8,7 @@ import WatchConnectivity
 /// plus the day as it counts it; the watch pushes outcomes and quick logs back.
 ///
 /// The wire format is not written here. It lives once, in `KairoKit`'s
-/// `WristSync`, and both apps link it — hand-rolled dictionaries with bare
+/// `WristSync`, and both apps link it - hand-rolled dictionaries with bare
 /// string keys on each side is exactly how the two ends drifted apart and how a
 /// glass of water logged on the wrist ended up going nowhere. This file is
 /// transport only: one envelope out, one decoded event in.
@@ -52,7 +52,7 @@ final class WatchConnectivityBridge: NSObject {
             // Queue for the next time the phone is reachable rather than dropping
             // the event: a dismissed nudge the receptivity model never learns from
             // is worse than a late one. Application context holds one payload, so
-            // the most recent send wins — which is why the model keeps its own
+            // the most recent send wins - which is why the model keeps its own
             // outbox of sips and re-sends them when the link comes back, with the
             // same ids so the phone can discard the duplicates.
             try? session?.updateApplicationContext(payload)
@@ -65,7 +65,7 @@ final class WatchConnectivityBridge: NSObject {
     /// when the phone is out of reach and nothing was sent.
     ///
     /// Never queued: a reading about this second is worthless a minute later,
-    /// and application context holds a single payload — queuing one would
+    /// and application context holds a single payload - queuing one would
     /// overwrite a nudge outcome waiting there, which the receptivity model
     /// actually learns from.
     @discardableResult
@@ -91,11 +91,11 @@ final class WatchConnectivityBridge: NSObject {
         do {
             onPhoneEvent?(try WristSync.unwrap(PhoneEvent.self, from: message))
         } catch {
-            // A payload this build cannot read — a newer phone, or something that
-            // is not ours at all — is dropped rather than fatal: the watch's job
+            // A payload this build cannot read - a newer phone, or something that
+            // is not ours at all - is dropped rather than fatal: the watch's job
             // is to keep working with the last state it understood.
             #if DEBUG
-            print("WatchConnectivityBridge: ignoring inbound message — \(error)")
+            print("WatchConnectivityBridge: ignoring inbound message - \(error)")
             #endif
         }
     }
@@ -105,7 +105,7 @@ final class WatchConnectivityBridge: NSObject {
 extension WatchConnectivityBridge: WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith state: WCSessionActivationState,
                  error: Error?) {
-        // Activation finished — either the link is live or the phone is simply
+        // Activation finished - either the link is live or the phone is simply
         // not in range. Both are better news than "still loading".
         onLinkState?(error == nil && state == .activated
                      ? (session.isReachable ? .linked : .unreachable)

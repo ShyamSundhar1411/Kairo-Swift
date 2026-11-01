@@ -6,7 +6,7 @@ import UserNotifications
 
 /// Delivers an allocated nudge as a local notification.
 ///
-/// NFR8's ceiling is enforced by the arbiter, not here — a channel that silently
+/// NFR8's ceiling is enforced by the arbiter, not here - a channel that silently
 /// dropped nudges would corrupt the outcome history the receptivity model learns
 /// from. This channel delivers whatever it is handed, or reports why it could not.
 public final class NotificationNudgeChannel: NudgeChannel, @unchecked Sendable {

@@ -2,8 +2,8 @@ import XCTest
 
 /// Drives the screens and photographs them.
 ///
-/// This exists because the screens that carry the product — the ledger, the
-/// decision record behind a losing bid, the agents sheet — are a tap away from
+/// This exists because the screens that carry the product - the ledger, the
+/// decision record behind a losing bid, the agents sheet - are a tap away from
 /// the root, and this machine has no `Simulator.app` to tap in. It is also the
 /// only automatable way past iOS's Health Access sheet, which is SpringBoard's
 /// rather than the app's.
@@ -75,7 +75,7 @@ final class ScreenTour: XCTestCase {
     }
 
     func testAgentsUnreachable() {
-        // A port nothing is listening on. Not a malformed address — the point of
+        // A port nothing is listening on. Not a malformed address - the point of
         // the state is that the address is fine and the server is not there.
         let app = launch(backend: "http://127.0.0.1:8088")
         shoot(app, "today-unreachable")
@@ -126,7 +126,7 @@ final class ScreenTour: XCTestCase {
     /// `.textClipped` is the one that matters here: it is exactly the
     /// "truncated with an ellipsis at accessibility XXXL" check, made by the
     /// system against the rendered tree rather than by eye against a
-    /// screenshot. Contrast is excluded — the palette is deliberately low
+    /// screenshot. Contrast is excluded - the palette is deliberately low
     /// contrast on a dark canvas for the faint rows, and arguing that with the
     /// audit is a different change from this one.
     func testAccessibilityAudit() throws {
@@ -140,7 +140,7 @@ final class ScreenTour: XCTestCase {
             try app.performAccessibilityAudit(for: audited) { issue in
                 // Reported, not ignored: `XCTIssue` records them all and the
                 // test fails if any survive this filter.
-                let element = issue.element?.debugDescription ?? "—"
+                let element = issue.element?.debugDescription ?? "-"
                 print("AUDIT [\(tab)] \(issue.auditType): \(issue.compactDescription)\n"
                       + "  ON: \(element.prefix(400))")
                 // Dynamic Type is reported but not failed: the two elements it
@@ -156,7 +156,7 @@ final class ScreenTour: XCTestCase {
     }
 
     /// Criterion: one element per bid, announcing the role, the bid text, and
-    /// then whether it was delivered or why it was not — in that order.
+    /// then whether it was delivered or why it was not - in that order.
     func testLedgerAnnouncesEachBidOnce() {
         let app = launch(backend: "http://127.0.0.1:8099")
         let rows = app.buttons.allElementsBoundByIndex.filter {

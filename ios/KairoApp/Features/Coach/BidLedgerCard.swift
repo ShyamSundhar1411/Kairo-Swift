@@ -6,14 +6,14 @@ import KairoKit
 /// This replaces `deliveredSection` + `suppressedSection`, which were two
 /// separate stacks each drawing its own `ScoreMeter` on its own 0–1 track. Four
 /// gauges side by side imply four unrelated measurements; there was a contest,
-/// and nothing on the screen showed it. Here every bid from the pass — won and
-/// lost — is one row on **one shared horizontal axis**, ordered by score. The
+/// and nothing on the screen showed it. Here every bid from the pass - won and
+/// lost - is one row on **one shared horizontal axis**, ordered by score. The
 /// longest bar won. That is the picture, rather than a caption under four
 /// independent dials saying a contest happened.
 ///
 /// Part A is the roster: five discs, always five, dimmed where a role stayed
 /// silent. It is the only thing on any screen that makes "five bid and four
-/// lost" *checkable* instead of a slogan — you can count the dim ones.
+/// lost" *checkable* instead of a slogan - you can count the dim ones.
 struct BidLedgerCard: View {
     let delivered: [Nudge]
     let suppressed: [Nudge]
@@ -31,7 +31,7 @@ struct BidLedgerCard: View {
     private var deliveredIDs: Set<String> { Set(delivered.map(\.bid.id)) }
 
     /// The axis every bar is drawn against. The top score, never less than the
-    /// winner's — so the longest bar is the highest score and two bids at 0.71
+    /// winner's - so the longest bar is the highest score and two bids at 0.71
     /// and 0.22 differ by the ~3.2× they actually differ by, rather than both
     /// being drawn against 1.0 and looking like two thirds of nothing.
     private var axis: Double { max(all.first?.score ?? 1, 0.0001) }
@@ -57,7 +57,7 @@ struct BidLedgerCard: View {
 
     /// Always five. A role that bid is lit in its own colour; a role that stayed
     /// silent is drawn at a quarter opacity and still occupies its place, which
-    /// is the whole point — an absence you cannot see is not evidence of
+    /// is the whole point - an absence you cannot see is not evidence of
     /// restraint.
     private var roster: some View {
         let bidding = Set(all.map(\.bid.originAgent))
@@ -146,11 +146,11 @@ struct BidLedgerCard: View {
 
 /// The winner at full weight with its text at headline size; losers at body
 /// weight and reduced opacity, each with its reason and its agent's colour as a
-/// left rail. One row component, used for both — because a contest drawn with
+/// left rail. One row component, used for both - because a contest drawn with
 /// two different row designs is two lists that happen to be adjacent.
 ///
 /// The chevron is FR12.4. Before this, `WhyView` was referenced exactly once in
-/// the whole app — from the Memory tab — so the decision record for the pass the
+/// the whole app - from the Memory tab - so the decision record for the pass the
 /// user was looking at was two taps away behind a different screen.
 struct BidRow: View {
     let nudge: Nudge
@@ -177,7 +177,7 @@ struct BidRow: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        // Criterion: role, bid text, then delivered-or-why — in that order, one
+        // Criterion: role, bid text, then delivered-or-why - in that order, one
         // element per bid, so a VoiceOver user hears the contest as a list of
         // outcomes rather than as a pile of meters.
         .accessibilityLabel("\(Kairo.shortName(forAgent: nudge.bid.originAgent)). "
@@ -241,7 +241,7 @@ struct BidRow: View {
 
     /// The bar, against the pass's own top score rather than against 1.0. No
     /// number beside it: the bid's *rank* is what the user can act on, and 0.43
-    /// is a float the user has no mental model for — and set in monospace it
+    /// is a float the user has no mental model for - and set in monospace it
     /// read as a debug build.
     private var bar: some View {
         ScoreMeter(value: nudge.score / axis,

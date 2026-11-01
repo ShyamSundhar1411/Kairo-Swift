@@ -4,7 +4,7 @@ import KairoKit
 /// The watch has two modes and they are meant to feel like opposites.
 ///
 /// A pending nudge takes the whole screen, warm and loud, with one action and
-/// three answers. The rest of the time — which is most of the time, by design —
+/// three answers. The rest of the time - which is most of the time, by design -
 /// the crown pages through three quiet, cool cards that ask nothing of you.
 struct WatchRootView: View {
     @Environment(WatchModel.self) private var model
@@ -22,7 +22,7 @@ struct WatchRootView: View {
 
 // MARK: - The interruption
 
-/// CF7 — what an interruption actually looks like on the wrist: one action,
+/// CF7 - what an interruption actually looks like on the wrist: one action,
 /// three answers, no scrolling.
 ///
 /// The phone arbitrates; this screen only renders the bid that won and reports
@@ -61,7 +61,7 @@ struct NudgeCard: View {
                              for: .navigation)
     }
 
-    /// NFR11 — this nudge is not the one the role wrote; it was substituted
+    /// NFR11 - this nudge is not the one the role wrote; it was substituted
     /// because the original needed a capability the user does not have. A silent
     /// substitution would be the app quietly deciding what you can do, so it is
     /// stated on the same screen as the ask.
@@ -83,7 +83,7 @@ struct NudgeCard: View {
     }
 
     private var answers: some View {
-        // 38 + 38 + 48 plus gaps is 134pt — inside the 40mm content width with
+        // 38 + 38 + 48 plus gaps is 134pt - inside the 40mm content width with
         // room to spare, so nothing compresses and nothing scrolls sideways.
         HStack(spacing: 5) {
             AnswerButton(glyph: "xmark", label: "Dismiss", tint: Kairo.inkSoft) {
@@ -101,7 +101,7 @@ struct NudgeCard: View {
 }
 
 /// One of the three answers. Circular, fingertip-sized on the smallest watch,
-/// and labelled — the glyph is decoration, the label is the control's name.
+/// and labelled - the glyph is decoration, the label is the control's name.
 private struct AnswerButton: View {
     let glyph: String
     let label: String
@@ -236,7 +236,7 @@ private struct DemoWristPage: View {
     }
 }
 
-/// CF8 — one tap, no keyboard, no confirmation screen.
+/// CF8 - one tap, no keyboard, no confirmation screen.
 private struct HydrationPage: View {
     @Environment(WatchModel.self) private var model
 
@@ -323,8 +323,8 @@ private struct HydrationPage: View {
 ///
 /// The phone measures sitting, not the watch, and it now says so over the wire:
 /// this page renders `DayState.sedentaryMinutes`. nil and zero are different
-/// answers and read differently — nil is "your phone has not told us", zero is
-/// "you have not been sitting" — so an unmeasured day never borrows the look of
+/// answers and read differently - nil is "your phone has not told us", zero is
+/// "you have not been sitting" - so an unmeasured day never borrows the look of
 /// a measured one.
 private struct SittingPage: View {
     @Environment(WatchModel.self) private var model
@@ -403,14 +403,14 @@ private struct SittingPage: View {
 
 /// Today, as the phone has it.
 ///
-/// Read-only by design. The wrist consolidates nothing: every line here — the
-/// headline and the already-formatted figure beside it — was composed on the
+/// Read-only by design. The wrist consolidates nothing: every line here - the
+/// headline and the already-formatted figure beside it - was composed on the
 /// phone, which is the only side that knows where a number came from and what
 /// the evidence gate permits to be said about it. The header states that out
 /// loud, because "this is your phone's figure" is precisely what makes the two
 /// screens agree instead of quietly disagreeing.
 ///
-/// There is no motion on this page — no `contentTransition`, no `symbolEffect`.
+/// There is no motion on this page - no `contentTransition`, no `symbolEffect`.
 /// A list that re-animates every time the phone re-sends the same digest is
 /// noise, and Reduce Motion would have to switch it off anyway; the only moving
 /// thing is the connecting mark in the empty state, which already stands still
@@ -467,7 +467,7 @@ private struct LogPage: View {
 
             // nil is "not measured" and never a zero. A morning nobody logged is
             // not a morning without food, and a night nothing recorded is not a
-            // night without sleep — so the absent case says so in words rather
+            // night without sleep - so the absent case says so in words rather
             // than drawing a confident 0.
             summaryLine(icon: "flame.fill", tint: Kairo.leaf,
                         figure: log.kilojoulesLogged.map { kj in
@@ -482,7 +482,7 @@ private struct LogPage: View {
                         },
                         absent: "sleep not measured")
 
-            // CF7 — what the day actually cost you in attention. The one figure
+            // CF7 - what the day actually cost you in attention. The one figure
             // on this page that is about Kairo rather than about the user, and
             // the only one with no absent case: both halves are non-optional on
             // `DayLog`, because the phone always knows what it has spent.
@@ -525,7 +525,7 @@ private struct LogPage: View {
     /// "The phone has not sent anything yet" and "nothing was logged today" are
     /// not the same answer, and this page is not allowed to collapse them: the
     /// first is about the link, the second is a claim about the user's day. The
-    /// model knows its `linkState`, so the link cases can be told apart too —
+    /// model knows its `linkState`, so the link cases can be told apart too -
     /// still connecting is genuinely still loading, out of range is not.
     private var emptyState: some View {
         VStack(spacing: 7) {
@@ -581,8 +581,8 @@ private struct LogRow: View {
     let now: Date
 
     /// Below this the figure was not arrived at by measuring. The number is
-    /// `EnergySummary.portionForm`'s own floor — under 0.65 a day's energy may
-    /// only be spoken as a range, never as a point — so a point figure resting on
+    /// `EnergySummary.portionForm`'s own floor - under 0.65 a day's energy may
+    /// only be spoken as a range, never as a point - so a point figure resting on
     /// evidence that weak has to *look* weak here, or the wrist has laundered a
     /// guess into a clean number.
     private static let weakConfidence = 0.65
@@ -667,7 +667,7 @@ private struct LogRow: View {
 
 /// The silence, stated. Kairo makes a promise about restraint on the phone; the
 /// wrist is where that promise is either kept or broken, so it says so here.
-/// Arbitration happens on the phone — the watch buzzes only when a bid wins.
+/// Arbitration happens on the phone - the watch buzzes only when a bid wins.
 private struct SilencePage: View {
     var body: some View {
         VStack(spacing: 8) {
@@ -794,7 +794,7 @@ private struct SilencePage: View {
 
 /// Fixtures, and labelled as such: these are what the *phone* would compose, not
 /// figures the watch is capable of producing. The `.meal` and `.sleep` entries
-/// exist here to prove the row renders them — the live phone sends neither yet,
+/// exist here to prove the row renders them - the live phone sends neither yet,
 /// because it holds no meal ledger. See `AppModel.dayLog()`.
 ///
 /// Guarded to match `WatchModel.preview`, so no fixture is ever compiled into a

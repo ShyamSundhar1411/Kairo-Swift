@@ -2,8 +2,8 @@
 """The backends `KairoUITests` expects on 8099, 8098 and 8097.
 
 `ScreenTour` has driven the app against these three addresses since it was
-written and the repository never shipped anything to answer them, so ten tests —
-including the accessibility audit, which is the only automated check on NFR11 —
+written and the repository never shipped anything to answer them, so ten tests -
+including the accessibility audit, which is the only automated check on NFR11 -
 have been unrunnable. This is what they talk to.
 
 **These are not hand-written fakes.** Each one is the real `create_app` with a
@@ -14,18 +14,18 @@ drift from the thing it doubles is a test that passes after the contract breaks.
 Three ports because the app renders three different provenance states and each
 has to be photographed rather than described:
 
-* **8099 — served by agents.** A full round: five bids, one delivered, four
+* **8099 - served by agents.** A full round: five bids, one delivered, four
   suppressed with their reasons. This is the one the ledger, the decision record
   and the accessibility audit all run against.
-* **8098 — shadow costing.** The same round from a backend whose provider costs
+* **8098 - shadow costing.** The same round from a backend whose provider costs
   nothing, so §7.1's ladder moves on shadow rates and every figure derived from
   them says so. The app has to show that it is notional.
-* **8097 — refusing.** No provider could be bound. `/health` answers 503 with a
+* **8097 - refusing.** No provider could be bound. `/health` answers 503 with a
   diagnosis and every `/v1` route refuses. The app's job is to say which backend
   and which tier, not to show an empty Today.
 
 8088 is deliberately not served. `testAgentsUnreachable` wants a fine address
-with nothing behind it — the state where the server is simply not there.
+with nothing behind it - the state where the server is simply not there.
 
     python mobile/ios/KairoUITests/doubles/serve.py          # all three
     python mobile/ios/KairoUITests/doubles/serve.py 8099     # just one
@@ -48,11 +48,11 @@ from kairo.providers.base import Costing
 from kairo.providers.scripted import Rule, ScriptedProvider
 
 #: The bids the ledger screenshots and `testLedgerAnnouncesEachBidOnce` expect.
-#: Five, so the ledger has losers to explain — a round where everything was
+#: Five, so the ledger has losers to explain - a round where everything was
 #: delivered would photograph the one case the attention budget is not for.
 #: Keyed by the role name **as the prompt spells it**, with spaces. The first
 #: draft keyed them by the enum spelling (`LifestyleSignalAnalyst`) and matched
-#: nothing, so every round came back empty — a double that answers 200 with no
+#: nothing, so every round came back empty - a double that answers 200 with no
 #: bids is the most confusing possible failure, because the app renders it as a
 #: quiet day rather than a broken harness.
 BIDS = {
@@ -86,7 +86,7 @@ def rules() -> list[Rule]:
                 _bid_json(entries))
            for role, entries in BIDS.items()]
     # The Steward screens whatever the arbiter allocates (CF11). Unscripted, the
-    # judge is unparseable and the service fails closed — which is the correct
+    # judge is unparseable and the service fails closed - which is the correct
     # behaviour and would photograph an empty ledger.
     out.append(Rule(("YOUR ROLE: Wellbeing Steward", "MESSAGE ABOUT TO BE SENT"),
                     '{"verdict":"pass","reason":"safe as written"}'))
@@ -97,7 +97,7 @@ class MeteredScripted(ScriptedProvider):
     """A scripted provider that reports metered costing.
 
     8099 and 8098 differ only in whether the money on screen is money. Both run
-    the same scripted round, so the costing has to be the thing that varies —
+    the same scripted round, so the costing has to be the thing that varies -
     and it has to come from the provider, because that is where the real one
     comes from. A flag read straight into the response would photograph a
     banner the production code could never produce.
@@ -130,7 +130,7 @@ def app_for(port: int, data_dir: Path):
     if port == 8097:
         # Nothing resolves. `_settings` roots at a temp directory and replaces
         # the process environment, so there is no `.env` above it and no key in
-        # scope — which is exactly the production condition for "no backend
+        # scope - which is exactly the production condition for "no backend
         # could be bound", reached the way production reaches it rather than
         # through a flag that exists only for tests.
         #
@@ -140,7 +140,7 @@ def app_for(port: int, data_dir: Path):
         # `OLLAMA_HOST` is pointed at a dead port on purpose. Without it this
         # app binds whatever local model the developer happens to be running,
         # so the "no backend" screenshot would be reproducible on CI and not on
-        # the machine of the person who wrote it — which is the worst of both.
+        # the machine of the person who wrote it - which is the worst of both.
         return create_app(_settings(here, OLLAMA_HOST="http://127.0.0.1:1"))
 
     sys.path.insert(0, str(ROOT / "backend"))
@@ -172,7 +172,7 @@ def main() -> None:
         serve(port, data_dir)
         print(f"  127.0.0.1:{port}")
     print(f"data in {data_dir}")
-    print("ready — ctrl-c to stop")
+    print("ready - ctrl-c to stop")
     signal.pause()
 
 

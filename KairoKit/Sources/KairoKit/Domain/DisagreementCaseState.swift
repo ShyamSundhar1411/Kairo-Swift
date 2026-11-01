@@ -1,6 +1,6 @@
 import Foundation
 
-/// Figure 34 — the disagreement case lifecycle (UC2).
+/// Figure 34 - the disagreement case lifecycle (UC2).
 ///
 /// The case already had `rounds`, `maxRounds` and `resolve()`, and no machine.
 /// So the rebuttal round the diagram counts was a number nobody could be
@@ -32,15 +32,15 @@ public enum DisagreementCaseState: String, LifecycleState {
         // clinical opinion.
         .init(.deadlocked, "notifyHumanOperator", .escalated, guardText: "clinical"),
         .init(.deadlocked, "stewardRuled", .resolved,
-              guardText: "not clinical — rank(positions), resolve(STEWARD_RULING)"),
+              guardText: "not clinical - rank(positions), resolve(STEWARD_RULING)"),
         .init(.escalated, "operatorRuled", .resolved,
-              guardText: "ruleOn(case) — resolve(OPERATOR_RULING)"),
+              guardText: "ruleOn(case) - resolve(OPERATOR_RULING)"),
         // Both branches of the screen under RESOLVED end sealed. A withheld
         // recommendation is sealed with the reason it was withheld, which is
         // the branch that makes the record worth keeping.
         .init(.resolved, "presented", .sealed,
-              guardText: "verdict.isReleasable() — present card, seal()"),
+              guardText: "verdict.isReleasable() - present card, seal()"),
         .init(.resolved, "withheld", .sealed,
-              guardText: "not releasable — withhold, record reason, seal()"),
+              guardText: "not releasable - withhold, record reason, seal()"),
     ]
 }

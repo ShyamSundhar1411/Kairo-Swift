@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member B — CF6 Evidence-sufficiency gate.
+/// Member B - CF6 Evidence-sufficiency gate.
 ///
 /// Coverage is not a quality score shown to the user. It decides what any agent is
 /// *permitted to assert*, which is why it is a first-class object with a lifecycle.
@@ -30,10 +30,10 @@ public enum CoverageDomain: String, CaseIterable, Sendable {
 /// What a claim is allowed to sound like, given the evidence behind it.
 ///
 /// The Steward enforces this by rejecting the Coach's own outbound message and
-/// returning a downgraded form — the sequence diagram in Member B's chain.
+/// returning a downgraded form - the sequence diagram in Member B's chain.
 public extension CoverageDomain {
     /// The domain a nudge of this class makes claims about, or nil when it claims
-    /// nothing measurable — a bid that only asks a question is not making one.
+    /// nothing measurable - a bid that only asks a question is not making one.
     ///
     /// This mapping is what lets CF6 apply to the nudges the user actually sees.
     /// Until it existed the evidence gate was reachable from exactly one badge on
@@ -61,7 +61,7 @@ public enum AssertionForm: Int, Comparable, Sendable {
 
 public struct CoverageMetric: Sendable, Equatable {
     public let domain: CoverageDomain
-    /// 0...1 — observed over expected, where "expected" comes from this user's learned pattern.
+    /// 0...1 - observed over expected, where "expected" comes from this user's learned pattern.
     public let observedFraction: Double
     public let expectedCount: Int
     public let observedCount: Int
@@ -122,7 +122,7 @@ public struct DayCoverage: Sendable {
 /// Kairo is not seeing anything.
 public enum CoverageBid {
     /// Fixed and low. FR6.4 says low coverage *competes*, so this has to be
-    /// beatable by anything with a real finding behind it — and still win on a
+    /// beatable by anything with a real finding behind it - and still win on a
     /// day where nothing else bids, which is the day it matters most.
     public static let expectedBenefit = 0.25
     public static let urgency = 0.15
@@ -159,11 +159,11 @@ public enum CoverageBid {
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
 
-    /// `nil` when every domain is above the floor — the common case, and it
+    /// `nil` when every domain is above the floor - the common case, and it
     /// must cost nothing.
     /// `calendar` defaults to `.current` deliberately: the user's day is theirs,
     /// not ours. Tests pass `DateHelp.calendar` so they say which day they mean
-    /// — the distinction that broke three KairoKit tests on the first CI run.
+    /// - the distinction that broke three KairoKit tests on the first CI run.
     public static func bid(for coverage: DayCoverage, dayStart: Date,
                            calendar: Calendar = .current) -> NudgeBid? {
         let message = text(for: coverage)
@@ -175,8 +175,8 @@ public enum CoverageBid {
             id: "coverage:" + Self.isoDay(day, in: calendar),
             nudgeClass: nudgeClass, originAgent: "Orchestrator",
             expectedBenefit: expectedBenefit, urgency: urgency,
-            // The whole day. A coverage shortfall is not a moment — it does not
-            // become more or less true at 3pm — so a short window would let the
+            // The whole day. A coverage shortfall is not a moment - it does not
+            // become more or less true at 3pm - so a short window would let the
             // one bid about *not having data* expire before anything saw it.
             windowOpens: day,
             windowCloses: calendar.date(byAdding: .day, value: 1, to: day) ?? day,

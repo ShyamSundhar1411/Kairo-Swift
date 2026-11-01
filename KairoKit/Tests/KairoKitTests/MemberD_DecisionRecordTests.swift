@@ -2,8 +2,8 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// Member D — CF12. The modelling point: sealed content is append-only.
-@Suite("Member D — decision records")
+/// Member D - CF12. The modelling point: sealed content is append-only.
+@Suite("Member D - decision records")
 struct DecisionRecordTests {
     let t = DateHelp.at(2026, 8, 25, 15, 40)
 
@@ -71,8 +71,8 @@ struct DecisionRecordTests {
     }
 }
 
-/// Member D — CF10.
-@Suite("Member D — habit memory")
+/// Member D - CF10.
+@Suite("Member D - habit memory")
 struct MemoryTests {
     let t = DateHelp.at(2026, 8, 25)
 

@@ -4,9 +4,9 @@ import KairoKit
 
 /// Where the agent backend is, and whether it is actually answering.
 ///
-/// The address is per-device and changes constantly during development — the Mac
+/// The address is per-device and changes constantly during development - the Mac
 /// running the backend gets a new DHCP lease, the phone moves to a different
-/// network — so it is a runtime setting rather than a build constant.
+/// network - so it is a runtime setting rather than a build constant.
 @Observable
 final class BackendConnection {
     enum State: Equatable {
@@ -16,7 +16,7 @@ final class BackendConnection {
         /// Reachable. Arbitration, meal analysis and explanations come from the
         /// five roles rather than from the on-device fallback.
         case connected(mode: String, promptVersion: String, roles: Int)
-        /// Configured but not answering. The app keeps working on the device —
+        /// Configured but not answering. The app keeps working on the device -
         /// this state exists so that fact is visible rather than silent.
         case unreachable(String)
         /// The backend answered **503**. It is up, it is reachable, and it has
@@ -30,7 +30,7 @@ final class BackendConnection {
         /// thrown away one layer below here.
         case refusing(diagnosis: String)
         /// The backend answered **401**. It is up, it is reachable, it is not
-        /// misconfigured — it does not know who you are.
+        /// misconfigured - it does not know who you are.
         ///
         /// Split out for exactly the reason `refusing` was split out of
         /// `unreachable`: these are three different instructions to the person
@@ -68,7 +68,7 @@ final class BackendConnection {
             case let .connected(mode, version, roles):
                 "\(roles) roles, prompts \(version), \(mode)."
             case let .unreachable(why):
-                "\(why) Falling back to the on-device arbiter, so the app keeps working — "
+                "\(why) Falling back to the on-device arbiter, so the app keeps working - "
                 + "but what you see is not coming from the agents."
             case let .refusing(diagnosis):
                 // Verbatim. The backend wrote this sentence for a person to
@@ -77,7 +77,7 @@ final class BackendConnection {
                 diagnosis
             case .unauthenticated:
                 "This backend is up and will not answer without a token. Paste the one "
-                + "it printed when it started — `serve-lan.sh` shows it — into the field "
+                + "it printed when it started - `serve-lan.sh` shows it - into the field "
                 + "above. Until then the on-device arbiter is deciding."
             }
         }
@@ -85,7 +85,7 @@ final class BackendConnection {
 
     private static let key = "kairo.backend.baseURL"
     /// NFR6. A keychain account now, not a `UserDefaults` key. The old value is
-    /// migrated once on first launch and then removed from the plist — leaving
+    /// migrated once on first launch and then removed from the plist - leaving
     /// it there would mean the credential was in two places, one of them the
     /// place this change exists to get it out of.
     private static let tokenAccount = "backend.token"
@@ -98,7 +98,7 @@ final class BackendConnection {
 
     /// What the last successful `/health` said about the model behind the
     /// service. Held so the agents sheet can show provider, model ids and the
-    /// vendors that were passed over without a second request — and so the meal
+    /// vendors that were passed over without a second request - and so the meal
     /// screen can warn about an unusable vision tier before the camera opens.
     private(set) var provider: RemoteAgentClient.Provider?
     /// Figure 14's ports, as bound on the server.
@@ -109,8 +109,8 @@ final class BackendConnection {
 
     /// Edits re-check on their own. Pressing a button to apply an address you
     /// have just finished typing is work the app can do for you, and the state
-    /// it leaves behind otherwise — a new address with the old verdict still on
-    /// screen — is actively misleading.
+    /// it leaves behind otherwise - a new address with the old verdict still on
+    /// screen - is actively misleading.
     var address: String {
         didSet {
             UserDefaults.standard.set(address, forKey: Self.key)
@@ -131,7 +131,7 @@ final class BackendConnection {
     /// In the simulator this IS the Mac's loopback, so a developer who has the
     /// backend running gets the five agent roles on first launch with nothing
     /// typed. Demanding an address up front made the default experience the
-    /// on-device fallback — the weakest version of the product — and left the
+    /// on-device fallback - the weakest version of the product - and left the
     /// person to discover a settings screen before they ever saw an agent.
     ///
     /// On a real device loopback is the phone itself and nothing answers; that
@@ -145,7 +145,7 @@ final class BackendConnection {
     /// is machine-specific and changes with the network, which is exactly why
     /// it belongs in a build setting rather than committed in this file.
     ///
-    /// A stored address always wins — see `init`. This is only ever the value
+    /// A stored address always wins - see `init`. This is only ever the value
     /// nobody has overridden yet.
     static let defaultAddress: String = {
         let configured = Bundle.main.object(forInfoDictionaryKey: "KairoDefaultBackendURL")
@@ -168,7 +168,7 @@ final class BackendConnection {
     /// Keychain first, then the old plist key once.
     ///
     /// `didSet` does not fire from an initialiser, so the migration writes
-    /// through `KeychainStore` directly — and deletes the plist copy in the same
+    /// through `KeychainStore` directly - and deletes the plist copy in the same
     /// breath, because a credential that exists in both places has only been
     /// copied, not moved.
     private static func loadToken() -> String {
@@ -183,7 +183,7 @@ final class BackendConnection {
     /// nil when nothing is configured, which is the on-device path.
     ///
     /// 120 seconds per request. An arbitration is five model calls, and on a
-    /// local model that can run well past the old 45 — at which point the app
+    /// local model that can run well past the old 45 - at which point the app
     /// reported a backend that was busy working as unreachable.
     var client: RemoteAgentClient? { makeClient(timeout: 120) }
 
@@ -200,15 +200,15 @@ final class BackendConnection {
                                  timeout: timeout)
     }
 
-    /// The last request that failed while the backend itself was fine — a
+    /// The last request that failed while the backend itself was fine - a
     /// slow model, a route-level error. Shown on the Agents screen, and kept
     /// apart from `state` on purpose: see `noteFailure`.
     private(set) var lastRequestProblem: String?
 
     private var retryTask: Task<Void, Never>?
 
-    /// Keep trying while not connected, so a backend started after the app —
-    /// or one that blipped — comes back without anybody pressing Connect.
+    /// Keep trying while not connected, so a backend started after the app -
+    /// or one that blipped - comes back without anybody pressing Connect.
     /// Ten seconds apart, and silent while connected.
     @MainActor
     func startAutoRetry() {
@@ -228,7 +228,7 @@ final class BackendConnection {
     }
 
     /// NFR6, the in-transit half (SCRUM-24). The rule itself lives in
-    /// `KairoKit.TransportPolicy`, where it has tests — the app target has no
+    /// `KairoKit.TransportPolicy`, where it has tests - the app target has no
     /// unit test bundle, and a decision about whether health summaries may
     /// leave the phone in cleartext should not be untested code behind a guard.
     static func transportIsAcceptable(_ url: URL) -> Bool {
@@ -294,7 +294,7 @@ final class BackendConnection {
     ///
     /// Called when the app comes back to the foreground, which is the moment
     /// that matters: the usual way to see "backend unreachable" is to launch
-    /// before starting the server, and the usual fix is to start it — after
+    /// before starting the server, and the usual fix is to start it - after
     /// which the app had no reason to look again and sat on a stale verdict
     /// until somebody found this screen.
     @MainActor
@@ -304,7 +304,7 @@ final class BackendConnection {
     }
 
     /// - Parameter quiet: re-verify without flashing "Checking…" over a
-    ///   connection that is probably fine — used after a single request failed.
+    ///   connection that is probably fine - used after a single request failed.
     func check(userID: String, quiet: Bool = false) async {
         guard let client, let healthClient else {
             state = .onDevice
@@ -347,12 +347,12 @@ final class BackendConnection {
     /// app "disconnected itself" a few requests in: a request SwiftUI cancelled
     /// because a screen went away, an arbitration that outlived the timeout on
     /// a slow model, or one route's own 503 ("no recommendation") each flipped
-    /// the whole app to unreachable or refusing — and with the state no longer
+    /// the whole app to unreachable or refusing - and with the state no longer
     /// connected, coming back to the foreground stopped re-running the pass, so
     /// it stayed that way until somebody pressed Connect.
     ///
     /// Now: cancellation is ignored, a 401 is still definitive, and everything
-    /// else asks `/health` — quietly — and lets that answer decide.
+    /// else asks `/health` - quietly - and lets that answer decide.
     @MainActor
     func noteFailure(_ error: Error) {
         if error is CancellationError { return }

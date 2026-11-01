@@ -1,12 +1,12 @@
 import Foundation
 
-/// Figure 40 (UC8) — the outbound advice screening lifecycle.
+/// Figure 40 (UC8) - the outbound advice screening lifecycle.
 ///
 /// Screening already worked. What it did not have was a *lifecycle*, and the
 /// difference is what the record can say afterwards. `blocked` told you a
 /// message was stopped; it could not tell you whether the classifier was
 /// unreachable, whether a red flag halted delivery, or whether a person was
-/// ever shown the result — three outcomes with the same name and completely
+/// ever shown the result - three outcomes with the same name and completely
 /// different obligations attached.
 ///
 /// The separations are load-bearing:
@@ -53,7 +53,7 @@ public enum AdviceScreeningState: String, LifecycleState {
         // rather than being thrown away.
         .init(.rejected, "revised", .submitted, guardText: "resubmit"),
         .init(.escalated, "clinicianDecided", .humanDecided,
-              guardText: "record decision — outranks all AI (AG-5)"),
+              guardText: "record decision - outranks all AI (AG-5)"),
         .init(.heldForHuman, "humanReviews", .humanDecided),
         .init(.approved, "release", .released,
               guardText: "seal verdict into DecisionRecord (FR12.1)"),

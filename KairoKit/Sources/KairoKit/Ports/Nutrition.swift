@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member A — CF1 / CF2. Where a kilojoule figure is allowed to come from.
+/// Member A - CF1 / CF2. Where a kilojoule figure is allowed to come from.
 ///
 /// Energy is not recoverable from a photograph. It is `identity × portion`, and
 /// the identity has to be looked up in a food composition table while the
@@ -24,7 +24,7 @@ public struct FoodReference: Sendable, Equatable, Identifiable {
     /// Where this came from, in words, for display. Attribution is a licence
     /// condition for some sources and good manners for all of them.
     public let source: String
-    /// The identifier within that source — a barcode, a food code — so any
+    /// The identifier within that source - a barcode, a food code - so any
     /// number in this app can be traced back to a row somebody else published.
     public let sourceID: String
 
@@ -67,7 +67,7 @@ public enum PortionBasis: String, Sendable, CaseIterable {
     case declaredServing
     /// Weighed on scales.
     case weighed
-    /// A cup, a slice, a tablespoon — a real measure with real variance.
+    /// A cup, a slice, a tablespoon - a real measure with real variance.
     case householdMeasure
     /// The user's estimate by eye.
     case estimated
@@ -103,7 +103,7 @@ public enum NutritionLookupError: Error, Equatable {
 ///
 /// Barcode lookup is the path that yields a measured number, so it is the one
 /// the app leans on. Text search is a convenience and is allowed to return
-/// nothing — which routes the entry to the ungrounded branch rather than to a
+/// nothing - which routes the entry to the ungrounded branch rather than to a
 /// guess.
 public protocol NutritionRepository: Sendable {
     var attribution: String { get }

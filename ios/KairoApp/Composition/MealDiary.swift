@@ -11,7 +11,7 @@ import KairoKit
 struct LoggedMeal: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let at: Date
-    /// The items, in words — "grilled salmon, steamed rice".
+    /// The items, in words - "grilled salmon, steamed rice".
     let title: String
     let kilojoules: Double
     /// The weakest item's confidence, which is what the whole estimate is worth.

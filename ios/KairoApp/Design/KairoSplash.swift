@@ -6,7 +6,7 @@ import KairoKit
 /// iOS paints the static launch screen (`UILaunchScreen` in apps/project.yml:
 /// `LaunchBackground` behind the `LaunchMark` image) before any of our code
 /// runs. This view opens on visually the same thing in the same place, then
-/// brings it to life and dissolves into the app — so there is no seam where the
+/// brings it to life and dissolves into the app - so there is no seam where the
 /// system's screen hands over to ours.
 ///
 /// It covers real work rather than a timer. `AppModel.bootstrap()` loads the

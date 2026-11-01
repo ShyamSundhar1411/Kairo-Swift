@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-@Suite("NFR10 — the companion's activity budget, which is not a battery reading")
+@Suite("NFR10 - the companion's activity budget, which is not a battery reading")
 struct WatchEnergyBudgetTests {
 
     @Test("a fresh day starts at nothing and is within budget")
@@ -40,7 +40,7 @@ struct WatchEnergyBudgetTests {
     @Test("the day rolls over on the first event of the new day")
     func rollsOver() {
         // A watch app is not running at midnight. The first event of a new day
-        // is the only reliable moment to notice the day changed — a ledger that
+        // is the only reliable moment to notice the day changed - a ledger that
         // rolled only while the app happened to be open would attribute a
         // morning's events to yesterday.
         var ledger = WatchEnergyBudget(dayStart: DateHelp.at(2026, 8, 25))

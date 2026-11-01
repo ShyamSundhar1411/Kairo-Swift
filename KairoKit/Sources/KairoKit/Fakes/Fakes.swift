@@ -39,7 +39,7 @@ public final class InMemoryMemoryStore: MemoryStore, @unchecked Sendable {
 }
 
 /// Returns canned structured responses keyed by a substring of the prompt.
-/// Deterministic, free, and offline — which is what the demo runs on.
+/// Deterministic, free, and offline - which is what the demo runs on.
 public struct ScriptedLLMProvider: LLMProvider {
     /// A rule fires when *every* substring in `all` appears in the system prompt
     /// or the user prompt. Role prompts share a preamble and one role answers
@@ -133,14 +133,14 @@ public struct StubHealthDataSource: HealthDataSource {
 /// A food composition table with a handful of rows in it and nothing behind it.
 ///
 /// Seeded from `FoodReference` values the caller writes out by hand, so a test
-/// can exercise the barcode path — the one path that yields a measured number —
+/// can exercise the barcode path - the one path that yields a measured number -
 /// without a network call or an API key. Barcode lookup matches on `sourceID`,
 /// because that is what the identifier of a barcode row *is*.
 public struct InMemoryNutritionRepository: NutritionRepository {
     /// Deliberately not phrased as a citation. Attribution exists so the app can
     /// say where a number came from, and nothing here came from anywhere: these
     /// rows are fixtures, and displaying them as a source would be a lie.
-    public let attribution = "in-memory fixture — not a food composition table"
+    public let attribution = "in-memory fixture - not a food composition table"
 
     private let references: [FoodReference]
 

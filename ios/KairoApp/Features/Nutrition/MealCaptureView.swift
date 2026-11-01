@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import KairoKit
 
-/// Member A — CF1 / OF1. One screen, four states, and the one branch no
+/// Member A - CF1 / OF1. One screen, four states, and the one branch no
 /// competitor has: admitting it does not know the dish.
 ///
 /// The state machine is the visual here. `MealProgressTrack` draws the path this
@@ -18,7 +18,7 @@ struct MealCaptureView: View {
     @State private var lookingUp: String?
     @State private var reference: FoodReference?
     @State private var lookupFailure: String?
-    /// NFR6 — per-session consent for a photo leaving the phone. `@State` and
+    /// NFR6 - per-session consent for a photo leaving the phone. `@State` and
     /// not persisted on purpose: "per session" is the requirement's word, and a
     /// remembered yes is a different promise from the one made.
     @State private var confirmingUpload = false
@@ -95,7 +95,7 @@ struct MealCaptureView: View {
                 if let failure = model.analysisFailure { errorCard(failure) }
                 if let e = model.error { errorCard(e) }
 
-                TrustNote(text: "Kilojoules are what Kairo stores — that is the unit on an "
+                TrustNote(text: "Kilojoules are what Kairo stores - that is the unit on an "
                           + "Australian label. Calories, where they appear at all, are a "
                           + "derived display. Nothing is written to your day until you confirm it.")
             }
@@ -172,7 +172,7 @@ struct MealCaptureView: View {
                           trailing: "3 paths", tint: Kairo.inkFaint)
             if model.photo != nil {
                 TrustNote(text: "The photo above is yours. The three estimates below are "
-                          + "still scripted — the on-device classifier is phase 2 work, so "
+                          + "still scripted - the on-device classifier is phase 2 work, so "
                           + "Kairo will not pretend to have read your plate. Pick the "
                           + "branch you want to see.",
                           icon: "exclamationmark.triangle")
@@ -180,7 +180,7 @@ struct MealCaptureView: View {
 
             analyseRow
 
-            // Same seeded items and the same `recognise` calls as before — these
+            // Same seeded items and the same `recognise` calls as before - these
             // are the branches the state machine can take without a backend.
             ChoiceCard(title: "Grilled salmon and rice",
                        subtitle: "the confident path: both items clear the threshold, "
@@ -214,7 +214,7 @@ struct MealCaptureView: View {
             }
 
             // FR8.2 without a vision provider. It feeds a canned response
-            // through `apply` — the *same* handler the network path uses — so
+            // through `apply` - the *same* handler the network path uses - so
             // the drink offer being exercised here is evidence about the real
             // code and not about a second one written for the demo. The only
             // thing scripted is where the `MealAnalysis` came from.
@@ -243,7 +243,7 @@ struct MealCaptureView: View {
     ///
     /// Two drinks on purpose, and only one of them survives: the water is in
     /// shot and measurable, the second is the inference the schema exists to
-    /// stop — a model reasoning "they had curry, so probably a lassi" rather
+    /// stop - a model reasoning "they had curry, so probably a lassi" rather
     /// than seeing one. The backend zeroes it; this fixture arrives already
     /// filtered, which is what a real response looks like by the time it is here.
     private static let plateWithAGlass = RemoteAgentClient.MealAnalysis(
@@ -258,7 +258,7 @@ struct MealCaptureView: View {
                                             kilojoules: 0, confidence: 0.72),
         ])
 
-    /// FR8.2 / NFR6 — send the photo to the analyst, having asked first.
+    /// FR8.2 / NFR6 - send the photo to the analyst, having asked first.
     ///
     /// Separate button rather than automatic on capture, because NFR6 says meal
     /// photographs are "uploaded only on explicit per-session consent" and an
@@ -278,7 +278,7 @@ struct MealCaptureView: View {
                       app.backend.provider?.visionIsUnavailable != true {
                 ChoiceCard(title: "Analyse this photo",
                            subtitle: "sends it to the bound backend once. Real items, real "
-                           + "confidence — and any drink it can actually see (FR8.2).",
+                           + "confidence - and any drink it can actually see (FR8.2).",
                            icon: "sparkle.magnifyingglass",
                            tint: Kairo.sky) {
                     confirmingUpload = true
@@ -299,7 +299,7 @@ struct MealCaptureView: View {
                 SectionHeader(title: "A drink in the photo", icon: "cup.and.saucer",
                               trailing: "\(model.pendingDrinks.count)", tint: Kairo.sky)
                 TrustNote(text: "Kairo thinks it can see this. It has not been added to "
-                          + "your water — a volume read off a picture is weaker than a "
+                          + "your water - a volume read off a picture is weaker than a "
                           + "tap, so it asks.",
                           icon: "hand.raised")
                 ForEach(model.pendingDrinks) { drink in
@@ -366,7 +366,7 @@ struct MealCaptureView: View {
     }
 
     /// The camera is real. What it feeds is not yet, and the section below says
-    /// so — a tappable tile that opens nothing would be the worse lie, but so
+    /// so - a tappable tile that opens nothing would be the worse lie, but so
     /// would a photo followed by numbers presented as a measurement.
     private var photoPrompt: some View {
         Button { showingCamera = true } label: {
@@ -378,7 +378,7 @@ struct MealCaptureView: View {
                     .font(.kairoHeadline)
                     .foregroundStyle(Kairo.ink)
                 Text("One photo. It stays on your iPhone unless you ask for it to be "
-                     + "analysed — and that asks you first, every session (NFR6).")
+                     + "analysed - and that asks you first, every session (NFR6).")
                     .font(.kairoCaption)
                     .foregroundStyle(Kairo.inkSoft)
                     .multilineTextAlignment(.center)
@@ -466,7 +466,7 @@ struct MealCaptureView: View {
     private func explain(_ error: Error, code: String) -> String {
         switch error as? NutritionLookupError {
         case .notFound:
-            "Nothing is published for \(code). Kairo will not invent a row — "
+            "Nothing is published for \(code). Kairo will not invent a row - "
             + "photograph the meal and teach it the dish instead."
         case .noEnergyPublished:
             "\(code) is on file, but nobody has published an energy figure for it. "
@@ -590,7 +590,7 @@ struct MealCaptureView: View {
             SectionHeader(title: "Teach me", icon: "graduationcap", tint: Kairo.coral)
 
             ChoiceCard(title: "Scan the barcode or label",
-                       subtitle: "reads the panel off the packet — the strongest evidence "
+                       subtitle: "reads the panel off the packet - the strongest evidence "
                        + "there is",
                        icon: "barcode.viewfinder",
                        tint: Kairo.leaf) {
@@ -602,7 +602,7 @@ struct MealCaptureView: View {
             }
 
             ChoiceCard(title: "Describe it instead",
-                       subtitle: "a guided description — usable, and recorded as the weaker "
+                       subtitle: "a guided description - usable, and recorded as the weaker "
                        + "source it is",
                        icon: "text.viewfinder",
                        tint: Kairo.amber) {
@@ -689,7 +689,7 @@ struct MealCaptureView: View {
 
                 Divider().overlay(Kairo.hairline.opacity(0.12))
 
-                // NFR14: kilojoules first and largest — Australian labels are in kJ,
+                // NFR14: kilojoules first and largest - Australian labels are in kJ,
                 // and kJ is the unit Kairo stores. Calories are derived, and look it.
                 VStack(alignment: .leading, spacing: 2) {
                     Text("TOTAL")
@@ -720,7 +720,7 @@ struct MealCaptureView: View {
                          tint: Kairo.violet)
                 }
 
-                Button("Looks right — log it") {
+                Button("Looks right - log it") {
                     withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
                         model.confirmAndLog()
                     }
@@ -776,7 +776,7 @@ struct MealCaptureView: View {
     }
 
     /// The macros were always on `NutritionFacts` and never shown. The meters are
-    /// each macro's share of the grams on this plate, not a share of any target —
+    /// each macro's share of the grams on this plate, not a share of any target -
     /// Kairo does not hold a macro goal for you.
     private func macroRow(_ m: (protein: Double, carbs: Double, fat: Double)) -> some View {
         let total = m.protein + m.carbs + m.fat
@@ -854,13 +854,13 @@ struct MealCaptureView: View {
         }
 
         // CF3 used to be demonstrated here with a hard-coded disagreement about
-        // "the meal you just logged" — two `Position`s written in this file,
+        // "the meal you just logged" - two `Position`s written in this file,
         // identical for every meal anyone ever logged, carrying evidence
         // sentences about a plate the user had not photographed.
         //
         // It is gone, and `SecondOpinionView` went with it rather than being
         // left as an unreachable view. The backend's `/v1/dissent` returns
-        // `dto.outcome` — the winning position, the policy and the reason — and
+        // `dto.outcome` - the winning position, the policy and the reason - and
         // never the losing positions, so there is no way to draw a real
         // two-sided disagreement from what is on the wire. Drawing one anyway
         // would mean writing the loser's argument here, which is the thing this
@@ -888,8 +888,8 @@ struct MealCaptureView: View {
     private func transitionalSection(_ model: MealLogModel) -> some View {
         HStack(spacing: 12) {
             KairoInlineLoader()
-            // In words. This printed `model.state.name` — a camelCase machine
-            // state — at the user, in monospace, on a feature screen.
+            // In words. This printed `model.state.name` - a camelCase machine
+            // state - at the user, in monospace, on a feature screen.
             Text(title(for: model.state))
                 .font(.kairoHeadline)
                 .foregroundStyle(Kairo.inkSoft)
@@ -985,7 +985,7 @@ private struct MealProgressTrack: View {
     /// Four labels under four dots across 375 points is 9 points of room each
     /// at an accessibility size, which rendered "capture" as "ca…" and
     /// "recognise" as "re…". The per-dot labels come off and the step is named
-    /// in full underneath instead — the same words, legible, once.
+    /// in full underneath instead - the same words, legible, once.
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private struct Step {

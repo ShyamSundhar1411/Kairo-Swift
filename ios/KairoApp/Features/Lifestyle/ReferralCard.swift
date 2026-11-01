@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// FR11.7 — the one screen in the app that exists to be used in a bad moment.
+/// FR11.7 - the one screen in the app that exists to be used in a bad moment.
 ///
 /// Everything else here argues that interrupting someone has a cost. This is the
 /// exception: the gate has just decided a message should not be sent *because of
@@ -85,7 +85,7 @@ struct ReferralCard: View {
         .accessibilityHint("\(s.scope). Open \(s.hours).")
     }
 
-    /// VoiceOver reads a run of digits as one large number — "thirteen eleven
+    /// VoiceOver reads a run of digits as one large number - "thirteen eleven
     /// fourteen" becomes "one hundred and thirty-one thousand…". Spacing the
     /// digits out is the difference between a number somebody can dial and a
     /// number they have to ask a sighted person to read for them.

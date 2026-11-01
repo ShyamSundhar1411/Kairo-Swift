@@ -1,7 +1,7 @@
 import Foundation
 import KairoKit
 
-/// Member C — CF7. Delivers an allocated nudge to the wrist.
+/// Member C - CF7. Delivers an allocated nudge to the wrist.
 ///
 /// The watch has had a nudge card since the first prototype and it could never
 /// appear from real arbitration, because nothing on the phone ever pushed one.
@@ -9,7 +9,7 @@ import KairoKit
 /// interruption goes out over `PhoneEvent.nudge`.
 ///
 /// Like `NotificationNudgeChannel`, this delivers whatever it is handed. NFR8's
-/// ceiling is the arbiter's job — a channel that quietly dropped nudges would
+/// ceiling is the arbiter's job - a channel that quietly dropped nudges would
 /// corrupt the outcome history the receptivity model is meant to learn from.
 final class WatchNudgeChannel: NudgeChannel, @unchecked Sendable {
     let kind: NudgeChannelKind = .watchHaptic
@@ -22,7 +22,7 @@ final class WatchNudgeChannel: NudgeChannel, @unchecked Sendable {
 
     /// NFR11, the same test `RecordingNudgeChannel` applies: a bid that needs a
     /// capability this user does not have must not be delivered as written. The
-    /// arbiter still gets to substitute a confirmed equivalent — this only
+    /// arbiter still gets to substitute a confirmed equivalent - this only
     /// declares what the wrist can render unaided.
     func canRender(_ bid: NudgeBid, for profile: CapabilityProfile) -> Bool {
         profile.satisfies(bid.requiredCapabilities)

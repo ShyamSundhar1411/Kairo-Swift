@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// Which system produced the ledger on screen — the third question a user has,
+/// Which system produced the ledger on screen - the third question a user has,
 /// and the one the app never answered.
 ///
 /// Bound to `AppModel.arbitrationSource`, not to the last health check. Those
@@ -17,7 +17,7 @@ enum ArbitrationProvenance: Equatable {
     /// The five roles produced this, and the service cost is a real one.
     case agents
     /// The five roles produced this on a deployment where the money is a
-    /// stand-in — a free local model walking the same degradation ladder.
+    /// stand-in - a free local model walking the same degradation ladder.
     case agentsShadowCosted
     /// Nothing is configured. Not an error, and not drawn as one.
     case thisPhone
@@ -26,7 +26,7 @@ enum ArbitrationProvenance: Equatable {
     /// The backend answered 503. It is up and it has said what is wrong.
     case refusing
     /// The backend answered 401. It is up and correctly configured; it does not
-    /// know who you are. A different instruction from the two above — paste a
+    /// know who you are. A different instruction from the two above - paste a
     /// token, rather than check an address or read a diagnosis.
     case needsToken
 
@@ -93,7 +93,7 @@ enum ArbitrationProvenance: Equatable {
         case .unreachable:
             "The agent backend is configured but is not answering, so this phone decided."
         case .refusing:
-            "The agent backend is up and refusing every request. It has said why — open "
+            "The agent backend is up and refusing every request. It has said why - open "
             + "the agents sheet."
         case .needsToken:
             "The agent backend is up but does not know who you are. Paste its token on "
@@ -103,7 +103,7 @@ enum ArbitrationProvenance: Equatable {
 }
 
 /// The chip itself. Occupies the slot the old "Attention" chip had in the Today
-/// header, and leads to the agents sheet rather than to the contract — the
+/// header, and leads to the agents sheet rather than to the contract - the
 /// contract is one tap from the dial, which is the thing it is about.
 struct ProvenanceChip: View {
     let provenance: ArbitrationProvenance

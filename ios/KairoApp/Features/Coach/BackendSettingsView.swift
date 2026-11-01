@@ -4,7 +4,7 @@ import KairoKit
 /// Where the agents live, and proof of whether they are answering.
 ///
 /// This screen exists because the app is usable either way. Without it, a phone
-/// that has quietly lost the backend looks exactly like one that never had it —
+/// that has quietly lost the backend looks exactly like one that never had it -
 /// and the whole claim of the project is that five roles reasoned about your day,
 /// so "did they actually?" has to be answerable.
 ///
@@ -53,7 +53,7 @@ struct BackendSettingsView: View {
             } footer: {
                 if case .refusing = backend.state {
                     Text("The server answered. It is refusing every request until the "
-                         + "configuration above is fixed — which is a different problem "
+                         + "configuration above is fixed - which is a different problem "
                          + "from an address that does not resolve.")
                 } else {
                     Text(backend.state.detail)
@@ -93,7 +93,7 @@ struct BackendSettingsView: View {
     /// The expensive half is the footer. A chain of `+` over six string literals
     /// is six overload resolutions the solver has to carry through the whole
     /// `ViewBuilder` closure; a single multi-line literal is one token. The
-    /// house style uses `+ "…"` in a dozen other views and they are fine — this
+    /// house style uses `+ "…"` in a dozen other views and they are fine - this
     /// one sat beside five conditional rows, which is what tipped it over.
     private var provenanceSection: some View {
         Section {
@@ -110,7 +110,7 @@ struct BackendSettingsView: View {
         LabeledContent("Decided the ledger") {
             Text(provenance.label).foregroundStyle(provenance.tint)
         }
-        // S7 — read off the sealed record, so this says which backend
+        // S7 - read off the sealed record, so this says which backend
         // answered *that* pass rather than which one happens to be bound now.
         if let provider = model.servingProvider {
             LabeledContent("Answered by") { Text(provider).foregroundStyle(.secondary) }
@@ -137,12 +137,12 @@ struct BackendSettingsView: View {
         """
         \(oneLine)
 
-        The bidding model is the fast tier — the one the roles bid with. A \
+        The bidding model is the fast tier - the one the roles bid with. A \
         sentence written at the deep tier came from a different model on the \
         same provider.
 
         Either way the readings are this phone's. Sleep and movement come from \
-        Health, water from the watch — and where nothing was measured, nothing \
+        Health, water from the watch - and where nothing was measured, nothing \
         is claimed.
         """
     }
@@ -222,7 +222,7 @@ struct BackendSettingsView: View {
         } header: {
             Text("Cost ladder")
         } footer: {
-            // Verbatim. Not reformatted, not re-worded — the backend is the only
+            // Verbatim. Not reformatted, not re-worded - the backend is the only
             // thing that knows what its own figures stand for.
             Text(budget.note)
         }
@@ -252,7 +252,7 @@ struct BackendSettingsView: View {
     /// Backends found on this network.
     ///
     /// A LAN address is the one setting that is both required on a real device
-    /// and guaranteed to go stale — a reboot, a new lease, a different network.
+    /// and guaranteed to go stale - a reboot, a new lease, a different network.
     /// Typing it in is the work this section deletes.
     ///
     /// Only ever offers; `adopt(chosen:)` refuses to overwrite an address
@@ -298,7 +298,7 @@ struct BackendSettingsView: View {
             Text("On this network")
         } footer: {
             Text("Bonjour does not cross subnets or most VPNs. On those, type the "
-                 + "address below — it is what `serve-lan.sh` prints.")
+                 + "address below - it is what `serve-lan.sh` prints.")
         }
         .task {
             discovery.start()
@@ -312,7 +312,7 @@ struct BackendSettingsView: View {
         }
     }
 
-    /// The wrist, permanently — not only during onboarding.
+    /// The wrist, permanently - not only during onboarding.
     ///
     /// Somebody who pairs a watch a week after installing needs somewhere to see
     /// that it worked, and "is it connected?" should have an answer that is not
@@ -479,7 +479,7 @@ struct BackendSettingsView: View {
             // NFR6. The objection is shown here rather than left to surface as
             // a failed request: ATS refuses cleartext to a remote host with an
             // opaque URLError, which this screen would otherwise report as
-            // "the backend did not answer" — sending somebody to debug a server
+            // "the backend did not answer" - sending somebody to debug a server
             // that is fine.
             if let objection = backend.addressObjection {
                 Label(objection, systemImage: "lock.trianglebadge.exclamationmark.fill")
@@ -518,7 +518,7 @@ struct BackendSettingsView: View {
     private static let addressFooter = """
         The address of the machine running `python -m kairo`. Leave it empty to \
         stay on the device. On a phone this must be the Mac's address on your \
-        network, not localhost — localhost on a phone is the phone.
+        network, not localhost - localhost on a phone is the phone.
 
         Anything that is not on this machine must be https. The token is kept in \
         the keychain, not in preferences, and does not travel in a device backup.
@@ -575,7 +575,7 @@ private struct StatusRow: View {
         // different instruction to the reader.
         case .refusing:    Kairo.coral
         // Up, correctly configured, and does not know you. Amber rather than
-        // coral: nothing is broken, something is missing — and the field that
+        // coral: nothing is broken, something is missing - and the field that
         // fixes it is on this very screen.
         case .unauthenticated: Kairo.amber
         }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member D — CF12 "why did you say that?".
+/// Member D - CF12 "why did you say that?".
 ///
 /// The modelling point worth making in the interview: no transition may mutate
 /// sealed content. Corrections append an annotation; they never edit history.
@@ -26,12 +26,12 @@ public enum DecisionRecordState: String, LifecycleState {
         .init(.published, "userDisputed", .disputed),
         .init(.disputed, "openedForReview", .underReview),
         .init(.underReview, "annotationAppended", .amendedByAnnotation,
-              guardText: "append only — sealed content is never rewritten"),
+              guardText: "append only - sealed content is never rewritten"),
         .init(.amendedByAnnotation, "closed", .published),
         // Figure 41 carries an annotation rather than an edge: "No final
         // state: sealed records are never deleted or rewritten; they are
         // retained for audit (FR12.3, NFR12)". The two edges that used to be
-        // here — published → retentionExpired → purged — are not drift from
+        // here - published → retentionExpired → purged - are not drift from
         // that, they are its opposite. Mirrors records.py.
     ]
 }
@@ -107,7 +107,7 @@ public struct DecisionRecord: Sendable {
     public var fragments: [ContributionFragment] { _fragments }
     public var citations: [MemoryCitation] { _citations }
     public var rejectedAlternatives: [RejectedAlternative] { _rejected }
-    /// Which roles contributed — the direct answer to "are these five relabelled prompts?".
+    /// Which roles contributed - the direct answer to "are these five relabelled prompts?".
     public var contributingAgents: [String] { _fragments.map(\.agentID) }
 
     public enum SealError: Error, CustomStringConvertible {
@@ -134,6 +134,6 @@ public struct DecisionRecord: Sendable {
         safetyVerdict = v
         serviceTier = tier
     }
-    /// Permitted on a sealed record — this is the whole point of "append only".
+    /// Permitted on a sealed record - this is the whole point of "append only".
     public mutating func annotate(_ a: Annotation) { annotations.append(a) }
 }

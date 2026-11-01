@@ -1,12 +1,12 @@
 import SwiftUI
 import KairoKit
 
-/// Member A — CF1. The step between a published row and a logged portion.
+/// Member A - CF1. The step between a published row and a logged portion.
 ///
 /// Once a barcode or a search has produced a `FoodReference`, the composition is
 /// settled: somebody measured it, published it, and Kairo cites the row. What is
 /// still unknown is how much of it was eaten, and that is the only place error
-/// can enter — so this screen is entirely about the portion, and about being
+/// can enter - so this screen is entirely about the portion, and about being
 /// straight regarding how the portion was arrived at.
 ///
 /// Which is why every path out of here carries a `PortionBasis` as well as a
@@ -17,11 +17,11 @@ import KairoKit
 ///
 /// The one rule the copy keeps repeating: no invented conversions. A cup of
 /// rolled oats and a cup of rice weigh nothing like each other. Kairo holds no
-/// densities, so it does not offer a cup of a food — it offers what it can
+/// densities, so it does not offer a cup of a food - it offers what it can
 /// define, and says plainly why the rest is missing.
 struct PortionPicker: View {
     let reference: FoodReference
-    /// Called with the portion and how it was arrived at — two values, not one.
+    /// Called with the portion and how it was arrived at - two values, not one.
     /// The grams decide the number; the basis decides what the number is worth.
     /// A caller that took only the grams would be dropping the half of this
     /// screen that matters.
@@ -52,7 +52,7 @@ struct PortionPicker: View {
             methodCard
             energyCard
             confirmButton
-            TrustNote(text: "The composition figures here are published — somebody else "
+            TrustNote(text: "The composition figures here are published - somebody else "
                       + "measured them, and Kairo cites the row it read. The portion is the "
                       + "only part in doubt, which is why this screen exists and why what "
                       + "it records is how you arrived at it.")
@@ -114,7 +114,7 @@ struct PortionPicker: View {
             // label's serving comes first because it is the one portion figure
             // that arrives already measured, and for a packaged food it is the
             // fastest honest answer. Weighing scores higher (1.00 against 0.90)
-            // and sits directly below — the figure on each row says so, rather
+            // and sits directly below - the figure on each row says so, rather
             // than the ordering implying it.
             VStack(spacing: 8) {
                 ForEach(offeredBases, id: \.rawValue) { option in
@@ -183,7 +183,7 @@ struct PortionPicker: View {
         switch option {
         case .declaredServing:
             reference.declaredServingGrams.map {
-                "\(gramsText($0)), as the pack declares it — measured by whoever printed it"
+                "\(gramsText($0)), as the pack declares it - measured by whoever printed it"
             } ?? "This row declares no serving size"
         case .householdMeasure:
             "Servings counted or split by hand, plus millilitres where they can be "
@@ -237,7 +237,7 @@ struct PortionPicker: View {
             }
 
             if let measure = selectedMeasure {
-                Text("\(gramsText(measure.grams)) — \(measure.detail).")
+                Text("\(gramsText(measure.grams)) - \(measure.detail).")
                     .font(.caption)
                     .foregroundStyle(Kairo.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -275,7 +275,7 @@ struct PortionPicker: View {
             }
 
             if !typedGrams.isEmpty, parsedGrams == nil {
-                Text("Kairo needs a weight in grams, above zero and up to 5,000 — past that "
+                Text("Kairo needs a weight in grams, above zero and up to 5,000 - past that "
                      + "it is a typo rather than a meal.")
                     .font(.caption)
                     .foregroundStyle(Kairo.coral)
@@ -294,7 +294,7 @@ struct PortionPicker: View {
     /// Round grams, not small/medium/large.
     ///
     /// Small, medium and large need a gram weight per food before they mean
-    /// anything, and Kairo holds none — so a "medium" would be Kairo's invention
+    /// anything, and Kairo holds none - so a "medium" would be Kairo's invention
     /// wearing the user's name. A round number the user picks is genuinely their
     /// estimate, and the confidence beside it says what that is worth.
     private var estimatedControl: some View {
@@ -355,7 +355,7 @@ struct PortionPicker: View {
 
     private var energyCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // NFR14: kilojoules first and largest — that is the unit on an
+            // NFR14: kilojoules first and largest - that is the unit on an
             // Australian label and the unit Kairo stores. Calories are a derived
             // display line, and they are drawn to look like one.
             VStack(alignment: .leading, spacing: 3) {
@@ -413,8 +413,8 @@ struct PortionPicker: View {
 
     /// The consequence of the choice, all four at once.
     ///
-    /// The kilojoules do not move when the basis does — it is the same published
-    /// row either way — so the only thing that changes is what the figure is
+    /// The kilojoules do not move when the basis does - it is the same published
+    /// row either way - so the only thing that changes is what the figure is
     /// worth. Showing the whole ladder is the quickest way to make that legible:
     /// weighing is not better arithmetic, it is a stronger claim.
     private var confidenceLadder: some View {
@@ -460,7 +460,7 @@ struct PortionPicker: View {
             + "being guessed."
             : "Weighing the same food would carry "
             + "\(percent(PortionBasis.weighed.confidence)) instead of "
-            + "\(percent(basis.confidence)). The kilojoules would not change — the "
+            + "\(percent(basis.confidence)). The kilojoules would not change - the "
             + "strength of the claim would."
     }
 
@@ -480,7 +480,7 @@ struct PortionPicker: View {
 
     private var confirmTitle: String {
         guard let item else { return "Pick a portion first" }
-        return "Log \(gramsText(item.grams)) — \(basis.describedInWords)"
+        return "Log \(gramsText(item.grams)) - \(basis.describedInWords)"
     }
 
     // MARK: - The arithmetic
@@ -536,7 +536,7 @@ struct PortionPicker: View {
     ///
     /// 1. Multiples of the label's own declared serving. The serving itself was
     ///    measured by the manufacturer; counting two of them, or halving one by
-    ///    eye, is a real household action with real variance — which is exactly
+    ///    eye, is a real household action with real variance - which is exactly
     ///    what `.householdMeasure` is worth (0.70) rather than what
     ///    `.declaredServing` is (0.90).
     ///
@@ -569,7 +569,7 @@ struct PortionPicker: View {
             out.append(.init(id: "tsp", label: "1 tsp",
                              detail: "5 mL of water at 1 g per mL", grams: 5))
             out.append(.init(id: "tbsp", label: "1 tbsp",
-                             detail: "20 mL — the Australian tablespoon — at 1 g per mL",
+                             detail: "20 mL - the Australian tablespoon - at 1 g per mL",
                              grams: 20))
             out.append(.init(id: "half-cup", label: "½ cup",
                              detail: "125 mL of water at 1 g per mL", grams: 125))
@@ -591,8 +591,8 @@ struct PortionPicker: View {
     /// per-food density.
     ///
     /// The list is short on purpose and is matched against the whole name rather
-    /// than as a substring, so "coconut water" and "tonic water" — which carry
-    /// sugar and are not 1 g/mL — cannot slip through. The zero-energy check is
+    /// than as a substring, so "coconut water" and "tonic water" - which carry
+    /// sugar and are not 1 g/mL - cannot slip through. The zero-energy check is
     /// the second gate: a row calling itself water that has kilojoules in it is
     /// not water, whatever it is called.
     private var isWaterLike: Bool {
@@ -615,7 +615,7 @@ struct PortionPicker: View {
         } else {
             "Cups and spoons are not offered for this one. A cup of rolled oats and a cup "
             + "of rice weigh nothing like each other, and Kairo holds no density for this "
-            + "row — so the conversion would be invented. Weigh it instead, or estimate "
+            + "row - so the conversion would be invented. Weigh it instead, or estimate "
             + "it and take the lower confidence."
         }
     }
@@ -661,7 +661,7 @@ struct PortionPicker: View {
 }
 
 /// One measure the picker is willing to name, with the reason it is allowed to
-/// exist carried alongside it. `detail` is shown, not just documented — the user
+/// exist carried alongside it. `detail` is shown, not just documented - the user
 /// gets to see the conversion rather than trust it.
 private struct PortionMeasure: Identifiable, Equatable {
     let id: String
@@ -715,7 +715,7 @@ struct PortionPickerSheet: View {
 
 #Preview("Packaged, serving declared") {
     // Ferrero's published label figures for Nutella, which are also the row Open
-    // Food Facts carries for 3017620422003 — the barcode the simulated scanner
+    // Food Facts carries for 3017620422003 - the barcode the simulated scanner
     // offers. The Australian jar declares a 20 g serving.
     PortionPickerSheet(
         reference: FoodReference(
@@ -732,7 +732,7 @@ struct PortionPickerSheet: View {
 }
 
 #Preview("Water, no serving declared") {
-    // The one row whose energy needs no source — water carries none — and the
+    // The one row whose energy needs no source - water carries none - and the
     // only kind of row where a cup can be converted honestly.
     PortionPickerSheet(
         reference: FoodReference(
@@ -740,7 +740,7 @@ struct PortionPickerSheet: View {
             name: "Water",
             per100g: NutritionFacts(kilojoules: 0),
             source: "no source needed: water carries no energy",
-            sourceID: "—")) { grams, basis in
+            sourceID: "-")) { grams, basis in
         print("chose \(grams) g via \(basis.rawValue)")
     }
 }

@@ -2,9 +2,9 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// Member A — CF1 / OF1. The behaviour that distinguishes Kairo from every
+/// Member A - CF1 / OF1. The behaviour that distinguishes Kairo from every
 /// photo calorie counter on the market is the path it takes when it does *not* know.
-@Suite("Member A — meal logging")
+@Suite("Member A - meal logging")
 struct MealEntryTests {
     let t = DateHelp.at(2026, 8, 25, 12, 30)
 
@@ -51,8 +51,8 @@ struct MealEntryTests {
     }
 }
 
-/// Member A — CF3. Roles disagree on purpose; the ruling is written policy, not a vibe.
-@Suite("Member A — structured dissent")
+/// Member A - CF3. Roles disagree on purpose; the ruling is written policy, not a vibe.
+@Suite("Member A - structured dissent")
 struct DissentTests {
     @Test("safety outranks accuracy which outranks adherence")
     func precedenceRules() {

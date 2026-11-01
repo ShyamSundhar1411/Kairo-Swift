@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member A — CF3. Roles carry conflicting objectives on purpose; this is the
+/// Member A - CF3. Roles carry conflicting objectives on purpose; this is the
 /// bounded procedure that resolves a contradiction on the record.
 
 public enum Objective: String, Sendable, CaseIterable {
@@ -114,7 +114,7 @@ public struct DisagreementCase: Sendable {
         if isClinical {
             // The Steward is not permitted to rule on anything clinical.
             _ = try? lifecycle.transition(on: "notifyHumanOperator", to: .escalated, at: at)
-            result = .referredToFounder(reason: "clinical topic — outside the Steward's authority")
+            result = .referredToFounder(reason: "clinical topic - outside the Steward's authority")
         } else {
             // Rule by precedence, then by confidence, then by lower cost-if-wrong.
             let winner = positions.min { a, b in

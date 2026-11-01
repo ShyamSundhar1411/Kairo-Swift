@@ -5,7 +5,7 @@ import SwiftUI
 // Three of them, because three different waits want different shapes: a screen
 // with nothing on it yet, content whose layout is already known, and a row that
 // is working while the rest of the screen is not. All three are the brand mark
-// rather than a stock spinner — `SegmentedRing` from KairoLogo.swift is Kairo's
+// rather than a stock spinner - `SegmentedRing` from KairoLogo.swift is Kairo's
 // ring, so Kairo's loader is that ring in motion.
 //
 // Every one of them honours Reduce Motion. A loader is the one thing on screen
@@ -84,7 +84,7 @@ struct KairoLoadingScreen: View {
 // MARK: - Skeletons
 
 /// One placeholder bar. Used where the shape of the content is already known,
-/// which is most of this app — a stat tile is a stat tile before the number
+/// which is most of this app - a stat tile is a stat tile before the number
 /// lands, so nothing needs to move when it does.
 struct KairoSkeleton: View {
     var width: CGFloat?

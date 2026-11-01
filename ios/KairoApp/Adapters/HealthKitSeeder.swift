@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member B — CF4 / CF5 / CF6. Getting a week of data *into* HealthKit so the
+/// Member B - CF4 / CF5 / CF6. Getting a week of data *into* HealthKit so the
 /// read path can finally be executed rather than merely compiled.
 ///
 /// ## Why this file exists
@@ -9,7 +9,7 @@ import Foundation
 /// never run", and it was accurate: the sleep bucketing, the wear proxy and now
 /// the movement reads had all been reasoned about and compiled and never once
 /// executed against data. That is the worst state for this particular adapter to
-/// be in, because every bug it can have degrades to *silence* — an empty query
+/// be in, because every bug it can have degrades to *silence* - an empty query
 /// result is indistinguishable from a watch that was off the wrist, so a broken
 /// predicate looks exactly like a truthful "not measured" and nothing ever
 /// complains.
@@ -18,7 +18,7 @@ import Foundation
 /// device's data directory) and `HKHealthStore` works against it. What it does
 /// not have is any data, and there is no `simctl` subcommand to import any: the
 /// only automatable way in is `HKHealthStore.save(_:)` with share authorisation.
-/// So this is that — a debug-only writer that puts a coherent, deliberately
+/// So this is that - a debug-only writer that puts a coherent, deliberately
 /// incomplete week into the simulator's store so the reads can be run.
 ///
 /// ## Why it is wrapped in quite so many guards
@@ -31,26 +31,26 @@ import Foundation
 /// enough because any single guard can be edited away by somebody who does not
 /// know what it is for. In defence-in-depth order:
 ///
-/// 1. **`#if targetEnvironment(simulator)`** — the implementation does not
+/// 1. **`#if targetEnvironment(simulator)`** - the implementation does not
 ///    compile for a device slice at all. A device build contains no writer, so
 ///    there is nothing on the device to invoke, misconfigure or reflect over.
-/// 2. **`#if DEBUG`** — and not in a release simulator build either, so a
+/// 2. **`#if DEBUG`** - and not in a release simulator build either, so a
 ///    TestFlight or archive configuration cannot carry it even by accident.
-/// 3. **A runtime simulator re-check** — `ProcessInfo`'s `SIMULATOR_UDID` is
+/// 3. **A runtime simulator re-check** - `ProcessInfo`'s `SIMULATOR_UDID` is
 ///    present only in a simulator process. Belt and braces over guard 1: if
 ///    somebody ever lifts the `#if`, the runtime check still refuses.
-/// 4. **Explicit opt-in** — nothing here runs on launch. `runIfRequested()` is
+/// 4. **Explicit opt-in** - nothing here runs on launch. `runIfRequested()` is
 ///    safe to call unconditionally and does nothing at all unless a launch
 ///    argument or environment variable asks for it. Merely running the app in
 ///    the simulator never writes a sample.
-/// 5. **Every sample is marked synthetic** — a custom metadata key, so anything
+/// 5. **Every sample is marked synthetic** - a custom metadata key, so anything
 ///    this wrote can be found, told apart from real data, and deleted.
-/// 6. **A matching delete** — `deleteSeededSamples()` removes exactly the
+/// 6. **A matching delete** - `deleteSeededSamples()` removes exactly the
 ///    samples bearing that marker, via a metadata predicate, so a seeded store
 ///    can be returned to empty. HealthKit additionally only permits an app to
 ///    delete objects it saved itself, which means this cannot remove a real
 ///    sample even if the predicate were wrong.
-/// 7. **Share scope limited to what it writes** — four types, requested once,
+/// 7. **Share scope limited to what it writes** - four types, requested once,
 ///    and no read scopes at all. The read scopes are the adapter's business,
 ///    and a writer that quietly widened them would be misrepresenting itself.
 ///
@@ -65,7 +65,7 @@ import Foundation
 /// ```
 ///
 /// The launch will then stop on iOS's **Health Access** sheet, which asks to let
-/// Kairo write Active Energy, Heart Rate, Sleep and Steps — exactly
+/// Kairo write Active Energy, Heart Rate, Sleep and Steps - exactly
 /// `writeTypes`, and nothing to read. Somebody has to tap *Turn On All* and
 /// *Allow* once, and there is no way around that: `simctl privacy` has no health
 /// service, HealthKit has no test hook for share authorisation, and the sheet is
@@ -96,7 +96,7 @@ enum KairoHealthSeeding {
     /// Seeds, deletes, or does nothing, according to the launch environment.
     ///
     /// Safe to call unconditionally from app start-up. Returns a line worth
-    /// logging, or `nil` when it did nothing — which is the overwhelmingly
+    /// logging, or `nil` when it did nothing - which is the overwhelmingly
     /// common case and the intended default.
     @discardableResult
     static func runIfRequested() async -> String? {
@@ -111,7 +111,7 @@ enum KairoHealthSeeding {
         #endif
     }
 
-    /// True only in a Debug simulator build — the one place the writer exists.
+    /// True only in a Debug simulator build - the one place the writer exists.
     /// The Presenting section shows its buttons only when this is true.
     static var isAvailable: Bool {
         #if targetEnvironment(simulator) && DEBUG && canImport(HealthKit)
@@ -189,7 +189,7 @@ enum HealthKitSeeder {
     /// **The gaps are the point.** `SleepSummary` excludes unobserved nights from
     /// the debt rather than zero-filling them, `SleepDebt.isLowerBound` goes true
     /// when any are missing, and `SleepSummary.permittedForm` downgrades the
-    /// claim accordingly — and none of that had ever been exercised against real
+    /// claim accordingly - and none of that had ever been exercised against real
     /// HealthKit data, because a complete week never reaches it. A fully seeded
     /// week would test the arithmetic and skip the entire feature.
     ///
@@ -273,7 +273,7 @@ enum HealthKitSeeder {
     /// Learned by crashing the app on the simulator, which is the honest way to
     /// have learned it. `.appleExerciseTime` was in this list; HealthKit reserves
     /// the activity-ring types (`appleExerciseTime`, `appleStandTime`,
-    /// `appleMoveTime`) to itself and refuses share authorisation for them —
+    /// `appleMoveTime`) to itself and refuses share authorisation for them -
     /// **as an uncatchable Objective-C exception**, not a Swift error:
     ///
     /// ```
@@ -285,8 +285,8 @@ enum HealthKitSeeder {
     /// `requestAuthorization` throws it before returning, so no `try`/`catch`
     /// anywhere in this file can contain it and the process dies. There is no
     /// API that reports whether a type is shareable, so the only defence is this
-    /// list being right. Consequently exercise minutes are **not seeded** — see
-    /// `seed(days:)` — and the adapter's `exerciseMinutes(forDay:)` read will
+    /// list being right. Consequently exercise minutes are **not seeded** - see
+    /// `seed(days:)` - and the adapter's `exerciseMinutes(forDay:)` read will
     /// come back "measured, nothing there" against a seeded store. That is a
     /// genuine limitation of the simulator route, not a gap in the read.
     private static var writeTypes: Set<HKSampleType> {
@@ -369,7 +369,7 @@ enum HealthKitSeeder {
               heart rate   \(heartRateSamples) samples, off-wrist hours \
             \(offWristHours.sorted().map(String.init).joined(separator: ","))
               energy       \(energySamples) samples, \(Int(kilojoulesToday)) kJ today
-              exercise     not seeded — HealthKit reserves .appleExerciseTime, \
+              exercise     not seeded - HealthKit reserves .appleExerciseTime, \
             see HealthKitSeeder.writeTypes
             Remove it again with \(KairoHealthSeeding.deleteFlag).
             """
@@ -382,7 +382,7 @@ enum HealthKitSeeder {
     /// covers the hours the step series has activity in, sleep sits in the hours
     /// the heart-rate series is quiet, and nothing is written into the future.
     /// A week of independently random samples would exercise the queries but not
-    /// the interpretation — a wear figure that contradicts the step data would
+    /// the interpretation - a wear figure that contradicts the step data would
     /// produce nonsense downstream and nobody could tell whether the nonsense was
     /// the seed's or the adapter's.
     @discardableResult
@@ -446,7 +446,7 @@ enum HealthKitSeeder {
             // written by a third-party app; asking for share authorisation for
             // it terminates the process. See `writeTypes`. The adapter still
             // reads it, and against a seeded store that read correctly reports a
-            // measured absence rather than zero — which at least exercises the
+            // measured absence rather than zero - which at least exercises the
             // `.some(nil)` branch of the cache.
         }
 
@@ -460,7 +460,7 @@ enum HealthKitSeeder {
     /// exactly `hoursAsleep`.
     ///
     /// Exactness matters for verification. The adapter sums only the asleep
-    /// stages — `inBed` is time in bed, not sleep — so a night seeded at 7.5 h
+    /// stages - `inBed` is time in bed, not sleep - so a night seeded at 7.5 h
     /// must read back as 7.5 h. Anything else and the stage filter is wrong.
     ///
     /// Waking at 06:45 on `morning`, so the sample crosses midnight and lands in
@@ -596,8 +596,8 @@ enum HealthKitSeeder {
     ///
     /// Ten minutes is roughly what a watch writes when it is not exercising, and
     /// it is dense enough that the adapter's hour-counting proxy resolves every
-    /// worn hour. The night is covered too — the watch is worn to sleep in this
-    /// fixture — so the wear figure and the sleep figure agree, and a night that
+    /// worn hour. The night is covered too - the watch is worn to sleep in this
+    /// fixture - so the wear figure and the sleep figure agree, and a night that
     /// reads as slept but not worn would be a real inconsistency rather than a
     /// gap in the seed.
     private static func heartRateSamples(on dayStart: Date, notAfter limit: Date) -> [HKQuantitySample] {
@@ -668,7 +668,7 @@ enum HealthKitSeeder {
     ///    that matched everything could not remove another source's data.
     ///
     /// Together those mean the worst this can do is delete samples that this
-    /// seeder wrote — which is the entire intent.
+    /// seeder wrote - which is the entire intent.
     @discardableResult
     static func deleteSeededSamples() async throws -> String {
         guard isSimulator else { throw SeedError.notASimulator }

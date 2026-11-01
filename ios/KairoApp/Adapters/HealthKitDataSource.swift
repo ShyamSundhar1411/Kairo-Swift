@@ -10,8 +10,8 @@ import HealthKit
 /// `HealthDataSource` returns `Double?` for sleep, and the old adapter used that
 /// one `nil` for three unrelated situations: HealthKit is not on this device,
 /// nobody has fetched anything yet, and the watch was off the wrist. The whole
-/// app rests on telling the last of those from the other two — the screen says
-/// "the watch was off your wrist" — so the first two are errors and only the
+/// app rests on telling the last of those from the other two - the screen says
+/// "the watch was off your wrist" - so the first two are errors and only the
 /// third is a `nil` value.
 enum HealthReadError: Error, LocalizedError {
     /// No HealthKit on this device at all.
@@ -28,8 +28,8 @@ enum HealthReadError: Error, LocalizedError {
     case notSupported(String)
     /// The day *was* read and HealthKit had nothing of that kind in it.
     ///
-    /// Needed because two of the port's signatures — `wearHours(on:)` and
-    /// `sedentaryMinutes(at:)` — return non-optionals, so there is nowhere to put
+    /// Needed because two of the port's signatures - `wearHours(on:)` and
+    /// `sedentaryMinutes(at:)` - return non-optionals, so there is nowhere to put
     /// "measured, nothing there" except an error. Deliberately distinct from
     /// `.notFetchedYet`: this one will not change if you ask again, and a surface
     /// may honestly say "nothing recorded" about it, which it may not say about
@@ -61,7 +61,7 @@ enum HealthReadError: Error, LocalizedError {
 /// fakeable. So this lives in the app layer, alongside the only adapter that can
 /// honour it, and a surface that wants a window asks for it with a conditional
 /// cast. A source that cannot answer simply is not one, and the caller falls back
-/// to what the single-day port can tell it — which is one night, honestly labelled.
+/// to what the single-day port can tell it - which is one night, honestly labelled.
 protocol SleepWindowSource {
     /// One `NightReading` per night in the window, oldest first, **including a
     /// blank for every night nothing was found for**. Returning only the nights
@@ -87,7 +87,7 @@ protocol MovementDaySource {
     ///
     /// Throws rather than returning a blank `MovementDay` when nothing has been
     /// read yet, because a blank one is indistinguishable from a day the watch
-    /// spent on the charger — the conflation this whole adapter was rewritten to
+    /// spent on the charger - the conflation this whole adapter was rewritten to
     /// remove.
     func movementDay(on day: Date, at instant: Date) throws -> MovementDay
 }
@@ -102,7 +102,7 @@ protocol MovementDaySource {
 /// against data, and this section is kept honest deliberately.
 ///
 /// One earlier claim here was simply wrong and has been corrected: the simulator
-/// *does* have a working Health database — `healthdb.sqlite` under the device's
+/// *does* have a working Health database - `healthdb.sqlite` under the device's
 /// data directory, with a live `HKHealthStore` in front of it. What it has is no
 /// data in that database, and there is no `simctl` subcommand to import any, so
 /// `HealthKitSeeder` exists to write a week of marked synthetic samples through
@@ -111,26 +111,26 @@ protocol MovementDaySource {
 /// What has actually been executed so far is the authorisation call and the
 /// seeder's guards; the queries below have been compiled and reasoned about but
 /// have still never returned a sample. Seeding needs one manual tap on iOS's
-/// Health Access sheet — see `KairoHealthSeeding` for why that step cannot be
+/// Health Access sheet - see `KairoHealthSeeding` for why that step cannot be
 /// automated and for the exact commands. Until somebody takes that tap, treat
 /// every number this file can produce as unproven.
 ///
 /// Consequences, and the choices made because of them:
 ///
 /// * every query failure is caught and reported as `.fetchFailed`, and a failed
-///   day is **not** cached — so a bug here degrades to "not measured" rather than
+///   day is **not** cached - so a bug here degrades to "not measured" rather than
 ///   to a confident wrong number;
 /// * durations are clamped and implausible samples dropped, so a malformed
 ///   sample cannot produce a 400-hour night;
-/// * every judgement call — the sedentary threshold, the wear expectation, the
-///   assertion ladders — lives in `MovementSummary` and `SleepSummary` in
+/// * every judgement call - the sedentary threshold, the wear expectation, the
+///   assertion ladders - lives in `MovementSummary` and `SleepSummary` in
 ///   KairoKit, where it is pure, tested and arguable without a device. This file
 ///   translates; it does not decide.
 /// * nothing here traps. There is no `!` on a HealthKit result and no assumption
 ///   that a type identifier resolves.
 ///
 /// The first two things to check against a seeded store are the night bucketing
-/// — whether the nights this produces line up with what the Health app shows —
+/// - whether the nights this produces line up with what the Health app shows -
 /// and whether a night seeded at 7.5 hours reads back as 7.5 and not as the
 /// 7.9 hours it would be if `inBed` were being counted as sleep again.
 public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, MovementDaySource, @unchecked Sendable {
@@ -167,7 +167,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     ///
     /// Without it, every read of an unfillable day would throw `.notFetchedYet`
     /// and start another pointless fetch, once per frame. The flag is not a
-    /// cached *value* — caching "nothing there" for a device that cannot answer
+    /// cached *value* - caching "nothing there" for a device that cannot answer
     /// would be exactly the conflation this adapter was rewritten to remove.
     private var healthDataUnavailable = false
 
@@ -231,7 +231,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     ///
     /// This is the fix for the original defect. `sleepHours(on:)` was a
     /// synchronous getter over a cache that only `refresh(day:)` filled, and
-    /// nothing in the app called `refresh(day:)` — so in live mode the adapter
+    /// nothing in the app called `refresh(day:)` - so in live mode the adapter
     /// returned `nil` forever and looked exactly like a watch that had been off
     /// the wrist for the rest of time. A caller can now no longer forget to prime
     /// it: the first read primes it, and until the fetch lands the read *throws*
@@ -247,7 +247,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
         Task { [weak self] in
             await self?.refresh(day: key)
             // Released whatever happened, including on the platforms where
-            // `refresh` is a no-op — a day stuck in `priming` would never be
+            // `refresh` is a no-op - a day stuck in `priming` would never be
             // retried, which is the original bug wearing a different hat.
             self?.finishedPriming([key])
         }
@@ -284,7 +284,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// CF5's missing half: the run of not-moving that is still open at `t`.
     ///
     /// This used to `throw .notSupported("unbroken sitting")`, and before that it
-    /// returned a cached 0 that nothing ever filled — which the Today screen
+    /// returned a cached 0 that nothing ever filled - which the Today screen
     /// rendered as "0 min sitting unbroken", i.e. a reassurance nobody measured.
     /// It is now a real reading: `.stepCount` bucketed into five-minute intervals
     /// across the day (see `stepBuckets(forDay:)`) with the run computed by
@@ -305,7 +305,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
         // the query came back with no step data for the day at all, or it came
         // back but nothing covers the recent past (see the staleness rule in
         // `MovementSummary`). The port returns a non-optional `Int`, so both have
-        // to be errors — a 0 here is a claim that the user has not sat down.
+        // to be errors - a 0 here is a claim that the user has not sat down.
         guard let buckets = entry,
               let run = MovementSummary.unbrokenSedentaryMinutes(buckets: buckets, at: t) else {
             throw HealthReadError.notRecorded("unbroken sitting")
@@ -359,7 +359,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
         if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
         // `.activeEnergyBurned` was missing, which meant the energy read added
         // below would have come back empty on a real device however correct the
-        // query was — the failure mode HealthKit is worst about, because a denied
+        // query was - the failure mode HealthKit is worst about, because a denied
         // read is indistinguishable from an empty day.
         for id: HKQuantityTypeIdentifier in [.stepCount, .heartRate, .heartRateVariabilitySDNN,
                                              .appleExerciseTime, .activeEnergyBurned,
@@ -384,7 +384,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// no-op, so the worst case here is a wasted call.
     ///
     /// Note that HealthKit deliberately will not tell an app whether *read*
-    /// access was granted — a denied type reads as an empty result. That is the
+    /// access was granted - a denied type reads as an empty result. That is the
     /// other reason "fetched and empty" has to stay distinguishable from "not
     /// fetched": empty is the only signal a refusal ever produces, and it must
     /// not be silently upgraded into a claim about the user's sleep.
@@ -400,8 +400,8 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
 
     /// Fills the caches for one day: the night's sleep and the day's wear.
     ///
-    /// Still public and still callable explicitly — a screen that knows it is
-    /// about to need a day should say so — but no longer the only thing that can
+    /// Still public and still callable explicitly - a screen that knows it is
+    /// about to need a day should say so - but no longer the only thing that can
     /// fill the cache.
     public func refresh(day: Date) async {
         _ = await nightReadings(endingOn: day, nights: 1)
@@ -474,7 +474,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     ///    start-of-day-to-end-of-day predicate per day and summed whole
     ///    overlapping samples, so a 23:00–07:00 night was counted in full against
     ///    *both* days. Bucketing by end date is also how Health itself presents a
-    ///    night — the morning you woke up.
+    ///    night - the morning you woke up.
     private func bucketed(_ samples: [HKCategorySample],
                           into keys: [Date]) -> (asleep: [Date: Double], recorded: [Date: Double]) {
         let asleepValues: Set<Int> = [
@@ -495,7 +495,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
             let night = startOfDay(s.endDate)
             guard wanted.contains(night) else { continue }
 
-            // Every sleepAnalysis sample — `inBed` included — is evidence the
+            // Every sleepAnalysis sample - `inBed` included - is evidence the
             // device was on the wrist and recording, so it counts towards the
             // night's recorded time while only the asleep stages count towards
             // sleep.
@@ -506,8 +506,8 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
 
         var asleep: [Date: Double] = [:]
         for (night, seconds) in asleepSeconds {
-            // Clamped at a day: overlapping samples from two sources — a watch and
-            // a sleep-tracking app both writing the same night — could otherwise
+            // Clamped at a day: overlapping samples from two sources - a watch and
+            // a sleep-tracking app both writing the same night - could otherwise
             // sum past 24 hours. A cap is crude, but a 31-hour night on screen
             // would destroy the one thing this app is selling.
             asleep[night] = min(24, seconds / 3600)
@@ -547,7 +547,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// Hours of the day in which the wrist recorded something.
     ///
     /// The original adapter answered this with `samples.isEmpty ? 0 : 24`, i.e.
-    /// "if anything at all was recorded, assume the watch was worn all day" — a
+    /// "if anything at all was recorded, assume the watch was worn all day" - a
     /// fabricated denominator underneath a hero number whose entire job is to be
     /// honest. This counts distinct hours containing at least one sample instead.
     /// It is a proxy, not a wear time, and a conservative one: an hour with a
@@ -558,19 +558,19 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// deliberately *not* step count. The test is whether the signal can only
     /// exist while the device is on a wrist:
     ///
-    /// * **heart rate** — yes, and it is sampled every few minutes all day, which
+    /// * **heart rate** - yes, and it is sampled every few minutes all day, which
     ///   makes it the one signal dense enough to resolve wear to the hour. It is
     ///   the primary and does nearly all the work.
-    /// * **sleep analysis** — yes, and it *spans* hours rather than sampling
+    /// * **sleep analysis** - yes, and it *spans* hours rather than sampling
     ///   them, so it fills in a night the watch was worn but heart-rate sampling
     ///   was sparse. Reinforcement, not a substitute: it is already read for the
     ///   sleep feature, so it costs no extra permission.
-    /// * **step count** — no. Steps are also written by the iPhone, so counting
+    /// * **step count** - no. Steps are also written by the iPhone, so counting
     ///   step hours would credit "on your wrist" to a phone sitting in a bag.
     ///   That is the same class of error as the 24 it replaced, just smaller.
     ///
-    /// - Returns: `nil` when we could not look at all — no resolvable type, or
-    ///   every query failed — which must stay distinguishable from an empty
+    /// - Returns: `nil` when we could not look at all - no resolvable type, or
+    ///   every query failed - which must stay distinguishable from an empty
     ///   result. An empty result is a real, measured zero. The three-state
     ///   modelling of that lives in `MovementSummary.wearHours(hoursWithSamples:)`,
     ///   which this defers to rather than counting here.
@@ -618,7 +618,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// in kilojoules, and exercise minutes.
     ///
     /// Called by `refresh(day:)` *after* `nightReadings`, which is what fills the
-    /// wear cache — `movementDay(on:at:)` needs all four, so the order matters.
+    /// wear cache - `movementDay(on:at:)` needs all four, so the order matters.
     ///
     /// A failed query leaves its cache unfilled rather than caching an empty
     /// result, which is the same rule the sleep path follows and for the same
@@ -656,7 +656,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// write zero-step samples, so a five minutes of genuine stillness has no
     /// samples in it and `statistics.sumQuantity()` comes back `nil`.
     /// `StepBucket`'s contract says an absent bucket is an *unobserved* interval
-    /// and `MovementSummary` ends the run at one — so emitting nothing for those
+    /// and `MovementSummary` ends the run at one - so emitting nothing for those
     /// intervals would make every real sitting bout unmeasurable. They are
     /// therefore emitted as **0 steps**: inside a range we did query, no sample
     /// is evidence of no steps.
@@ -664,8 +664,8 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// That leaves the "was anything recording at all?" question unanswered here,
     /// on purpose. It is answered better one layer up, by the wear proxy, and
     /// `MovementSummary.permittedForm(hoursWorn:)` is what stops a day the watch
-    /// spent on the charger — which does produce a long, technically-correct
-    /// sitting run — from being said out loud.
+    /// spent on the charger - which does produce a long, technically-correct
+    /// sitting run - from being said out loud.
     ///
     /// - Returns: `nil` if the query failed, so the caller can decline to cache
     ///   it. An empty array means the day genuinely has not started yet.
@@ -703,13 +703,13 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// Read in `HKUnit.jouleUnit(with: .kilo)` rather than in
     /// `HKUnit.kilocalorie()` followed by a multiply. HealthKit stores energy in
     /// joules and converts on the way out, so asking it for kilojoules is one
-    /// conversion instead of two — and the multiply we would have written uses
+    /// conversion instead of two - and the multiply we would have written uses
     /// 4.184 kJ/kcal, the same ratio `NutritionFacts.calories` and
     /// `OpenFoodFactsRepository` use, which is HealthKit's own. The two routes
     /// agree; this one has no constant to drift.
     ///
     /// - Returns: `nil` when the query failed, `.some(nil)` when it succeeded and
-    ///   the day has no active energy in it — an untouched day, not a still one.
+    ///   the day has no active energy in it - an untouched day, not a still one.
     private func activeKilojoules(forDay day: Date) async -> Double?? {
         guard let type = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) else { return nil }
         return await dayTotal(type, day: day, unit: HKUnit.jouleUnit(with: .kilo))
@@ -785,7 +785,7 @@ public final class HealthKitDataSource: HealthDataSource, SleepWindowSource, Mov
     /// `HKStatisticsQuery` wrapped, for the cumulative day totals.
     ///
     /// Resolves to `nil` rather than throwing when nothing matched, because that
-    /// is not a failure — it is the answer. Only a framework error throws.
+    /// is not a failure - it is the answer. Only a framework error throws.
     private func statisticsSum(_ type: HKQuantityType,
                                predicate: NSPredicate) async throws -> HKQuantity? {
         try await withCheckedThrowingContinuation { cont in

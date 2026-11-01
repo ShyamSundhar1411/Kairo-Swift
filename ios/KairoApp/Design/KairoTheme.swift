@@ -4,7 +4,7 @@ import KairoKit
 
 /// The design tokens, in one place.
 ///
-/// No feature view names a raw colour, a corner radius or a point size — they all
+/// No feature view names a raw colour, a corner radius or a point size - they all
 /// resolve through here, so the whole app restyles from this file. Colours are
 /// declared as dark/light pairs and resolved by the trait environment, which is
 /// why every screen works in both appearances without a second code path.
@@ -185,7 +185,7 @@ private extension UIColor {
 // MARK: - Type scale
 //
 // Every token is anchored to a text style, so all eight grow with Dynamic Type.
-// They were `Font.system(size:)` — eight fixed point sizes that did not move at
+// They were `Font.system(size:)` - eight fixed point sizes that did not move at
 // all between the smallest setting and accessibility XXXL, which made the type
 // scale the single largest accessibility defect in the app and made it one that
 // no feature screen could fix locally, because no feature screen names a size.
@@ -202,7 +202,7 @@ extension Font {
     static let kairoHeadline = Font.system(.headline, design: .rounded)
     static let kairoBody     = Font.system(.body)
     static let kairoCaption  = Font.system(.footnote)
-    /// Small, tracked, uppercase — section labels and pills.
+    /// Small, tracked, uppercase - section labels and pills.
     static let kairoLabel    = Font.system(.caption2, design: .rounded).weight(.semibold)
     static let kairoMono     = Font.system(.caption, design: .monospaced).weight(.medium)
 
@@ -212,9 +212,9 @@ extension Font {
     /// `Font.system(size: 19, weight: .semibold, design: .rounded)` inline.
     static let kairoSubject  = Font.system(.title3, design: .rounded).weight(.semibold)
 
-    /// A glyph beside text. Icons are the one place a fixed size is still right —
+    /// A glyph beside text. Icons are the one place a fixed size is still right -
     /// an SF Symbol that grows with the body text pushes a 44pt control out of a
-    /// row — so this exists to make that choice explicit and greppable rather
+    /// row - so this exists to make that choice explicit and greppable rather
     /// than to pretend the size scales.
     static func kairoGlyph(_ size: CGFloat, weight: Weight = .bold) -> Font {
         .system(size: size, weight: weight)

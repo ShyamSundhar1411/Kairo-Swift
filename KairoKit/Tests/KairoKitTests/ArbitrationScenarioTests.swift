@@ -5,7 +5,7 @@ import Foundation
 /// The Tuesday 15:40 scenario, reproduced exactly as it is drawn in the object
 /// diagram of the Stage 1 report. If the report and the code ever disagree,
 /// this test fails.
-@Suite("Arbitration — the object diagram, executed")
+@Suite("Arbitration - the object diagram, executed")
 struct ArbitrationScenarioTests {
 
     static let now = DateHelp.at(2026, 8, 25, 15, 40)   // Tuesday 15:40
@@ -35,7 +35,7 @@ struct ArbitrationScenarioTests {
                      windowOpens: now.addingTimeInterval(-600),
                      windowCloses: now.addingTimeInterval(1800),
                      requiredCapabilities: [.standing, .walking],
-                     text: "82 minutes unbroken — 90 second walk"),
+                     text: "82 minutes unbroken - 90 second walk"),
             NudgeBid(id: "b3", nudgeClass: "bedtimePrep", originAgent: AgentID.lifestyle.rawValue,
                      expectedBenefit: 0.55, urgency: 0.2,
                      windowOpens: DateHelp.at(2026, 8, 25, 21, 30),
@@ -110,7 +110,7 @@ struct ArbitrationScenarioTests {
         let r = try NudgeArbiter(receptivity: Self.model).arbitrate(input(quiet: true), recordID: "dr-43")
         #expect(r.spentNothing)
         // A bid whose window has not opened never competed, so it is not a
-        // quiet-hours suppression — it simply was not due.
+        // quiet-hours suppression - it simply was not due.
         let competed = r.suppressed.filter { $0.suppressionReason != .windowNotOpen }
         #expect(competed.count == 2)
         #expect(competed.allSatisfy { $0.suppressionReason == .quietHours })
@@ -170,7 +170,7 @@ struct ArbitrationScenarioTests {
 ///
 /// The gate existed and was reachable from one badge on one screen, so every
 /// nudge the arbiter delivered went out unscreened. These pin it to the path.
-@Suite("CF6 — a bid the readings cannot support is not delivered")
+@Suite("CF6 - a bid the readings cannot support is not delivered")
 struct EvidenceGateTests {
     private let now = DateHelp.at(2026, 9, 10, 15, 40)
 

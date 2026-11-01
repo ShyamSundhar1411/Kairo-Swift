@@ -3,7 +3,7 @@ import Observation
 import UIKit
 import KairoKit
 
-/// Member A — CF1 / OF1. Drives the `MealEntry` lifecycle. The view never moves
+/// Member A - CF1 / OF1. Drives the `MealEntry` lifecycle. The view never moves
 /// the state machine itself; every transition goes through here so an illegal
 /// one surfaces as an error instead of a wrong screen.
 @Observable
@@ -15,7 +15,7 @@ final class MealLogModel {
     private(set) var clarifyingQuestion: String?
     private(set) var error: String?
     /// The photo the user actually took. It lives here rather than on
-    /// `MealEntry` because `KairoKit` imports Foundation and nothing else —
+    /// `MealEntry` because `KairoKit` imports Foundation and nothing else -
     /// putting a `UIImage` in the domain would break that in one line.
     ///
     /// Nothing is done with it yet beyond showing it back to the user. The
@@ -23,7 +23,7 @@ final class MealLogModel {
     /// beside it is scripted, and the screen has to say so.
     private(set) var photo: UIImage?
 
-    /// FR8.2 — drinks the analyst could see in the photograph.
+    /// FR8.2 - drinks the analyst could see in the photograph.
     ///
     /// **Offered, never logged.** The hydration total is the number the user
     /// taps to correct; a volume read off a picture written into it without
@@ -34,7 +34,7 @@ final class MealLogModel {
     /// back after it has been answered.
     private(set) var acceptedDrinkIDs: Set<String> = []
     private(set) var analysing = false
-    /// Set when the backend was asked and could not answer — distinct from the
+    /// Set when the backend was asked and could not answer - distinct from the
     /// analyst having looked and declined to quantify, which is `.ungrounded`
     /// and is a feature (OF1).
     private(set) var analysisFailure: String?
@@ -84,7 +84,7 @@ final class MealLogModel {
     /// Drive the machine from a real analysis.
     ///
     /// Separate from `recognise` because the backend has already decided which
-    /// branch this is — `state` on the response is the analyst's own answer —
+    /// branch this is - `state` on the response is the analyst's own answer -
     /// and re-deriving it here from the confidence would give two sources for
     /// one decision. The scripted paths still call `recognise`; this is the
     /// same machine reached with real evidence.
@@ -133,7 +133,7 @@ final class MealLogModel {
     }
 
     /// The user accepted one inferred drink. Returns the sip to log, or nil if
-    /// it was already answered — so a double tap cannot double-count a glass.
+    /// it was already answered - so a double tap cannot double-count a glass.
     func acceptDrink(_ drink: RemoteAgentClient.InferredDrink) -> HydrationLog.Sip? {
         guard !acceptedDrinkIDs.contains(drink.id) else { return nil }
         acceptedDrinkIDs.insert(drink.id)
@@ -144,7 +144,7 @@ final class MealLogModel {
     }
 
     /// The user declined it. Recorded the same way as acceptance so the offer
-    /// does not reappear — "no" is an answer, not an absence of one.
+    /// does not reappear - "no" is an answer, not an absence of one.
     func declineDrink(_ drink: RemoteAgentClient.InferredDrink) {
         acceptedDrinkIDs.insert(drink.id)
     }
@@ -154,7 +154,7 @@ final class MealLogModel {
         catch { self.error = String(describing: error) }
     }
 
-    /// OF1 — the teach-once path. Barcode, label OCR, or a short description.
+    /// OF1 - the teach-once path. Barcode, label OCR, or a short description.
     func teach(_ item: FoodItem) {
         do {
             entry.items = [item]
@@ -178,11 +178,11 @@ final class MealLogModel {
         } catch { self.error = String(describing: error) }
     }
 
-    /// CF1 + OF1 — the barcode path.
+    /// CF1 + OF1 - the barcode path.
     ///
     /// The classifier never grounded this dish; the label did. That is precisely
-    /// the route OF1 already models — the `dishTaught` guard in the transition
-    /// table names "barcode | label OCR | guided description" — so the entry
+    /// the route OF1 already models - the `dishTaught` guard in the transition
+    /// table names "barcode | label OCR | guided description" - so the entry
     /// walks the ungrounded/teach edges instead of faking a confident
     /// classification it never made. It also means `taughtByUser` is true, which
     /// is the honest thing to show.
@@ -214,6 +214,6 @@ final class MealLogModel {
         guard let weakest = items.min(by: { $0.confidence < $1.confidence }) else {
             return "What was in this?"
         }
-        return "How much \(weakest.name) was there — about \(Int(weakest.grams)) g?"
+        return "How much \(weakest.name) was there - about \(Int(weakest.grams)) g?"
     }
 }

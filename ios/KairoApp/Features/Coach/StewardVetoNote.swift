@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// FR9.5, Figure 38 — the contract that was considered and refused.
+/// FR9.5, Figure 38 - the contract that was considered and refused.
 ///
 /// A vetoed contract never becomes a proposal card, so without this the user is
 /// simply never told the conversation happened: the agents saw two corroborating
@@ -10,7 +10,7 @@ import KairoKit
 /// omission the losing-bid rows on Today exist to prevent.
 ///
 /// Written to be read in the second person and without alarm. The Steward's
-/// sentence is shown verbatim — it was composed for a person, and paraphrasing a
+/// sentence is shown verbatim - it was composed for a person, and paraphrasing a
 /// safety judgement is how a precise statement becomes a vague worry.
 struct StewardVetoNote: View {
     let reason: String

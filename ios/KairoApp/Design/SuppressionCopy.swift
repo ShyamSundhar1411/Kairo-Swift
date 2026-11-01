@@ -12,7 +12,7 @@ import KairoKit
 ///
 /// `costing` is a parameter rather than a lookup because the honest sentence for
 /// a cost ceiling depends on whether there is a bill behind it. Under
-/// `costing: "shadow"` there is no month's service cost to stay inside — the
+/// `costing: "shadow"` there is no month's service cost to stay inside - the
 /// ladder still moves, on shadow rates, and saying otherwise invents an invoice.
 enum SuppressionCopy {
 
@@ -47,10 +47,10 @@ enum SuppressionCopy {
             Copy(sentence: "a more useful interruption won this slot",
                  icon: "arrow.up.arrow.down", tint: Kairo.inkFaint, badge: nil)
         case .costCeiling:
-            // Section 7.1 — never dressed up as restraint, which is why it is
+            // Section 7.1 - never dressed up as restraint, which is why it is
             // the only reason that keeps the warning colour in both branches.
             costing == .notional
-                ? Copy(sentence: "held back by the cost ladder — this deployment runs a "
+                ? Copy(sentence: "held back by the cost ladder - this deployment runs a "
                        + "free local model, so the ceiling is a stand-in, not a bill.",
                        icon: "dollarsign.circle", tint: Kairo.coral,
                        badge: ("cost · notional", "dollarsign.circle.fill"))
@@ -77,7 +77,7 @@ enum SuppressionCopy {
                  icon: "eye.slash", tint: Kairo.inkFaint, badge: nil)
         case .safetyRefused:
             // Not a contest it lost. The Steward refused the wording, and the
-            // attention budget was not charged for it — so it must not read as
+            // attention budget was not charged for it - so it must not read as
             // though a better bid beat it.
             Copy(sentence: "the Steward would not let this be said the way it was written",
                  icon: "shield.lefthalf.filled", tint: Kairo.coral,

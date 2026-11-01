@@ -1,12 +1,12 @@
 import SwiftUI
 import KairoKit
 
-/// Member C — CF7. The attention ledger.
+/// Member C - CF7. The attention ledger.
 ///
 /// One question: what did Kairo decide about your attention, and who lost.
-/// Everything on this screen answers it, and the things that did not — three
+/// Everything on this screen answers it, and the things that did not - three
 /// stat tiles restating their own neighbours, a movement card that belongs on
-/// Body, four unrelated score gauges — are gone rather than rearranged.
+/// Body, four unrelated score gauges - are gone rather than rearranged.
 ///
 /// Six sections, at most, in any state:
 ///   1. the header, with the provenance chip
@@ -91,7 +91,7 @@ struct TodayView: View {
     ///
     /// This read `TimeZone(identifier: "Australia/Sydney")`, which is where the
     /// project was written. A user in Europe opened the app at breakfast and was
-    /// greeted with "Good evening" — the one line on the screen that claims to
+    /// greeted with "Good evening" - the one line on the screen that claims to
     /// know something about the person holding the phone, and it was about
     /// somebody else's afternoon.
     private var greeting: String {
@@ -105,8 +105,8 @@ struct TodayView: View {
     // MARK: - The dial
     //
     // Tappable, and the only way into the attention contract. The ring is
-    // `SegmentedRing` from the brand mark with the day's real numbers in it —
-    // the logo *is* the data — so it earns the hero slot.
+    // `SegmentedRing` from the brand mark with the day's real numbers in it -
+    // the logo *is* the data - so it earns the hero slot.
 
     private var dial: some View {
         NavigationLink { AttentionReceiptView() } label: {
@@ -133,7 +133,7 @@ struct TodayView: View {
     /// BackendSettingsView: measured with `-warn-long-function-bodies`, this
     /// getter was the slowest thing left in the app at 368ms on Swift 6.4. CI
     /// runs Swift 6.1.2, where the equivalent expression next door had already
-    /// crossed from slow into "unable to type-check in reasonable time" — so
+    /// crossed from slow into "unable to type-check in reasonable time" - so
     /// this is the one that fails next, on a build nobody has changed.
     private var dialDetail: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -195,7 +195,7 @@ struct TodayView: View {
                     // Not measured is not zero. Drawing an untouched day as
                     // "0 ml" would present an absence of data as an achievement,
                     // which is the same claim the coverage gate would refuse in a
-                    // sentence — so the card does not make it either.
+                    // sentence - so the card does not make it either.
                     Text("Nothing logged yet")
                         .font(.kairoHeadline)
                         .foregroundStyle(Kairo.inkSoft)
@@ -225,7 +225,7 @@ struct TodayView: View {
 
     /// Said on the first screen, every time. An audience is about to watch the
     /// agents reason over this day, and they are owed the fact that the readings
-    /// are a scenario — the reasoning over them is not.
+    /// are a scenario - the reasoning over them is not.
     private var demoBanner: some View {
         NavigationLink { BackendSettingsView() } label: {
             HStack(spacing: 10) {
@@ -272,9 +272,9 @@ struct TodayView: View {
             HStack(spacing: 10) {
                 signalTile(value: "\(model.observations.sedentaryMinutes ?? DemoHealthSource.sittingMinutes)",
                            unit: "min", caption: "sitting", tint: Kairo.amber)
-                signalTile(value: live.heartRateBPM.map(String.init) ?? "—",
+                signalTile(value: live.heartRateBPM.map(String.init) ?? "-",
                            unit: "bpm", caption: "heart rate", tint: Kairo.coral)
-                signalTile(value: live.stepsToday.map(String.init) ?? "—",
+                signalTile(value: live.stepsToday.map(String.init) ?? "-",
                            unit: "", caption: "steps", tint: Kairo.teal)
             }
             Text(model.sleepIsRecorded
@@ -309,7 +309,7 @@ struct TodayView: View {
 
     // MARK: - Meals
 
-    /// CF1 / CF2 — the day's ledger. This card did not exist, which is half of
+    /// CF1 / CF2 - the day's ledger. This card did not exist, which is half of
     /// why a logged meal looked as though it had gone nowhere.
     private var mealStrip: some View {
         let logged = !model.meals.isEmpty
@@ -382,7 +382,7 @@ struct TodayView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// CF2 — the Nutrition role's next-meal suggestion, on request. Asked for
+    /// CF2 - the Nutrition role's next-meal suggestion, on request. Asked for
     /// rather than fetched on every launch: it is a model call, and a card that
     /// spends money just by being looked at is not one this app would ship.
     @ViewBuilder private var suggestion: some View {
@@ -443,15 +443,15 @@ struct TodayView: View {
                     Kairo.inkFaint)
         }
         if log.remainingMillilitres == 0 {
-            return ("target reached — no more water nudges today",
+            return ("target reached - no more water nudges today",
                     "checkmark.seal.fill", Kairo.leaf)
         }
         return ("\(log.remainingMillilitres) ml to go", "drop.fill",
                 Kairo.colour(for: .hydration))
     }
 
-    /// Says where the number is supposed to come from, and — when there is no
-    /// session at all — says that too rather than blaming the user for not
+    /// Says where the number is supposed to come from, and - when there is no
+    /// session at all - says that too rather than blaming the user for not
     /// tapping. VoiceOver only; the pill carries the short form.
     private var emptyWaterHint: String {
         guard model.wristAvailable else {
@@ -467,7 +467,7 @@ struct TodayView: View {
 /// rather than an empty list.
 ///
 /// When nothing won this takes the headline position inside the ledger card and
-/// the losing bids sit underneath it unchanged — silence with four visible
+/// the losing bids sit underneath it unchanged - silence with four visible
 /// losers underneath is a far stronger statement than silence alone.
 struct SilenceCard: View {
     var body: some View {

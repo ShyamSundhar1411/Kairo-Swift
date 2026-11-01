@@ -2,8 +2,8 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-/// Member C — CF9. The interesting part is what the machine refuses to do.
-@Suite("Member C — disruption contract")
+/// Member C - CF9. The interesting part is what the machine refuses to do.
+@Suite("Member C - disruption contract")
 struct PlanContractTests {
     let t = DateHelp.at(2026, 8, 25, 8, 0)
 
@@ -65,7 +65,7 @@ struct PlanContractTests {
 
     /// Figure 38: the veto edge leaves Drafted and lands on Escalated.
     ///
-    /// Renamed, because the old name claimed more than the test did — it moved
+    /// Renamed, because the old name claimed more than the test did - it moved
     /// a contract across an edge by hand and called that "the Steward can
     /// veto", while nothing in either codebase ever emitted the event. The
     /// Steward's half is `test_the_steward_vetoes_a_contract_that_would_mask_deterioration`

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member B — CF5 / CF6. Sedentary detection, computed instead of asserted.
+/// Member B - CF5 / CF6. Sedentary detection, computed instead of asserted.
 ///
 /// CF5 is "detect a sedentary bout and deliver an actionable movement nudge",
 /// and until this file existed the detection half did not. `Observations`
@@ -11,8 +11,8 @@ import Foundation
 /// Lifestyle Signal Analyst bid on a number nobody had measured.
 ///
 /// So the detection lives here, as arithmetic over readings somebody else was
-/// handed. Every function in this file is pure over its arguments — no clock, no
-/// port, no `Date()`, no HealthKit — for the same reason `SleepSummary` and
+/// handed. Every function in this file is pure over its arguments - no clock, no
+/// port, no `Date()`, no HealthKit - for the same reason `SleepSummary` and
 /// `EnergySummary` are: an unbroken sitting run is a property of the step
 /// buckets that were observed, and reaching for the wall clock would only make
 /// it untestable. The instant the run is measured *to* is an argument.
@@ -23,7 +23,7 @@ import Foundation
 /// sitting still. So:
 ///
 /// * every reading here is optional, and `nil` means *not observed* rather than
-///   zero — the distinction `Observations.lines` exists to preserve;
+///   zero - the distinction `Observations.lines` exists to preserve;
 /// * a gap in the step buckets **ends** the run rather than being sat through,
 ///   because a run that spans unobserved time is a claim about that time;
 /// * zero observed intervals is `.forbidden`, not a confident zero.
@@ -32,8 +32,8 @@ import Foundation
 
 /// Steps counted in one fixed-width interval of the day.
 ///
-/// This is deliberately the shape `HKStatisticsCollectionQuery` hands back — one
-/// bucket per interval across a day, zeros included — so the adapter translates
+/// This is deliberately the shape `HKStatisticsCollectionQuery` hands back - one
+/// bucket per interval across a day, zeros included - so the adapter translates
 /// rather than interprets. `steps` of 0 is a real measurement of no steps; an
 /// interval HealthKit had nothing for should be **absent** from the array, not
 /// present with 0, or the gap rule below cannot fire.
@@ -54,7 +54,7 @@ public struct StepBucket: Sendable, Equatable {
 /// A day's movement, as the wrist saw it or failed to.
 ///
 /// Every field is optional and each `nil` carries the same meaning: this was not
-/// observed. That is not tidiness — it is the whole point. A day where the watch
+/// observed. That is not tidiness - it is the whole point. A day where the watch
 /// sat on the charger must not read downstream as a day of stillness, no active
 /// energy and no exercise.
 public struct MovementDay: Sendable, Equatable {
@@ -105,8 +105,8 @@ public enum MovementSummary {
     /// stray minute would break a genuine two-hour sitting bout, and the run
     /// would flap between 4 and 120 while the user sat perfectly still. Five
     /// minutes is also the finest resolution at which the *nudge* is meaningful
-    /// — nobody needs telling they have been sitting for 43 minutes rather than
-    /// 45 — so the extra precision would buy nothing and cost stability.
+    /// - nobody needs telling they have been sitting for 43 minutes rather than
+    /// 45 - so the extra precision would buy nothing and cost stability.
     public static let defaultBucketMinutes = 5
 
     /// Steps in one bucket at or above which the user counts as having moved.
@@ -120,13 +120,13 @@ public enum MovementSummary {
     ///   per hour, so a handful per five minutes must not clear the bar or the
     ///   run would never survive a phone call.
     /// * **Far below real walking.** Walking is roughly 100 steps a minute, so
-    ///   anything that is actually a movement break — standing up, walking to the
-    ///   kitchen, even crossing the room — clears 25 in the first fifteen
+    ///   anything that is actually a movement break - standing up, walking to the
+    ///   kitchen, even crossing the room - clears 25 in the first fifteen
     ///   seconds. The threshold does not need to be near walking pace to detect
     ///   walking; it needs to be above fidgeting.
     /// * **Erring towards silence.** The two ways to be wrong are not
     ///   symmetrical. Too high a threshold swallows real breaks, lengthens the
-    ///   run, and nags somebody who *did* get up — the failure that makes people
+    ///   run, and nags somebody who *did* get up - the failure that makes people
     ///   delete the app. Too low a threshold breaks the run early and Kairo says
     ///   nothing. This project would rather stay quiet, so the threshold sits at
     ///   the low end of the defensible band.
@@ -139,7 +139,7 @@ public enum MovementSummary {
     /// purposes.
     ///
     /// Sixteen: a waking day, leaving eight for sleeping and charging. Note that
-    /// this is *not* a claim that wearing it overnight is wrong — a day worn 24
+    /// this is *not* a claim that wearing it overnight is wrong - a day worn 24
     /// hours simply clamps to full coverage, because `CoverageMetric` caps the
     /// fraction at 1.
     ///
@@ -160,7 +160,7 @@ public enum MovementSummary {
     /// 2. **A gap in the buckets.** Buckets are `bucketMinutes` wide and
     ///    contiguous; if the previous bucket does not abut this one, there is
     ///    time in between that was never observed. The run stops at the edge of
-    ///    what was seen rather than being extended across the hole — an unobserved
+    ///    what was seen rather than being extended across the hole - an unobserved
     ///    twenty minutes might have been a walk, and claiming otherwise would be
     ///    the interpolation this whole layer refuses to do.
     /// 3. **Running out of buckets.** The earliest bucket is the earliest
@@ -175,14 +175,14 @@ public enum MovementSummary {
     ///
     /// - Parameters:
     ///   - buckets: step counts per interval. Order is not trusted. Buckets
-    ///     starting after `instant` are ignored — they are the future as far as
+    ///     starting after `instant` are ignored - they are the future as far as
     ///     this call is concerned, whatever HealthKit happened to return.
     ///   - instant: the moment the run is measured to. An argument, not a clock.
     ///   - bucketMinutes: bucket width. Clamped to at least 1.
     ///   - movedThreshold: steps at or above which the bucket counts as movement.
     ///     See `defaultMovedStepsPerBucket`.
     /// - Returns: minutes sat unbroken, or `nil` when the recent past was not
-    ///   observed at all — which is "we have not looked", not "you have been
+    ///   observed at all - which is "we have not looked", not "you have been
     ///   moving". See the staleness guard below for what counts as recent.
     public static func unbrokenSedentaryMinutes(
         buckets: [StepBucket],
@@ -202,7 +202,7 @@ public enum MovementSummary {
         // Staleness. `instant` has to fall inside the newest bucket for the run
         // to be *current*. If the last thing we observed ended three hours ago,
         // those three hours are unobserved and the honest answer about a run
-        // reaching `instant` is that we do not have one — the same rule as the
+        // reaching `instant` is that we do not have one - the same rule as the
         // gap check below, applied to the leading edge. Without this the run
         // would be reported as one bucket wide, which reads as "you just sat
         // down" for a watch that has been off since lunchtime.
@@ -214,7 +214,7 @@ public enum MovementSummary {
         guard newest.steps < movedThreshold else {
             // Movement inside the current bucket. The run is however long it has
             // been since that movement, which we cannot resolve more finely than
-            // the bucket — so zero, honestly coarse, rather than a guess.
+            // the bucket - so zero, honestly coarse, rather than a guess.
             return 0
         }
 
@@ -257,7 +257,7 @@ public enum MovementSummary {
     /// a plain `Set<Int>` and reading `isEmpty` as either answer.
     ///
     /// - Parameter hoursWithSamples: hour-of-day indices, `0..<24`. Indices
-    ///   outside that range are dropped rather than trusted — a sample bucketed
+    ///   outside that range are dropped rather than trusted - a sample bucketed
     ///   into hour 25 is an adapter bug, and letting it inflate wear time would
     ///   put the bug underneath a hero number.
     public static func wearHours(hoursWithSamples: Set<Int>?) -> Double? {
@@ -272,11 +272,11 @@ public enum MovementSummary {
     /// Observed is *hours the device recorded*, not steps taken and not intervals
     /// HealthKit returned. Coverage asks how much of the day Kairo could see, and
     /// a `HKStatisticsCollectionQuery` obligingly returns all 288 buckets of a
-    /// day whether the watch was worn or not — using that as the numerator would
+    /// day whether the watch was worn or not - using that as the numerator would
     /// report perfect coverage for a day the watch spent in a drawer.
     ///
     /// - Parameter observedHours: hours the device recorded, or `nil`/`0` when
-    ///   nothing was seen — both of which give a zero fraction, and therefore
+    ///   nothing was seen - both of which give a zero fraction, and therefore
     ///   `.forbidden`.
     public static func coverageMetric(observedHours: Double?,
                                       expectedHours: Int = expectedWornHoursPerDay) -> CoverageMetric {
@@ -297,20 +297,20 @@ public enum MovementSummary {
     /// `SleepSummary.permittedForm(observedNights:expectedNights:)` and
     /// `EnergySummary.permittedForm(for:expectedMeals:)`:
     ///
-    /// 1. **Coverage** — what fraction of the expected wear day was visible. That
+    /// 1. **Coverage** - what fraction of the expected wear day was visible. That
     ///    ladder is already written, in `DayCoverage.permittedForm(for:)`, and is
     ///    deliberately *not* restated here: at the default 0.6 floor and a
     ///    16-hour expectation, ten hours worn is a qualified claim and four is
     ///    only a range. Duplicating the ladder would give the project two floors
     ///    to retune, which is how floors drift apart.
-    /// 2. **Absolute hours worn** — how much of a day there is, regardless of the
+    /// 2. **Absolute hours worn** - how much of a day there is, regardless of the
     ///    fraction. See `wornForm(hoursWorn:)`.
     ///
     /// The second limit exists because a fraction cannot see the length of its
     /// own denominator. A caller that knows this user only ever wears the watch
     /// for a four-hour shift would pass `expectedHours: 4`, four hours worn would
     /// be a coverage fraction of 1.0, and the ladder would happily license a bare
-    /// number about their day's movement — built from four hours of it.
+    /// number about their day's movement - built from four hours of it.
     ///
     /// Worked through the default case: **four hours worn of an expected
     /// sixteen** is a fraction of 0.25, below the 0.3 half-floor, which the
@@ -318,7 +318,7 @@ public enum MovementSummary {
     /// The weaker wins, so the answer is `.question` and no number is spoken.
     ///
     /// - Parameter hoursWorn: `nil` means nobody has looked, which is not
-    ///   evidence and is therefore `.forbidden` — the same treatment zero gets,
+    ///   evidence and is therefore `.forbidden` - the same treatment zero gets,
     ///   for the same reason.
     public static func permittedForm(hoursWorn: Double?,
                                      expectedHours: Int = expectedWornHoursPerDay) -> AssertionForm {
@@ -335,16 +335,16 @@ public enum MovementSummary {
     /// couple of hours of it is not a small version of the day, it is a different
     /// thing. And because unobserved hours are excluded rather than zero-filled,
     /// every figure derived from them is a lower bound whose looseness grows with
-    /// each hour missing — so the ladder is asking "how badly could this
+    /// each hour missing - so the ladder is asking "how badly could this
     /// understate the day?"
     ///
     /// * `>= 12` → `.assertion`. Twelve hours covers the active part of a waking
     ///   day. Note that at the default 16-hour expectation twelve hours still
     ///   comes out `.qualified` overall, because the coverage ladder reserves a
-    ///   bare number for a complete day — this limit yielding does not mean the
+    ///   bare number for a complete day - this limit yielding does not mean the
     ///   gate opened.
     /// * `8...11` → `.qualified`. Most of a working day, but enough missing that
-    ///   the number must carry the caveat naming what it is built from — "in the
+    ///   the number must carry the caveat naming what it is built from - "in the
     ///   nine hours I could see".
     /// * `4...7` → `.range`. Half a day establishes that movement happened and
     ///   roughly how much per hour, but the day's total it implies is mostly
@@ -373,7 +373,7 @@ public enum MovementSummary {
     ///
     /// Exactly one: `sedentaryMinutes`. Active energy and exercise minutes are
     /// carried on `MovementDay` for the surfaces that show them, but they are
-    /// deliberately *not* poured into `Observations.kilojoulesLogged` — that
+    /// deliberately *not* poured into `Observations.kilojoulesLogged` - that
     /// field is Member A's food ledger, and energy burned is not energy eaten.
     /// Adding a burn figure to it would silently turn every meal total into a
     /// net.

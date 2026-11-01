@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import KairoKit
 
-@Suite("FR8.5 — hydration progress without looking at it")
+@Suite("FR8.5 - hydration progress without looking at it")
 struct HydrationProgressTests {
 
     // MARK: - Milestones
@@ -108,7 +108,7 @@ struct HydrationProgressTests {
     }
 }
 
-@Suite("FR8.2 — a photographed volume is weaker evidence than a tap")
+@Suite("FR8.2 - a photographed volume is weaker evidence than a tap")
 struct SipProvenanceTests {
 
     @Test("a tap is the default, so nothing already logged changes meaning")

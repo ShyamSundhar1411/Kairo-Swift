@@ -23,7 +23,7 @@ secrets.json
 
 # .env is committed deliberately. This repository is private and the team needs
 # the backend to come up in live mode without per-machine setup. It is already
-# tracked, so listing it here would only be confusing — the entry is left out on
+# tracked, so listing it here would only be confusing - the entry is left out on
 # purpose. Rotate the key when the unit ends, and remember that git history keeps
 # it even after a delete.
 
@@ -31,6 +31,6 @@ secrets.json
 .kairo-lan-token
 .kairo-fly-token
 
-# Intermediate render output — the published cut is brag-output/brag.mp4
+# Intermediate render output - the published cut is brag-output/brag.mp4
 brag-output/composition/renders/
 .kairo-demo

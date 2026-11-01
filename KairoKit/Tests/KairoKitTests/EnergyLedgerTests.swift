@@ -29,9 +29,9 @@ private enum Fixture {
     }
 }
 
-/// Member A — CF1 / CF2, NFR14. A day's total, and how much of one may be said
+/// Member A - CF1 / CF2, NFR14. A day's total, and how much of one may be said
 /// out loud.
-@Suite("Member A — energy ledger")
+@Suite("Member A - energy ledger")
 struct EnergyLedgerTests {
     let day = DateHelp.at(2026, 8, 25)
     let t = DateHelp.at(2026, 8, 25, 12, 30)
@@ -157,7 +157,7 @@ struct EnergyLedgerTests {
     @Test("an empty ledger has no weakest portion at all")
     func weakestOfNothingIsNil() {
         #expect(ledger().weakestPortionConfidence == nil)
-        // An entry with no items yet — still ungrounded — is the same situation.
+        // An entry with no items yet - still ungrounded - is the same situation.
         var l = ledger()
         l.record(MealEntry(id: "ungrounded", capturedAt: t))
         #expect(l.weakestPortionConfidence == nil)
@@ -166,7 +166,7 @@ struct EnergyLedgerTests {
     @Test("the weakest portion is the minimum across every item of every entry")
     func weakestSpansSeveralEntries() {
         // The low item is in the *second* entry, so a bug that only looks at the
-        // first entry — or at entry-level confidence — fails here.
+        // first entry - or at entry-level confidence - fails here.
         let l = ledger(meals: [[0.9, 0.8], [0.95, 0.55], [1.0]])
         #expect(l.weakestPortionConfidence == 0.55)
     }
@@ -190,7 +190,7 @@ struct EnergyLedgerTests {
         // This used to assert the line was *omitted*, which is what the code did
         // and is not what the test is named after. Omission is not absence: with
         // no line about food at all, the Nutrition role filled the silence with
-        // "No meals logged today" — a claim about the user's day from a service
+        // "No meals logged today" - a claim about the user's day from a service
         // that cannot see their meal log. Saying so explicitly is the fix.
         let line = obs.lines.first { $0.contains("energy logged") }
         #expect(line?.contains("not measured") == true)
@@ -286,9 +286,9 @@ struct EnergyLedgerTests {
     }
 }
 
-/// Member A — CF2. The lookup boundary, exercised on the fake so the whole thing
+/// Member A - CF2. The lookup boundary, exercised on the fake so the whole thing
 /// runs with no network and no key.
-@Suite("Member A — nutrition lookup")
+@Suite("Member A - nutrition lookup")
 struct NutritionRepositoryTests {
     let repo = InMemoryNutritionRepository([Fixture.unbranded, Fixture.branded])
 

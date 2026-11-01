@@ -6,13 +6,13 @@ import UniformTypeIdentifiers
 // Renders every raster brand asset from one description of the letterform: a K,
 // both arms at equal weight leaving one junction, optically shifted right
 // because a K is left-heavy. The identical fractions are drawn in SwiftUI by
-// `KairoLetter` in apps/ios/KairoApp/Design/KairoLogo.swift — change one and you
+// `KairoLetter` in apps/ios/KairoApp/Design/KairoLogo.swift - change one and you
 // must change the other.
 //
 // The segmented ring is NOT here. It is the attention dial, not the logo, and it
 // only ever exists as SwiftUI.
 //
-// Regenerate everything — app icons in all three iOS appearance variants for
+// Regenerate everything - app icons in all three iOS appearance variants for
 // both targets, the launch mark at 1x/2x/3x in both appearances, and the
 // asset-catalog metadata:
 //
@@ -96,7 +96,7 @@ func writeJSON(_ text: String, to path: String) {
 // MARK: - The app icon
 //
 // No rounded corners and no transparency: iOS applies its own mask, and a
-// pre-rounded icon gets masked twice. Three appearance variants — the warm field
+// pre-rounded icon gets masked twice. Three appearance variants - the warm field
 // for light, the letter alone on ink for dark so it sits back on a dark home
 // screen, and greyscale for tinted, where the system supplies tint and ground.
 
@@ -222,7 +222,7 @@ writeJSON("""
 }
 """, to: "\(watchSet)/Contents.json")
 
-// Launch mark — 160pt, both appearances, three scales.
+// Launch mark - 160pt, both appearances, three scales.
 let launchPT = 160.0
 let launchSet = "\(iosAssets)/LaunchMark.imageset"
 var launchImages: [String] = []
@@ -257,7 +257,7 @@ writeJSON("""
 }
 """, to: "\(launchSet)/Contents.json")
 
-// Launch background — the same two values `Kairo.canvas` resolves to, so the
+// Launch background - the same two values `Kairo.canvas` resolves to, so the
 // handoff from the static launch screen to the app is invisible.
 func colourset(_ rgb: UInt32, dark: Bool) -> String {
     let f = { (shift: UInt32) in String(format: "0x%02X", (rgb >> shift) & 0xFF) }

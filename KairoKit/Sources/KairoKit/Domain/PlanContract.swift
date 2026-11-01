@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member C — CF9 Disruption contract.
+/// Member C - CF9 Disruption contract.
 ///
 /// The point of the machine is what it refuses to do: it will not extend forever.
 /// A third extension escalates, because a fortnight of "still unwell" is a signal,
@@ -32,7 +32,7 @@ public enum PlanContractState: String, LifecycleState {
         .init(.extending, "extensionGranted", .active),
         .init(.active, "expiryReachedAgain", .recovering, guardText: "extensionCount >= 1"),
         .init(.active, "thirdExtensionRequested", .escalated,
-              guardText: "extensionCount >= 2 — escalate instead of extending"),
+              guardText: "extensionCount >= 2 - escalate instead of extending"),
         .init(.active, "userEndedEarly", .recovering),
         .init(.recovering, "rampCompleted", .restored),
         .init(.recovering, "userDisengaged", .abandoned),

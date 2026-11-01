@@ -1,6 +1,6 @@
-# NFR10 — the 3% daily battery budget
+# NFR10 - the 3% daily battery budget
 
-> **NFR10** Battery cost — watchOS companion ≤ 3% of daily battery
+> **NFR10** Battery cost - watchOS companion ≤ 3% of daily battery
 
 **Status: unverified.** The figure in the report is a target nobody has
 measured, and nothing in this repository can measure it. This file is the
@@ -8,7 +8,7 @@ procedure for doing so, plus the tripwire that runs in the meantime.
 
 ## Why the app cannot measure it
 
-watchOS gives an app `WKInterfaceDevice.current().batteryLevel` — the *device's*
+watchOS gives an app `WKInterfaceDevice.current().batteryLevel` - the *device's*
 charge, not this app's share of the drain. A number computed from it would be
 the whole watch's consumption wearing Kairo's name, which is worse than no
 number: it would look like a measurement and would move with the user's workout
@@ -21,23 +21,23 @@ not have.
 ## The tripwire that does run
 
 `WatchEnergyBudget` (KairoKit) counts the three things the companion initiates
-that cost energy — wakes, WatchConnectivity transmissions, haptics — against a
+that cost energy - wakes, WatchConnectivity transmissions, haptics - against a
 per-day budget drawn from what the design assumes:
 
 | | Budget | Why that number |
 |---|---|---|
 | wakes | 40 | Six interruptions (AG-1), the user opening the app a handful of times, hourly-ish background refreshes while worn |
 | transmissions | 60 | One per water tap, one per nudge response, plus outbox re-sends |
-| haptics | 50 | One per tap, plus FR8.5's milestones — at most four more per day |
+| haptics | 50 | One per tap, plus FR8.5's milestones - at most four more per day |
 
 Every outbound message goes through one `send` on `WatchModel` and every haptic
 through one `haptic`, so a new caller cannot miss the counter.
 
 **Crossing a budget does not mean NFR10 was breached.** It means the companion
 is doing more than the design assumed and the real measurement below is now
-worth running. The value is catching the regression on the day it lands — "we
+worth running. The value is catching the regression on the day it lands - "we
 added milestone haptics" is exactly the kind of change that should have to show
-its cost — rather than the day somebody finally opens Instruments.
+its cost - rather than the day somebody finally opens Instruments.
 
 ## The real measurement
 
@@ -52,7 +52,7 @@ Needs: an Apple Watch, a paired iPhone, both off the charger, and Xcode.
    at the same hour the next day. This is the control, and skipping it is how a
    watch that loses 40% a day anyway gets blamed on one app.
 4. **Measured day.** Same watch, same wearer, same rough activity, with Kairo
-   running normally — AG-1's six interruptions, water logged on the wrist a few
+   running normally - AG-1's six interruptions, water logged on the wrist a few
    times. Record the same two numbers.
 5. **Attribute.** The difference between the two daily drops is Kairo's share.
    Repeat over at least three paired days: one day's difference is inside the
@@ -74,7 +74,7 @@ In order of what costs the user least:
 2. **Lower the background refresh rate.** The watch does not need the day's
    state until the wrist is raised.
 3. **Drop the milestone haptics to the target only.** FR8.5's non-visual
-   equivalent survives — the spoken form is the primary channel — and the
+   equivalent survives - the spoken form is the primary channel - and the
    quarter buzzes are the part with the weakest claim on the budget.
 
 Interruptions are the last thing to cut, not the first: AG-1 already caps them

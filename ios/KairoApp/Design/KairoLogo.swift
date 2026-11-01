@@ -6,7 +6,7 @@ import SwiftUI
 // Kairo's mark IS its thesis: a day's interruption budget as a ring of discrete
 // segments, part of it spent, and the opportune moment at the centre. The app
 // icon, the launch screen, the loaders and the attention dial on Today are all
-// the same shape at different sizes — which is why the geometry lives in one
+// the same shape at different sizes - which is why the geometry lives in one
 // place instead of being redrawn per use.
 
 // MARK: - The motif
@@ -68,13 +68,13 @@ struct SegmentedRing: View {
 /// The identity mark: a K, both arms at equal weight leaving one junction.
 ///
 /// The app icon and the launch screen are this shape. It is drawn rather than
-/// typeset so it matches the generated PNGs exactly at any size — the same
+/// typeset so it matches the generated PNGs exactly at any size - the same
 /// fractions appear in scripts/make-brand-assets.swift, and changing one means
 /// changing both.
 ///
 /// An earlier version lightened the upper arm to mean "the time that simply
-/// passes". It destroyed the letter — with one arm faded the shape reads as a
-/// lowercase k — so the idea moved to `KairoMark`, where a ring of segments can
+/// passes". It destroyed the letter - with one arm faded the shape reads as a
+/// lowercase k - so the idea moved to `KairoMark`, where a ring of segments can
 /// carry it without anything having to stay legible at 29pt.
 struct KairoLetter: View {
     var size: CGFloat = 112
@@ -118,7 +118,7 @@ struct KairoLetter: View {
 struct KairoMark: View {
     var size: CGFloat = 44
     /// Collapses the whole mark to one colour, for contexts that cannot carry
-    /// the warm sweep — a tinted background, a monochrome print, a template icon.
+    /// the warm sweep - a tinted background, a monochrome print, a template icon.
     var monochrome: Color?
     var animatesIn: Bool = false
 

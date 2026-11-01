@@ -1,6 +1,6 @@
 import Foundation
 
-/// Member C — CF7 attention budget.
+/// Member C - CF7 attention budget.
 public enum NudgeState: String, LifecycleState {
     case bid, queued, scored, suppressed, scheduled, delivered
     case accepted, snoozed, dismissed, expired, recorded
@@ -46,7 +46,7 @@ public enum NudgeState: String, LifecycleState {
 
 /// The classes an agent may bid in. A model asked to name a class without being
 /// shown the vocabulary invents one, and a contract then suspends a class that
-/// does not exist — silently doing nothing.
+/// does not exist - silently doing nothing.
 public enum NudgeClassVocabulary {
     public static let known = ["hydration", "sedentary", "bedtimePrep", "mealLog", "movement"]
     public static func isKnown(_ c: String) -> Bool { known.contains(c) }
@@ -107,7 +107,7 @@ public struct NudgeBid: Sendable, Equatable {
 public enum SuppressionReason: String, Sendable, CaseIterable {
     case budgetExhausted, quietHours, outranked, costCeiling, classSuspended
     case windowNotOpen, windowClosed, inaccessible, duplicateClass
-    /// CF6 — nothing measured in this domain, so nothing may be claimed about it.
+    /// CF6 - nothing measured in this domain, so nothing may be claimed about it.
     case ungrounded
     /// The Steward refused the wording, so nothing was sent and the attention
     /// budget was not spent on it. Distinct from `ungrounded`: there *was*

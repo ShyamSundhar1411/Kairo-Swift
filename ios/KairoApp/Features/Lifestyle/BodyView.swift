@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// Member B — CF4 + CF6. The number and, inseparably, what it is worth.
+/// Member B - CF4 + CF6. The number and, inseparably, what it is worth.
 ///
 /// The hero never prints the hours without the evidence badge beside them, because
 /// the badge *is* what the number is worth: the same `AssertionForm` the Steward
@@ -10,8 +10,8 @@ import KairoKit
 ///
 /// Was `SleepView`. It now carries movement as well, which arrived here from
 /// Today: a sitting figure and a wear figure are the same kind of fact as last
-/// night's hours — a reading from the same sensor with the same evidence gate
-/// over it — and they answered none of the questions the attention ledger is
+/// night's hours - a reading from the same sensor with the same evidence gate
+/// over it - and they answered none of the questions the attention ledger is
 /// for. The wear and sitting tiles were drawn twice, once on each screen; there
 /// is now one set.
 struct BodyView: View {
@@ -86,7 +86,7 @@ struct BodyView: View {
     /// read rather than from a constant.
     ///
     /// `AppModel` records `CoverageMetric(domain: .sleep, observedCount: 1,
-    /// expectedCount: 1)` unconditionally — a permanent claim that last night was
+    /// expectedCount: 1)` unconditionally - a permanent claim that last night was
     /// seen, made before anything had been looked at. `DayCoverage` is a value
     /// type with a public `record`, so this screen can overlay the truth on its
     /// own copy without touching the model: last night is either observed
@@ -95,7 +95,7 @@ struct BodyView: View {
     ///
     /// INTEGRATION: this overlay is a stand-in. Once `AppModel` records the
     /// day-level sleep metric itself, delete `dayCoverage` and read
-    /// `model.coverage` directly — every use below is already written against a
+    /// `model.coverage` directly - every use below is already written against a
     /// `DayCoverage`, so the diff is the four call sites and nothing else.
     private var dayCoverage: DayCoverage {
         guard case let .read(hours) = night else { return model.coverage }
@@ -108,8 +108,8 @@ struct BodyView: View {
 
     /// What may be said about *last night*, which is a different question from
     /// what may be said about the week's debt. A single measured night is fully
-    /// evidenced — downgrading it because the rest of the week is patchy would be
-    /// under-claiming, which is its own kind of dishonesty — so the hero reads the
+    /// evidenced - downgrading it because the rest of the week is patchy would be
+    /// under-claiming, which is its own kind of dishonesty - so the hero reads the
     /// day metric and the debt claim reads the week's.
     private var sleepForm: AssertionForm { dayCoverage.permittedForm(for: .sleep) }
 
@@ -211,8 +211,8 @@ struct BodyView: View {
     // point of the movement read was to stop showing a constant where there was
     // no measurement, so an absent value says so instead of drawing a zero.
     //
-    // `wearHours` is also the honest denominator behind the sleep hero — hours
-    // slept mean nothing without the hours the watch was actually on — which is
+    // `wearHours` is also the honest denominator behind the sleep hero - hours
+    // slept mean nothing without the hours the watch was actually on - which is
     // the other reason the two belong on one screen.
 
     private var movementSection: some View {
@@ -262,12 +262,12 @@ struct BodyView: View {
     }
 
     /// Three states onto the two a `StatTile` draws: still reading keeps the
-    /// skeleton, and read-but-absent gets an em dash. The dash matters — the live
+    /// skeleton, and read-but-absent gets an em dash. The dash matters - the live
     /// adapter refuses the sitting question outright rather than answering a
     /// plausible zero, and "0 min" would have been a reassurance nobody measured.
     private func measured<V>(_ value: V??, _ format: (V) -> String) -> String? {
         guard let answered = value else { return nil }
-        return answered.map(format) ?? "—"
+        return answered.map(format) ?? "-"
     }
 
     private func shortHours(_ v: Double) -> String {
@@ -277,7 +277,7 @@ struct BodyView: View {
     // MARK: - The claim
 
     /// The debt, computed. This section used to read
-    /// `GatedClaim(text: "Your sleep debt is 2.4 hours.", domain: .sleep)` — a
+    /// `GatedClaim(text: "Your sleep debt is 2.4 hours.", domain: .sleep)` - a
     /// string literal wearing the evidence badge of a reading, which is the exact
     /// thing the rest of this app exists to argue against. The number now comes
     /// from `SleepSummary.debt(over:)` over the nights the adapter could actually
@@ -308,8 +308,8 @@ struct BodyView: View {
     /// number when the domain sits below full coverage, so a weaker form must
     /// carry its meaning in words or be rewritten out from under itself. Below
     /// `.qualified` the honest content is the *sign* of the debt rather than its
-    /// size — three nights can show that someone is running short of the
-    /// reference; they cannot total a week — and at `.question` there is nothing
+    /// size - three nights can show that someone is running short of the
+    /// reference; they cannot total a week - and at `.question` there is nothing
     /// but a question to ask.
     ///
     /// No two-sided band is offered at `.range`, deliberately. A band with an
@@ -365,7 +365,7 @@ struct BodyView: View {
 
     /// The evidence behind the claim, in the same shape `CoverageRow` uses: the
     /// form on the left, the raw counts on the right. This is not itself a claim
-    /// about the user's sleep — it is a statement about what Kairo saw — which is
+    /// about the user's sleep - it is a statement about what Kairo saw - which is
     /// why it carries digits at every form.
     private func evidenceFootnote(_ d: SleepDebt) -> some View {
         HStack(spacing: 8) {
@@ -421,7 +421,7 @@ struct BodyView: View {
                 .fill(Kairo.ink.opacity(0.6))
                 .frame(width: 1.5, height: 10)
                 .padding(.top, 2)
-            Text("the tick on each ring is the \(floorPercent)% floor — a domain below it "
+            Text("the tick on each ring is the \(floorPercent)% floor - a domain below it "
                  + "may not carry a bare number")
                 .font(.caption2)
                 .foregroundStyle(Kairo.inkFaint)
@@ -433,21 +433,21 @@ struct BodyView: View {
 
     // MARK: - Load
 
-    /// INTEGRATION (AppModel / Observations) — this belongs upstream.
+    /// INTEGRATION (AppModel / Observations) - this belongs upstream.
     ///
     /// The week is loaded here as local state only because `AppModel` is being
     /// edited elsewhere this week. When it lands, the two moves are:
     ///
     /// 1. `AppModel.bootstrap()` awaits the window once, records
     ///    `debt.coverageMetric` (or, for the day-level ring, one-of-one against
-    ///    last night's reading — see `dayCoverage` above) and merges
+    ///    last night's reading - see `dayCoverage` above) and merges
     ///    `SleepSummary.observations(for: window)` into `observations`, which is
     ///    what finally fills the `sleepHoursLastNight` and `sleepDebtHours`
     ///    fields the Lifestyle analyst has been bidding on since day one with
     ///    nothing behind them.
     /// 2. This screen then reads `model.debt` instead of loading its own, and
     ///    `GatedClaim` starts screening the sentence below against real sleep
-    ///    coverage rather than against the hardcoded one-of-one — at which point
+    ///    coverage rather than against the hardcoded one-of-one - at which point
     ///    the gate independently enforces the same limit `debtClaim` already
     ///    respects, which is the check worth having.
     ///
@@ -457,7 +457,7 @@ struct BodyView: View {
 
         // The window first. With the HealthKit adapter this is also what primes
         // the day-level caches the three port reads below draw on, so the sync
-        // getters have something to answer with — that missing prime was the
+        // getters have something to answer with - that missing prime was the
         // whole reason live sleep read as nil forever.
         debt = await week(endingOn: day).sleepDebt()
 
@@ -469,7 +469,7 @@ struct BodyView: View {
     /// The last seven nights, blanks included.
     ///
     /// A source that can answer a multi-night question is asked one. A source
-    /// that cannot — the stub the demo runs on, which knows a single day — gets
+    /// that cannot - the stub the demo runs on, which knows a single day - gets
     /// asked for last night and the other six nights stay blank, because six
     /// copies of last night is exactly the fabricated week this app refuses to
     /// draw. That path is also the honest one for a first launch, and it is why
@@ -536,7 +536,7 @@ private struct CoverageRow: View {
     }
 
     /// The domain's own colour and icon, with the floor marked on the arc at the
-    /// angle it sits at — so "60%" is a place on the ring, not a number in prose.
+    /// angle it sits at - so "60%" is a place on the ring, not a number in prose.
     private var ring: some View {
         ZStack {
             MetricRing(progress: fraction, tint: tint, icon: Kairo.icon(for: domain),

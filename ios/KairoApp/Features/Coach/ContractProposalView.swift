@@ -1,7 +1,7 @@
 import SwiftUI
 import KairoKit
 
-/// Member C — CF9. A contract is proposed and accepted, never applied silently,
+/// Member C - CF9. A contract is proposed and accepted, never applied silently,
 /// and it always carries an end date.
 ///
 /// This is the only card in the app that asks the user for something, so it is
@@ -27,7 +27,7 @@ struct ContractProposalCard: View {
             suspendedRow
             expiryRow
 
-            TrustNote(text: "This ends on its own — it will not quietly become your new normal.",
+            TrustNote(text: "This ends on its own - it will not quietly become your new normal.",
                       icon: "clock.arrow.circlepath")
 
             buttons
@@ -175,7 +175,7 @@ struct ContractProposalCard: View {
         .padding(.top, 2)
     }
 
-    /// CF9 — recorded where the agents can see it, not only on the phone.
+    /// CF9 - recorded where the agents can see it, not only on the phone.
     private func respond(accept: Bool) {
         Task { await model.respondToContract(accept: accept) }
     }

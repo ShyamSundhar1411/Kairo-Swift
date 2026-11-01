@@ -47,7 +47,7 @@ enum DemoScenario {
     }
 
     /// What the demo user "tells" Kairo. Sent to `/v1/memories/extract`, where
-    /// the Habit Memory Curator decides what is worth keeping — so the facts
+    /// the Habit Memory Curator decides what is worth keeping - so the facts
     /// that appear in the Memory Book are the curator's, not this file's.
     static let aboutMe = """
         I'm training for a half marathon and I run before work on Tuesdays and \
@@ -56,7 +56,7 @@ enum DemoScenario {
         A short walk works better for me than a reminder while I'm at my desk.
         """
 
-    /// Today at hh:mm, but never in the future — a demo run at 9am shows
+    /// Today at hh:mm, but never in the future - a demo run at 9am shows
     /// breakfast at 7:50 and lunch "just now" rather than a meal not yet eaten.
     private static func at(_ hour: Int, _ minute: Int, _ dayStart: Date, _ now: Date) -> Date {
         let t = dayStart.addingTimeInterval(TimeInterval(hour * 3_600 + minute * 60))
@@ -71,7 +71,7 @@ struct DemoHealthSource: HealthDataSource, MovementDaySource, SleepWindowSource 
     let name = "Demo scenario (not your Health data)"
 
     /// Hours asleep for the last seven nights, oldest first; the last is last
-    /// night. Two nights are missing on purpose — the watch was on the charger —
+    /// night. Two nights are missing on purpose - the watch was on the charger -
     /// so the sleep-debt claim has to be qualified rather than asserted.
     static let week: [Double?] = [6.4, 5.9, nil, 7.1, 6.2, nil, 5.6]
 

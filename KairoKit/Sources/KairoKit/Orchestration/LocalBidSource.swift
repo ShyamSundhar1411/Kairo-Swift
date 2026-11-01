@@ -2,9 +2,9 @@ import Foundation
 
 /// CF7. The bids the phone raises for itself when the agents cannot be reached.
 ///
-/// This replaces a fixture. The app used to fall back to three hard-coded bids —
+/// This replaces a fixture. The app used to fall back to three hard-coded bids -
 /// a sitting run of 82 minutes, "You are 340 ml behind today", and a wind-down
-/// window pinned to the evening of 25 August 2026 — so a phone with no backend
+/// window pinned to the evening of 25 August 2026 - so a phone with no backend
 /// and no readings still displayed a full day's worth of advice about someone
 /// else's Tuesday.
 ///
@@ -16,7 +16,7 @@ import Foundation
 ///
 /// The numbers below are thresholds and priors, not observations. They are stated
 /// here as constants so they can be argued with, and none of them invents a
-/// reading — they only decide when a real reading is worth an interruption.
+/// reading - they only decide when a real reading is worth an interruption.
 public enum LocalBidSource {
 
     /// Sitting runs shorter than this are not worth an interruption. Chosen to sit
@@ -54,7 +54,7 @@ public enum LocalBidSource {
         }
         // FR6.4. Deliberately last and deliberately low: it competes with the
         // bids above and loses to any of them. It is also the only bid in this
-        // file not derived from a reading — it is derived from their *absence*,
+        // file not derived from a reading - it is derived from their *absence*,
         // which is why nothing else here could ever have raised it, and why a
         // phone that has measured nothing stops being silent about that.
         if let coverage,
@@ -90,7 +90,7 @@ public enum LocalBidSource {
     private static func hydrationBid(at now: Date, observations: Observations) -> NudgeBid? {
         // Both halves required. Millilitres with no target cannot be judged, and a
         // target with nothing logged is a morning nobody has drunk in yet rather
-        // than a morning of no water — `Observations` is explicit that its job is
+        // than a morning of no water - `Observations` is explicit that its job is
         // to keep "zero" and "not measured" apart, and this is where that matters.
         guard let logged = observations.hydrationML,
               let target = observations.hydrationTargetML, target > 0 else { return nil }
@@ -115,7 +115,7 @@ public enum LocalBidSource {
     ///
     /// The window is computed from the user's calendar rather than written as a
     /// literal date. The fixture this replaces had `2026-08-25 21:30`, which on
-    /// any other day is a window that has already closed — so the bid was raised,
+    /// any other day is a window that has already closed - so the bid was raised,
     /// suppressed as `windowNotOpen`, and shown to the user as restraint the
     /// arbiter had never actually exercised.
     private static func bedtimeBid(at now: Date,

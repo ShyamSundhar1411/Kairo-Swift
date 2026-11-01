@@ -5,7 +5,7 @@ public struct NudgeOutcome: Sendable, Equatable, Codable {
     public enum Response: String, Sendable, Codable {
         case accepted, dismissed, snoozed, expired
 
-        /// Snoozing is not a refusal — the user wanted this, later. Counting it as
+        /// Snoozing is not a refusal - the user wanted this, later. Counting it as
         /// a rejection would teach the model to stop raising exactly the nudges
         /// somebody keeps deferring because they intend to act on them.
         var isPositive: Bool { self == .accepted || self == .snoozed }
@@ -31,8 +31,8 @@ public protocol NudgeOutcomeLog: Sendable {
 
 /// CF7 receptivity, learned from what the user has actually done.
 ///
-/// The app shipped with a fixed table — hydration 0.70, sedentary 0.90,
-/// bedtimePrep 0.60 — which never moved no matter how many times a nudge was
+/// The app shipped with a fixed table - hydration 0.70, sedentary 0.90,
+/// bedtimePrep 0.60 - which never moved no matter how many times a nudge was
 /// dismissed. The port's own documentation says receptivity is "learned from the
 /// outcome history of past nudges", and nothing was.
 ///
@@ -44,7 +44,7 @@ public protocol NudgeOutcomeLog: Sendable {
 ///     least as strong a signal as what about.
 ///
 /// With no history at all this returns the prior unchanged, and says so through
-/// `evidence(for:)` — a 0.5 backed by nothing and a 0.5 backed by forty
+/// `evidence(for:)` - a 0.5 backed by nothing and a 0.5 backed by forty
 /// deliveries are different claims, and the receipt screen is entitled to know
 /// which one it is showing.
 public struct ObservedReceptivityModel: ReceptivityModel {
@@ -54,7 +54,7 @@ public struct ObservedReceptivityModel: ReceptivityModel {
 
     /// Beta-style shrinkage. At `strength` observations the estimate sits halfway
     /// between the prior and the observed rate. Six is about a week of nudges in
-    /// one class — enough to move, not enough to be moved by one bad morning.
+    /// one class - enough to move, not enough to be moved by one bad morning.
     public static let strength = 6.0
 
     /// The hour multiplier is shrunk harder: there are twenty-four buckets, so any
@@ -107,7 +107,7 @@ public struct ObservedReceptivityModel: ReceptivityModel {
     ///
     /// The baseline deliberately excludes this hour's own outcomes. Comparing a
     /// bucket against a total it is itself part of applies the same evidence
-    /// twice — with a single dismissal in the whole history it dragged the
+    /// twice - with a single dismissal in the whole history it dragged the
     /// estimate down through the class rate and then again through the hour
     /// factor, which is how one bad morning got to count as two.
     private func hourFactor(at t: Date, history: [NudgeOutcome]) -> Double {
@@ -139,7 +139,7 @@ public struct ObservedReceptivityModel: ReceptivityModel {
     /// produced an observation, and it outranks anything the history suggests.
     ///
     /// The hour is read out of the memory rather than fixed at 9, and the user's
-    /// own calendar decides what hour it is — the model this replaces hard-coded
+    /// own calendar decides what hour it is - the model this replaces hard-coded
     /// `Australia/Sydney`, which is a fact about where the project was written.
     private func quietMultiplier(at t: Date, memories: [MemoryItem]) -> Double {
         let hour = calendar.component(.hour, from: t)
