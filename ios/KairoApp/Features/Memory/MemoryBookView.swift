@@ -4,50 +4,42 @@ import KairoKit
 /// Member D — CF10. Every remembered fact in plain language, with the controls
 /// that make the memory an artefact the user owns rather than a hidden profile.
 ///
-/// A profile you cannot read is a profile you cannot argue with, so each fact
-/// carries where it came from, how sure Kairo is, and a delete that really
-/// deletes. Facts Kairo is no longer sure about are drawn differently from the
-/// ones it is acting on, because adjudicating them is the user's job.
+/// Two tabs, because facts and decisions answer different questions — "what
+/// does Kairo think it knows about me?" and "what did it decide, and why?" —
+/// and stacking them on one scrolling page buried both. Facts are grouped by
+/// whether Kairo is acting on them, each row says one thing, and the full
+/// detail (state, sensitivity, decay, provenance, id) is one tap away rather
+/// than on every card at once.
 struct MemoryBookView: View {
     @Environment(AppModel.self) private var model
     @State private var openRecordID: String?
-    /// What the user is about to tell Kairo. Sent to the curator, never stored
-    /// as a fact directly.
-    @State private var draft = ""
-    /// A 44-point disc beside prose leaves the prose 190 points at 375, which
-    /// iOS's own audit reported as clipped text at accessibility XXXL.
+    @State private var tab: Tab = .facts
+    /// The fact whose detail sheet is open. An id, because `MemoryItem` is
+    /// not `Identifiable` and the domain should not change for a sheet.
+    @State private var openMemoryID: String?
+    @State private var composing = false
+    @State private var showUnused = false
     @Environment(\.dynamicTypeSize) private var typeSize
+
+    enum Tab: String, CaseIterable { case facts = "Facts", decisions = "Decisions" }
 
     var body: some View {
         NavigationStack {
             List {
                 header
                     .padding(.horizontal, 4)
-                    .padding(.bottom, 2)
                     .kairoListRow()
 
-                SectionHeader(title: "Facts", icon: "sparkles",
-                              trailing: "\(model.memories.count)", tint: Kairo.teal)
-                    .kairoListRow()
-
-                if model.memories.isEmpty {
-                    emptyFacts.kairoListRow()
-                } else {
-                    ForEach(model.memories, id: \.id) { m in
-                        MemoryRow(memory: m) { forget(m) }
-                            .kairoListRow()
-                    }
+                Picker("Show", selection: $tab) {
+                    ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
+                .pickerStyle(.segmented)
+                .kairoListRow()
 
-                composer.kairoListRow()
-
-                decisions.kairoListRow()
-
-                TrustNote(text: "Facts marked on-device never leave this phone. "
-                          + "Anything you delete is gone from every agent's next answer.",
-                          icon: "iphone.and.arrow.forward")
-                    .padding(.top, 4)
-                    .kairoListRow()
+                switch tab {
+                case .facts:     factsTab
+                case .decisions: decisionsTab
+                }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -62,44 +54,134 @@ struct MemoryBookView: View {
                     WhyView(record: record)
                 }
             }
+            .sheet(isPresented: Binding(get: { openMemoryID != nil },
+                                        set: { if !$0 { openMemoryID = nil } })) {
+                if let memory = model.memories.first(where: { $0.id == openMemoryID }) {
+                    MemoryDetailSheet(memory: memory) {
+                        openMemoryID = nil
+                        forget(memory)
+                    }
+                }
+            }
+            .sheet(isPresented: $composing) {
+                TellKairoSheet()
+            }
         }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        // The count comes off at an accessibility size rather than being
-        // clipped. Inside a `List` row the header's trailing slot is measured
-        // against the row rather than the line, so the pill was handed 125
-        // points and cut "2 facts" in half — and the same count is already on
-        // the Facts section header immediately below this.
         KairoHeader(eyebrow: "what kairo remembers", title: "Memory") {
-            if !typeSize.isAccessibilitySize {
-                Pill(text: factCount, icon: "book.closed.fill", tint: Kairo.teal)
+            Button { composing = true } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Kairo.canvas)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Kairo.teal))
             }
+            .buttonStyle(.kairoPress)
+            .accessibilityLabel("Tell Kairo something")
         }
     }
 
-    private var factCount: String {
-        model.memories.count == 1 ? "1 fact" : "\(model.memories.count) facts"
+    // MARK: - Facts
+
+    private var acting: [MemoryItem] { model.memories.filter { [.active, .verified].contains($0.state) } }
+    private var unsure: [MemoryItem] {
+        model.memories.filter { [.candidate, .unconfirmed, .decaying, .contradicted].contains($0.state) }
+    }
+    private var unused: [MemoryItem] {
+        model.memories.filter { !acting.map(\.id).contains($0.id) && !unsure.map(\.id).contains($0.id) }
+    }
+
+    @ViewBuilder private var factsTab: some View {
+        if model.memories.isEmpty {
+            emptyFacts.kairoListRow()
+        } else {
+            summary.kairoListRow()
+            group("Kairo acts on these", icon: "checkmark.circle", tint: Kairo.leaf, acting)
+            group("Not sure yet", icon: "questionmark.circle", tint: Kairo.amber, unsure)
+            if !unused.isEmpty {
+                Button {
+                    withAnimation(.snappy) { showUnused.toggle() }
+                } label: {
+                    SectionHeader(title: "Not used in answers", icon: showUnused ? "chevron.down" : "chevron.right",
+                                  trailing: "\(unused.count)", tint: Kairo.inkFaint)
+                }
+                .buttonStyle(.plain)
+                .kairoListRow()
+                if showUnused {
+                    ForEach(unused, id: \.id) { row($0) }
+                }
+            }
+        }
+        TrustNote(text: "Facts marked on-device never leave this phone. Anything you forget "
+                  + "is gone from every agent's next answer. Swipe a fact to forget it.",
+                  icon: "iphone.and.arrow.forward")
+            .padding(.top, 4)
+            .kairoListRow()
+    }
+
+    /// Three numbers that say the state of the book at a glance.
+    private var summary: some View {
+        HStack(spacing: 10) {
+            stat("\(acting.count)", "acting on", Kairo.leaf)
+            stat("\(unsure.count)", "not sure", Kairo.amber)
+            stat("\(model.memories.filter { $0.sensitivity.mustStayOnDevice }.count)", "on device", Kairo.teal)
+        }
+    }
+
+    private func stat(_ value: String, _ label: String, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value).font(.kairoDisplay).monospacedDigit().foregroundStyle(Kairo.ink)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(label.uppercased()).font(.kairoLabel).tracking(0.9).foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .kairoCard(padding: 12, radius: Kairo.Radius.inner)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func group(_ title: String, icon: String, tint: Color, _ items: [MemoryItem]) -> some View {
+        if !items.isEmpty {
+            SectionHeader(title: title, icon: icon, trailing: "\(items.count)", tint: tint)
+                .padding(.top, 6)
+                .kairoListRow()
+            ForEach(items, id: \.id) { row($0) }
+        }
+    }
+
+    private func row(_ m: MemoryItem) -> some View {
+        Button { openMemoryID = m.id } label: { FactRow(memory: m) }
+            .buttonStyle(.kairoPress)
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) { forget(m) } label: { Label("Forget", systemImage: "trash") }
+            }
+            .kairoListRow()
     }
 
     private var emptyFacts: some View {
-        AdaptiveHeroRow(stacked: typeSize.isAccessibilitySize, spacing: 14) {
-            Image(systemName: "book.closed")
-                .font(.kairoGlyph(18, weight: .semibold))
-                .foregroundStyle(Kairo.teal)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Kairo.teal.opacity(0.14)))
-        } detail: {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Kairo remembers nothing about you")
-                    .font(.kairoHeadline).foregroundStyle(Kairo.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(emptyReason)
-                    .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 12) {
+            AdaptiveHeroRow(stacked: typeSize.isAccessibilitySize, spacing: 14) {
+                Image(systemName: "book.closed")
+                    .font(.kairoGlyph(18, weight: .semibold))
+                    .foregroundStyle(Kairo.teal)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Kairo.teal.opacity(0.14)))
+            } detail: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Kairo remembers nothing about you")
+                        .font(.kairoHeadline).foregroundStyle(Kairo.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(emptyReason)
+                        .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+            Button("Tell Kairo something") { composing = true }
+                .buttonStyle(.kairoSoft(Kairo.teal))
         }
         .kairoCard(tint: Kairo.teal)
     }
@@ -112,88 +194,35 @@ struct MemoryBookView: View {
             return "The agents are not connected. Facts live with the curator on the "
                 + "backend, so this fills in once Kairo can reach it."
         }
-        return "Nothing has been told to the curator yet. Log a meal, or say "
-            + "something below, and it decides what is worth remembering."
+        return "Nothing has been told to the curator yet. Log a meal, or tap + and say "
+            + "something, and it decides what is worth remembering."
     }
 
-    // MARK: - Telling Kairo something
+    // MARK: - Decisions
 
-    /// FR10.1 from the user's side. What is typed goes to the Habit Memory
-    /// Curator; what comes back in the list above is what it chose to keep.
-    private var composer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: "Tell Kairo", icon: "text.bubble", tint: Kairo.teal)
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("e.g. I run before work on Tuesdays", text: $draft, axis: .vertical)
-                    .lineLimit(1...4)
-                    .font(.subheadline)
-                    .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Kairo.hairline.opacity(0.06)))
-                Button {
-                    let said = draft
-                    draft = ""
-                    Task { await model.teach(said) }
-                } label: {
-                    if model.teaching {
-                        ProgressView().frame(width: 36, height: 36)
-                    } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundStyle(Kairo.teal)
-                    }
-                }
-                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty
-                          || model.teaching || model.backend.client == nil)
-                .accessibilityLabel("Send to the memory curator")
-            }
-            if model.demoMode, model.memories.isEmpty, !model.teaching {
-                Button("Use the demo user's story") {
-                    Task { await model.teach(DemoScenario.aboutMe) }
-                }
-                .buttonStyle(.kairoSoft(Kairo.teal))
-            }
-            if let said = model.lastExtraction {
-                Text(said)
-                    .font(.kairoCaption).foregroundStyle(Kairo.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .kairoCard()
-    }
-
-    // MARK: - Recent decisions
-    //
-    // These sit inside a single list row rather than being rows themselves, so
-    // the cards keep their own chrome instead of collecting a system chevron.
-    //
-    // Which record the reader has opened. Held here rather than pushed straight
-    // from the row, for the reason spelled out on the Button below.
-
-    @ViewBuilder private var decisions: some View {
-        VStack(spacing: 8) {
-            SectionHeader(title: "Recent decisions", icon: "clock.arrow.circlepath",
-                          trailing: "\(model.records.count)", tint: Kairo.violet)
-                .padding(.top, 10)
-
-            if model.records.isEmpty {
-                Text("Nothing has been decided yet this session.")
-                    .font(.caption)
-                    .foregroundStyle(Kairo.inkFaint)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .kairoCard(padding: 14, radius: Kairo.Radius.inner)
-            } else {
-                ForEach(model.records.reversed(), id: \.id) { r in
-                    // A Button plus `navigationDestination(item:)` rather than a
-                    // NavigationLink: nested or not, a link inside a List still
-                    // earns the row a system chevron, and the card draws its own.
-                    Button { openRecordID = r.id } label: {
-                        DecisionRecordCard(record: r)
-                    }
+    @ViewBuilder private var decisionsTab: some View {
+        if model.records.isEmpty {
+            Text("Nothing has been decided yet this session.")
+                .font(.caption)
+                .foregroundStyle(Kairo.inkFaint)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .kairoCard(padding: 14, radius: Kairo.Radius.inner)
+                .kairoListRow()
+        } else {
+            // A Button plus `navigationDestination(item:)` rather than a
+            // NavigationLink: a link inside a List still earns the row a
+            // system chevron, and the card draws its own.
+            ForEach(model.records.reversed(), id: \.id) { r in
+                Button { openRecordID = r.id } label: { DecisionRecordCard(record: r) }
                     .buttonStyle(.kairoPress)
-                }
+                    .kairoListRow()
             }
         }
+        TrustNote(text: "Every decision is sealed with what each role said and every bid "
+                  + "that lost. Open one to see why Kairo said what it said.",
+                  icon: "lock.doc")
+            .padding(.top, 4)
+            .kairoListRow()
     }
 
     // MARK: - Actions
@@ -201,9 +230,178 @@ struct MemoryBookView: View {
     /// CF10: the delete is real. It leaves the store, so it is gone from the
     /// next answer every agent gives — there is no shadow copy behind it.
     private func forget(_ memory: MemoryItem) {
-        Task {
-            await model.forget(memory)
+        Task { await model.forget(memory) }
+    }
+}
+
+// MARK: - One fact, compact
+
+/// One line of fact and one line of context. Everything else is in the sheet.
+private struct FactRow: View {
+    let memory: MemoryItem
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                Circle().stroke(Kairo.hairline.opacity(0.12), lineWidth: 3)
+                Circle().trim(from: 0, to: min(max(memory.confidence, 0), 1))
+                    .stroke(tint, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(Int((memory.confidence * 100).rounded()))")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Kairo.ink)
+            }
+            .frame(width: 34, height: 34)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(memory.text)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Kairo.ink)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 6) {
+                    if memory.sensitivity.mustStayOnDevice {
+                        Image(systemName: "iphone").foregroundStyle(Kairo.teal)
+                    }
+                    Text(context)
+                }
+                .font(.caption2)
+                .foregroundStyle(Kairo.inkFaint)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Kairo.inkFaint)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .kairoCard(padding: 12, radius: Kairo.Radius.inner)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(memory.text). \(Int((memory.confidence * 100).rounded())) per cent sure. \(context).")
+    }
+
+    private var tint: Color {
+        switch memory.state {
+        case .contradicted: Kairo.coral
+        case .candidate, .unconfirmed, .decaying: Kairo.amber
+        case .active, .verified: memory.confidence >= 0.75 ? Kairo.leaf : Kairo.amber
+        default: Kairo.inkFaint
+        }
+    }
+
+    /// The single most useful thing to know besides the fact itself.
+    private var context: String {
+        switch memory.state {
+        case .contradicted: return "clashes with something newer"
+        case .decaying:     return "fading unless it happens again"
+        case .candidate:    return "not confirmed yet"
+        case .unconfirmed:  return "not seen lately"
+        default:            return spacedStateName(memory.state.name) + " · " + originShort
+        }
+    }
+
+    private var originShort: String {
+        switch memory.sourceRef {
+        case "user", "chat": "you told me"
+        case "seed":         "set up with the app"
+        default:             memory.sourceRef.hasPrefix("extraction") ? "from something you said" : "learned"
+        }
+    }
+}
+
+// MARK: - The detail sheet
+
+/// Everything about one fact, and the delete.
+private struct MemoryDetailSheet: View {
+    let memory: MemoryItem
+    let onForget: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: Kairo.Space.stack) {
+                    MemoryRow(memory: memory, onForget: onForget)
+                    Button(role: .destructive, action: onForget) {
+                        Label("Forget this fact", systemImage: "trash")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.kairoSoft(Kairo.coral))
+                    TrustNote(text: "Forgetting removes it from the store the agents read, "
+                              + "so no future answer can use it.")
+                }
+                .padding(Kairo.Space.stack)
+            }
+            .background(KairoCanvas())
+            .navigationTitle("Fact")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Telling Kairo something
+
+/// FR10.1 from the user's side. What is typed goes to the Habit Memory Curator;
+/// what comes back in the book is what it chose to keep.
+private struct TellKairoSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft = ""
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Say something about your routine, what agrees with you, or what does "
+                     + "not. The memory curator decides what is worth keeping.")
+                    .font(.footnote).foregroundStyle(Kairo.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+                TextField("e.g. I run before work on Tuesdays", text: $draft, axis: .vertical)
+                    .lineLimit(3...6)
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Kairo.hairline.opacity(0.06)))
+                Button {
+                    let said = draft
+                    draft = ""
+                    Task { await model.teach(said) }
+                } label: {
+                    HStack {
+                        if model.teaching { ProgressView() }
+                        Text(model.teaching ? "The curator is reading…" : "Send to the curator")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.kairoProminent(Kairo.teal))
+                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty
+                          || model.teaching || model.backend.client == nil)
+                if model.demoMode {
+                    Button("Use the demo user's story") {
+                        Task { await model.teach(DemoScenario.aboutMe) }
+                    }
+                    .buttonStyle(.kairoSoft(Kairo.teal))
+                    .disabled(model.teaching)
+                }
+                if let said = model.lastExtraction {
+                    Label(said, systemImage: "sparkles")
+                        .font(.footnote).foregroundStyle(Kairo.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .kairoCard(padding: 12, radius: Kairo.Radius.inner)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(Kairo.Space.stack)
+            .background(KairoCanvas())
+            .navigationTitle("Tell Kairo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

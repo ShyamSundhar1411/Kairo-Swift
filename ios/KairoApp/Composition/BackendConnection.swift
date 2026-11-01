@@ -181,12 +181,50 @@ final class BackendConnection {
     }
 
     /// nil when nothing is configured, which is the on-device path.
-    var client: RemoteAgentClient? {
+    ///
+    /// 120 seconds per request. An arbitration is five model calls, and on a
+    /// local model that can run well past the old 45 — at which point the app
+    /// reported a backend that was busy working as unreachable.
+    var client: RemoteAgentClient? { makeClient(timeout: 120) }
+
+    /// `/health` answers instantly or not at all, so the check that decides
+    /// whether the backend is *there* gets a short leash of its own.
+    private var healthClient: RemoteAgentClient? { makeClient(timeout: 8) }
+
+    private func makeClient(timeout: TimeInterval) -> RemoteAgentClient? {
         let trimmed = address.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, let url = URL(string: trimmed), url.host != nil,
               Self.transportIsAcceptable(url) else { return nil }
         return RemoteAgentClient(baseURL: url,
-                                 token: token.isEmpty ? nil : token)
+                                 token: token.isEmpty ? nil : token,
+                                 timeout: timeout)
+    }
+
+    /// The last request that failed while the backend itself was fine — a
+    /// slow model, a route-level error. Shown on the Agents screen, and kept
+    /// apart from `state` on purpose: see `noteFailure`.
+    private(set) var lastRequestProblem: String?
+
+    private var retryTask: Task<Void, Never>?
+
+    /// Keep trying while not connected, so a backend started after the app —
+    /// or one that blipped — comes back without anybody pressing Connect.
+    /// Ten seconds apart, and silent while connected.
+    @MainActor
+    func startAutoRetry() {
+        guard retryTask == nil else { return }
+        retryTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard let self, !Task.isCancelled else { return }
+                switch self.state {
+                case .unreachable, .refusing:
+                    if let whoami = self.userIDForRecheck { await self.check(userID: whoami()) }
+                default:
+                    break
+                }
+            }
+        }
     }
 
     /// NFR6, the in-transit half (SCRUM-24). The rule itself lives in
@@ -210,7 +248,7 @@ final class BackendConnection {
 
     /// Debounced, because `address` changes on every keystroke and a request
     /// per character would be both useless and rude to whatever is listening.
-    private func scheduleRecheck(after seconds: Double = 0.8) {
+    private func scheduleRecheck(after seconds: Double = 0.8, quiet: Bool = false) {
         recheckTask?.cancel()
         // Read on the main actor, inside the task: `didSet` runs wherever the
         // write did, and reaching for an isolated property from there is the
@@ -218,7 +256,7 @@ final class BackendConnection {
         recheckTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
             guard !Task.isCancelled, let self, let whoami = self.userIDForRecheck else { return }
-            await self.check(userID: whoami())
+            await self.check(userID: whoami(), quiet: quiet)
         }
     }
 
@@ -265,17 +303,20 @@ final class BackendConnection {
         await check(userID: userIDForRecheck())
     }
 
-    func check(userID: String) async {
-        guard let client else {
+    /// - Parameter quiet: re-verify without flashing "Checking…" over a
+    ///   connection that is probably fine — used after a single request failed.
+    func check(userID: String, quiet: Bool = false) async {
+        guard let client, let healthClient else {
             state = .onDevice
             provider = nil
             ports = []
             budget = nil
             return
         }
-        state = .checking
+        if !(quiet && state.isConnected) { state = .checking }
         do {
-            let health = try await client.health()
+            let health = try await healthClient.health()
+            lastRequestProblem = nil
             provider = health.provider
             ports = health.ports
             state = .connected(mode: health.mode, promptVersion: health.promptVersion,
@@ -299,20 +340,31 @@ final class BackendConnection {
         lastServedByBackend = Date()
     }
 
+    /// One request failed. That is evidence about the request, not a verdict on
+    /// the backend.
+    ///
+    /// This used to set the connection state from any failure, which is why the
+    /// app "disconnected itself" a few requests in: a request SwiftUI cancelled
+    /// because a screen went away, an arbitration that outlived the timeout on
+    /// a slow model, or one route's own 503 ("no recommendation") each flipped
+    /// the whole app to unreachable or refusing — and with the state no longer
+    /// connected, coming back to the foreground stopped re-running the pass, so
+    /// it stayed that way until somebody pressed Connect.
+    ///
+    /// Now: cancellation is ignored, a 401 is still definitive, and everything
+    /// else asks `/health` — quietly — and lets that answer decide.
     @MainActor
     func noteFailure(_ error: Error) {
-        if let refusal = error as? RemoteAgentClient.Refusal {
-            if let p = refusal.provider { provider = p }
-            state = .refusing(diagnosis: refusal.diagnosis)
-            return
-        }
+        if error is CancellationError { return }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return }
         // A 401 is not a network fault and not a misconfiguration. Reporting it
         // as "unreachable" sends somebody to check an address that is right.
         if case let RemoteAgentClient.ClientError.http(status, _) = error, status == 401 {
             state = .unauthenticated
             return
         }
-        state = .unreachable(shortReason(error))
+        lastRequestProblem = (error as? RemoteAgentClient.Refusal)?.diagnosis ?? shortReason(error)
+        scheduleRecheck(after: 0.3, quiet: true)
     }
 
     private func shortReason(_ error: Error) -> String {
