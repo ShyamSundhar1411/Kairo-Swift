@@ -34,3 +34,6 @@ secrets.json
 # Intermediate render output - the published cut is brag-output/brag.mp4
 brag-output/composition/renders/
 .kairo-demo
+
+# Office lock files, written while a document is open
+~$*
