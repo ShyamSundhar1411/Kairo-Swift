@@ -5,7 +5,7 @@
 #   cd mobile && ./generate.sh && open Kairo.xcodeproj
 #
 # Use generate.sh rather than xcodegen directly: signing is per-developer and
-# comes from mobile/signing.env, and an unset variable would otherwise be written
+# comes from signing.env, and an unset variable would otherwise be written
 # into the project literally.
 #
 # Info.plist and the entitlements file are GENERATED from this spec, so every
@@ -24,7 +24,7 @@ options:
 packages:
   # The on-device domain now sits alongside the apps rather than in a shared
   # top-level directory: the agent layer moved to the Python backend, so nothing
-  # outside mobile/ links this package any more.
+  # outside this repository links this package any more.
   Kairo:
     path: KairoKit
 
@@ -53,7 +53,7 @@ targets:
         CFBundleVersion: "1"
         # Where a fresh install looks for the backend, before anybody has typed
         # anything. Loopback by default, which is right in the simulator and
-        # wrong on a phone - set KAIRO_BACKEND_URL in mobile/signing.env to your
+        # wrong on a phone - set KAIRO_BACKEND_URL in signing.env to your
         # Mac's LAN address and regenerate, and a device build points at it with
         # nothing entered on the device. A stored address still wins, so this
         # only ever supplies the first value.
@@ -97,7 +97,7 @@ targets:
           you will actually act on one. You can lower that number or turn it off
           entirely.
 
-        # Development only: the agent server runs on localhost during Stage 2.
+        # Development only: the agent server runs on localhost in development.
         # Remove this before any real distribution.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
@@ -115,7 +115,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: au.edu.sydney.elec5620.kairo${KAIRO_BUNDLE_SUFFIX}
-        # Per-developer, from mobile/signing.env. Empty is fine for the simulator;
+        # Per-developer, from signing.env. Empty is fine for the simulator;
         # a device build needs a real team. Setting it here rather than in Xcode's
         # UI is what makes it survive the next `generate.sh`.
         DEVELOPMENT_TEAM: ${KAIRO_DEV_TEAM}

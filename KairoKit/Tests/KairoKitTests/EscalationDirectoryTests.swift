@@ -101,7 +101,6 @@ struct EscalationDirectoryTests {
             .deletingLastPathComponent()   // KairoKitTests
             .deletingLastPathComponent()   // Tests
             .deletingLastPathComponent()   // KairoKit
-            .deletingLastPathComponent()   // mobile
             .deletingLastPathComponent()   // <repo root>
         let source = root.appending(path: "docs/escalation-directory.json")
         let doc = try JSONSerialization.jsonObject(

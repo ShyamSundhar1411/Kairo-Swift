@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generates Kairo.xcodeproj.
 #
-# Signing lives in mobile/signing.env, which is committed so the team can clone
+# Signing lives in signing.env, which is committed so the team can clone
 # and hit run. It is read here rather than written into the spec directly because
 # XcodeGen leaves an unset ${KAIRO_DEV_TEAM} in the project as a literal string,
 # which then fails to build; exporting an empty default keeps that from happening
@@ -22,7 +22,7 @@ export KAIRO_BACKEND_URL="${KAIRO_BACKEND_URL:-http://127.0.0.1:9080}"
 
 if [ -z "$KAIRO_DEV_TEAM" ]; then
   echo "note: no KAIRO_DEV_TEAM - simulator builds work, a device build will not."
-  echo "      Set one in mobile/signing.env."
+  echo "      Set one in signing.env."
 fi
 
 xcodegen generate

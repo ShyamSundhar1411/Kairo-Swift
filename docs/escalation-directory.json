@@ -1,0 +1,88 @@
+{
+  "_": "FR11.7. The single source for the escalation directory. Both halves assert against this file rather than against each other, because a phone number that drifts on one side only is the harm NFR14 names. Checked against each service's own site on 2026-10-27.",
+  "emergency": {
+    "name": "Emergency services",
+    "telephone": "000",
+    "hours": "24 hours",
+    "scope": "immediate danger to life",
+    "url": "https://www.triplezero.gov.au/",
+    "alternatives": []
+  },
+  "directory": {
+    "eatingDisorder": {
+      "name": "Butterfly Foundation National Helpline",
+      "telephone": "1800 33 4673",
+      "hours": "8am to midnight AEST/AEDT, 7 days",
+      "scope": "eating disorders and body image",
+      "url": "https://butterfly.org.au/get-support/helpline/",
+      "alternatives": []
+    },
+    "selfHarm": {
+      "name": "Lifeline",
+      "telephone": "13 11 14",
+      "hours": "24 hours, 7 days",
+      "scope": "crisis support and suicide prevention",
+      "url": "https://www.lifeline.org.au/",
+      "alternatives": [
+        {
+          "name": "13YARN",
+          "telephone": "13 92 76",
+          "hours": "24 hours, 7 days",
+          "scope": "crisis support for Aboriginal and Torres Strait Islander people",
+          "url": "https://www.13yarn.org.au/",
+          "alternatives": []
+        },
+        {
+          "name": "Kids Helpline",
+          "telephone": "1800 55 1800",
+          "hours": "24 hours, 7 days",
+          "scope": "counselling for people aged 5 to 25",
+          "url": "https://kidshelpline.com.au/",
+          "alternatives": []
+        }
+      ]
+    },
+    "mentalHealth": {
+      "name": "Beyond Blue",
+      "telephone": "1300 22 4636",
+      "hours": "24 hours, 7 days",
+      "scope": "anxiety, depression and general mental wellbeing",
+      "url": "https://www.beyondblue.org.au/",
+      "alternatives": [
+        {
+          "name": "13YARN",
+          "telephone": "13 92 76",
+          "hours": "24 hours, 7 days",
+          "scope": "crisis support for Aboriginal and Torres Strait Islander people",
+          "url": "https://www.13yarn.org.au/",
+          "alternatives": []
+        }
+      ]
+    },
+    "unclassified": {
+      "name": "Lifeline",
+      "telephone": "13 11 14",
+      "hours": "24 hours, 7 days",
+      "scope": "crisis support and suicide prevention",
+      "url": "https://www.lifeline.org.au/",
+      "alternatives": [
+        {
+          "name": "13YARN",
+          "telephone": "13 92 76",
+          "hours": "24 hours, 7 days",
+          "scope": "crisis support for Aboriginal and Torres Strait Islander people",
+          "url": "https://www.13yarn.org.au/",
+          "alternatives": []
+        },
+        {
+          "name": "Kids Helpline",
+          "telephone": "1800 55 1800",
+          "hours": "24 hours, 7 days",
+          "scope": "counselling for people aged 5 to 25",
+          "url": "https://kidshelpline.com.au/",
+          "alternatives": []
+        }
+      ]
+    }
+  }
+}

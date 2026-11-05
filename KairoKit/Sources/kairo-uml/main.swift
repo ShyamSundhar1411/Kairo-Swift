@@ -1,7 +1,7 @@
 import Foundation
 import KairoKit
 
-// Regenerates every state machine diagram in the Stage 1 report from the code
+// Regenerates every state machine diagram in the original design document from the code
 // that enforces it.  Usage:
 //   swift run kairo-uml            -> PlantUML for all machines
 //   swift run kairo-uml mermaid    -> Mermaid instead

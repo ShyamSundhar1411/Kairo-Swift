@@ -17,7 +17,7 @@ let package = Package(
     ],
     targets: [
         // Pure domain + orchestration. No HealthKit, no SwiftUI, no networking.
-        // This is the layer the Stage 1 UML describes, and it builds without Xcode.
+        // This is the layer the original UML describes, and it builds without Xcode.
         .target(name: "KairoKit"),
         // Generates PlantUML for every state machine straight from its transition table,
         // so the diagrams in the report cannot drift from the code that implements them.

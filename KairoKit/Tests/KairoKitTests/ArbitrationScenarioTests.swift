@@ -3,7 +3,7 @@ import Foundation
 @testable import KairoKit
 
 /// The Tuesday 15:40 scenario, reproduced exactly as it is drawn in the object
-/// diagram of the Stage 1 report. If the report and the code ever disagree,
+/// diagram of the original design document. If the report and the code ever disagree,
 /// this test fails.
 @Suite("Arbitration - the object diagram, executed")
 struct ArbitrationScenarioTests {

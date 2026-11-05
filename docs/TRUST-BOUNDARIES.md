@@ -50,7 +50,7 @@ Apple:
   changes nothing.
 
 **What would break it:** a shared or family watch, which AS-3 already rules out
-of Stage 1 ("one account represents one adult primary user"). AS-15 is the watch
+of the original design ("one account represents one adult primary user"). AS-15 is the watch
 half of AS-3 and should sit beside it in the report.
 
 ## What this is not
@@ -67,6 +67,6 @@ rather than leaving the watch to appear, unexplained, in a status chip.
 ## Still open
 
 - **AS-15 is not in the submitted report.** It belongs in Table 19 beside AS-3.
-  Raise it for Stage 2 rather than editing a handed-in document.
+  Raise it in a follow-up rather than editing a published document.
 - **NFR6's wording covers one leg and reads as though it covers all three.**
-  Worth a sentence in Stage 2.
+  Worth a sentence in the next revision.

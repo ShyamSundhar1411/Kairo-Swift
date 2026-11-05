@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerates every state machine diagram in the Stage 1 report from the code
+# Regenerates every state machine diagram in the original design document from the code
 # that enforces it. Run this before submitting; the diagrams cannot drift.
 set -euo pipefail
 cd "$(dirname "$0")/../.."

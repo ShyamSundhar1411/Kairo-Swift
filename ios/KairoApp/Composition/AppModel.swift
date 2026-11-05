@@ -167,7 +167,7 @@ final class AppModel {
     var priorities: [String: Double] = Dictionary(
         uniqueKeysWithValues: NudgeClassVocabulary.known.map { ($0, 0.6) })
 
-    /// - Parameter seedingScenario: whether to open on the Stage 1 coverage the
+    /// - Parameter seedingScenario: whether to open on the reference coverage the
     ///   report documents. True for `.demo`, false for a real phone.
     ///
     ///   These four numbers were unconditional, which made them the last piece of
@@ -360,7 +360,7 @@ final class AppModel {
         reloadLocalMemories()
     }
 
-    /// The on-device store. In `.demo` this is the Stage 1 seed the report draws;
+    /// The on-device store. In `.demo` this is the reference seed the report draws;
     /// in `.live` it is empty until the backend answers, and an empty book is the
     /// honest picture of a phone that has not talked to the agents yet.
     @MainActor

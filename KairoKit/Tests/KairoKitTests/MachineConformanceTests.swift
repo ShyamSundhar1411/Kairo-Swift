@@ -36,7 +36,6 @@ struct MachineConformanceTests {
             .deletingLastPathComponent()   // KairoKitTests
             .deletingLastPathComponent()   // Tests
             .deletingLastPathComponent()   // KairoKit
-            .deletingLastPathComponent()   // mobile
             .deletingLastPathComponent()   // <repo root>
         let data = try Data(contentsOf: root.appending(path: "docs/state-machines.json"))
         let doc = try JSONSerialization.jsonObject(with: data) as! [String: Any]

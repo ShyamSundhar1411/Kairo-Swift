@@ -140,7 +140,7 @@ final class BackendConnection {
     /// itself beats a blank field that explains nothing.
     ///
     /// Which is still a poor first run on a phone, so the build can supply a
-    /// better guess: set `KAIRO_BACKEND_URL` in `mobile/signing.env`, and
+    /// better guess: set `KAIRO_BACKEND_URL` in `signing.env`, and
     /// `generate.sh` bakes it into Info.plist as `KairoDefaultBackendURL`. It
     /// is machine-specific and changes with the network, which is exactly why
     /// it belongs in a build setting rather than committed in this file.
