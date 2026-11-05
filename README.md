@@ -10,10 +10,10 @@ logic and every state machine in a separate Swift package.
 
 ## 🎬 Demo
 
-[![Watch the film](demo/poster.jpg)](demo/kairo-launch-film.mp4)
+![Kairo in motion](demo/kairo-demo.gif)
 
-84 seconds, captioned. Click the poster, or
-[download it directly](demo/kairo-launch-film.mp4).
+The full 84 second film, captioned and with sound:
+[demo/kairo-launch-film.mp4](demo/kairo-launch-film.mp4)
 
 ## 📸 Screens
 
