@@ -140,9 +140,6 @@ warning fails the build.
 
 ## 🙏 Credits
 
-Kairo began as a four person university project for ELEC5620 at the University of Sydney.
-The commit history preserves every contributor.
-
 Built and pair programmed with [Claude](https://claude.com/claude-code). The design calls,
 the architecture and the product thinking are mine. Claude was the other half of the
 keyboard.
