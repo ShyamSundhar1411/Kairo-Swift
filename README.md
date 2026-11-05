@@ -1,4 +1,4 @@
-# Kairo 📱⌚️
+# Kairo
 
 A health companion that argues with itself before it interrupts you.
 
@@ -8,14 +8,14 @@ logic and every state machine in a separate Swift package.
 
 > The agent runtime lives in [kairo-backend-fastapi](https://github.com/ShyamSundhar1411/kairo-backend-fastapi).
 
-## 🎬 Demo
+## Demo
 
 ![Kairo in motion](demo/kairo-demo.gif)
 
 The full 84 second film, captioned and with sound:
 [demo/kairo-launch-film.mp4](demo/kairo-launch-film.mp4)
 
-## 📸 Screens
+## Screens
 
 | Today | Why did you say that? | Second opinion |
 |:---:|:---:|:---:|
@@ -32,7 +32,7 @@ The full 84 second film, captioned and with sound:
 | <img src="docs/screenshots/watch-nudge-delivered.png" width="420"> |
 | A nudge arrives where you already look. The watch holds no network code at all |
 
-## 💡 The idea
+## The idea
 
 Most health apps have one voice and no opinion about when to use it. Kairo has five, and
 they disagree.
@@ -41,20 +41,20 @@ The day holds a finite number of interruptions. Three roles bid against each oth
 each one, a Steward can veto on safety grounds, and the losing arguments are kept rather
 than thrown away. When the app does speak, you can open the record and read the argument.
 
-## 🚀 Features
+## Features
 
-- 🧠 Five agent roles, one interruption at most per round
-- ⚖️ A second opinion screen that shows every position, not just the verdict
-- 🧾 A sealed record behind every piece of advice, replayable
-- 📒 A memory book with confidence, provenance, delete, export, and never remember this
-- 🔋 An attention budget you can see spending down
-- ⌚️ Native watchOS app with haptics, and no network code on the wrist by design
-- 📷 Meals read from a photo, with consent asked before the image leaves the device
-- 🩺 HealthKit stays on device. Only a short summary ever reaches an agent
-- 📡 Finds the backend over Bonjour rather than asking you to type an IP
-- 🧪 254 tests on the pure domain layer
+- Five agent roles, one interruption at most per round
+- A second opinion screen that shows every position, not just the verdict
+- A sealed record behind every piece of advice, replayable
+- A memory book with confidence, provenance, delete, export, and never remember this
+- An attention budget you can see spending down
+- Native watchOS app with haptics, and no network code on the wrist by design
+- Meals read from a photo, with consent asked before the image leaves the device
+- HealthKit stays on device. Only a short summary ever reaches an agent
+- Finds the backend over Bonjour rather than asking you to type an IP
+- 254 tests on the pure domain layer
 
-## 🏗️ Under the hood
+## Under the hood
 
 The domain layer is a separate Swift package with no UIKit, no SwiftUI and no networking.
 It can be tested on Linux. Everything the app needs from the outside world is a port, and
@@ -88,7 +88,7 @@ Both halves pin to the same `state-machines.json`. A machine that drifts on one 
 is correct looking on both and wrong where it matters, so neither half asserts against the
 other. They both assert against one file.
 
-## ⚙️ Setup
+## Setup
 
 ### 1. Clone
 
@@ -128,7 +128,7 @@ runs against its built in fakes.
 `signing.env` holds the development team. A free personal Apple ID registers a bundle
 identifier to one team, so set `KAIRO_BUNDLE_SUFFIX` if two people build the same id.
 
-## 🧪 Tests
+## Tests
 
 ```bash
 cd KairoKit && swift test        # 254 tests
@@ -137,9 +137,3 @@ swift run -q kairo-uml audit     # unreachable states and dead ends
 
 Both app targets compile in CI on every push, including the watch app, and a source
 warning fails the build.
-
-## 🙏 Credits
-
-Built and pair programmed with [Claude](https://claude.com/claude-code). The design calls,
-the architecture and the product thinking are mine. Claude was the other half of the
-keyboard.
